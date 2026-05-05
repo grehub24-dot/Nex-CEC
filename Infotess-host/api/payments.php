@@ -130,7 +130,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 <body>
                     <div class='email-container'>
                         <div class='header'>
-                            <h1>Γ£ô Payment Received!</h1>
+                            <h1>✓ Payment Received!</h1>
                             <p>USTED - Infotess Dues Payment Confirmation</p>
                         </div>
                         <div class='content'>
@@ -182,13 +182,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                                 
                                 <div class='amount-box'>
                                     <p>Amount Paid</p>
-                                    <h2>GHΓé╡ " . number_format($amount, 2) . "</h2>
+                                    <h2>GH₵ " . number_format($amount, 2) . "</h2>
                                 </div>
                                 
                                 <div style='text-align: center; margin-top: 20px;'>
                                     <img src='https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=" . urlencode(getAppUrl() . "/verify_public.php?receipt=" . $receipt_number) . "' alt='QR Code' style='width: 100px; height: 100px; margin-bottom: 10px;' />
                                     <br>
-                                    <div class='paid-badge'>Γ£ô PAID</div>
+                                    <div class='paid-badge'>✓ PAID</div>
                                 </div>
                             </div>
                             

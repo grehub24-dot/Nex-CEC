@@ -38,13 +38,19 @@ $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $uri = trim($uri, '/');
 
 if (empty($uri)) {
-    $file = 'index.php';
+    // Homepage — use the dedicated home page file, not this router
+    $file = 'home.php';
 } else {
     $file = $uri;
 }
 
 // Prevent directory traversal
 $file = str_replace(['../', '..\\'], '', $file);
+
+// Prevent infinite recursion (router requiring itself)
+if ($file === 'index.php' || $file === 'api/index.php') {
+    $file = 'home.php';
+}
 
 $targetPath = realpath(__DIR__ . '/' . $file);
 

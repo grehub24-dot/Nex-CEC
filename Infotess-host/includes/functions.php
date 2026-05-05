@@ -7,6 +7,12 @@ if (session_status() === PHP_SESSION_NONE) {
 
 // Restore getBasePath() which was missing
 function getBasePath() {
+    // Check BASE_PATH constant first (set by api/index.php)
+    if (defined('BASE_PATH')) {
+        $bp = BASE_PATH;
+        return $bp === '' ? '/' : rtrim($bp, '/') . '/';
+    }
+
     $configured = getenv('APP_BASE_PATH');
     if ($configured !== false && trim($configured) !== '') {
         $normalized = '/' . trim(str_replace('\\', '/', trim($configured)), '/');

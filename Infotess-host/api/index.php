@@ -19,12 +19,8 @@ if (file_exists(__DIR__ . '/../.env')) {
 }
 
 // 3. Set Base Path for Assets
-$scriptName = $_SERVER['SCRIPT_NAME'];
-$basePath = dirname($scriptName);
-if ($basePath === '/' || $basePath === '\\') {
-    $basePath = '';
-}
-define('BASE_PATH', $basePath);
+// When deployed via root vercel.json, all routes are at the root level
+define('BASE_PATH', '');
 
 // 4. Load Core Library
 require_once __DIR__ . '/../lib/Supabase.php';
@@ -32,11 +28,6 @@ require_once __DIR__ . '/../includes/functions.php';
 
 // 5. Routing Logic
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-
-// Remove base path from URI
-if ($basePath !== '' && strpos($uri, $basePath) === 0) {
-    $uri = substr($uri, strlen($basePath));
-}
 $uri = trim($uri, '/');
 
 // Map URI to file

@@ -1,10 +1,10 @@
 <?php
-require_once '../includes/db.php';
+require_once 'includes/db.php';
 // In a real scenario, use require_once '../vendor/autoload.php';
 // For now, we will simulate the Receipt Generation class
-require_once '../includes/ReceiptGenerator.php'; 
-require_once '../includes/SMSHelper.php';
-require_once '../includes/Mailer.php';
+require_once 'includes/ReceiptGenerator.php'; 
+require_once 'includes/SMSHelper.php';
+require_once 'includes/Mailer.php';
 
 if (!isLoggedIn() || !isAdmin()) {
     redirect('../login.php');

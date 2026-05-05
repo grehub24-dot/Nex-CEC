@@ -1,5 +1,5 @@
 <?php
-require_once '../includes/db.php';
+require_once 'includes/db.php';
 
 // Ensure Admin Access
 if (!isLoggedIn() || !isAdmin()) {

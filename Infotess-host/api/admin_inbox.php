@@ -1,6 +1,6 @@
 <?php
-require_once '../includes/db.php';
-require_once '../includes/ImapHelper.php';
+require_once 'includes/db.php';
+require_once 'includes/ImapHelper.php';
 
 // Ensure Admin Access
 if (!isLoggedIn() || !isAdmin()) {

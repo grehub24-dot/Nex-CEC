@@ -1,5 +1,5 @@
 <?php
-require_once '../includes/db.php';
+require_once 'includes/db.php';
 
 if (!isLoggedIn() || !isStudent()) {
     redirect('../login.php');

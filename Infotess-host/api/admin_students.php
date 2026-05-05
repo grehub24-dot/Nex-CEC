@@ -1,6 +1,6 @@
 <?php
-require_once '../includes/db.php';
-require_once '../includes/Mailer.php';
+require_once 'includes/db.php';
+require_once 'includes/Mailer.php';
 
 if (!isLoggedIn() || !isAdmin()) {
     redirect('../login.php');

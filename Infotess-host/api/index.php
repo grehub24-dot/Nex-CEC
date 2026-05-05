@@ -1,6 +1,6 @@
 <?php
-// api/index.php — Homepage only
-// All other PHP files are handled by file-based routing (api/**/*.php functions)
+// api/index.php — Central Router
+// ALL requests go through here. Files are in the same api/ directory.
 
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
@@ -18,10 +18,11 @@ if (file_exists(__DIR__ . '/../.env')) {
 
 define('BASE_PATH', '');
 
-// Load Supabase client
+// Pre-load ALL dependencies
 require_once __DIR__ . '/lib/Supabase.php';
 require_once __DIR__ . '/includes/functions.php';
 
+// Initialize Supabase globally
 global $supabase;
 try {
     $supabase = new SupabaseClient();
@@ -30,5 +31,49 @@ try {
     exit;
 }
 
-// Include the homepage content
-require_once __DIR__ . '/home.php';
+// Initialize $pdo globally (for legacy code compatibility)
+require_once __DIR__ . '/includes/db.php';
+
+// Route resolution
+$uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+$uri = trim($uri, '/');
+
+// Map clean URLs to actual files
+$routes = [
+    '' => 'home.php',
+    'index.php' => 'home.php',
+];
+
+// Admin routes
+$adminPages = ['dashboard','students','payments','reports','settings','users','edit_student','inbox','messaging','module_settings','verify'];
+foreach ($adminPages as $page) {
+    $routes["admin/$page.php"] = "admin_$page.php";
+}
+
+// Student routes
+$studentPages = ['dashboard','history','messages','password-reset','profile'];
+foreach ($studentPages as $page) {
+    $routes["student/$page.php"] = "student_$page.php";
+}
+
+$file = $routes[$uri] ?? $uri;
+
+// Prevent directory traversal
+$file = str_replace(['../', '..\\'], '', $file);
+
+$targetPath = realpath(__DIR__ . '/' . $file);
+
+if ($targetPath && pathinfo($targetPath, PATHINFO_EXTENSION) === 'php') {
+    require $targetPath;
+    exit;
+}
+
+if ($targetPath) {
+    $mime = mime_content_type($targetPath);
+    header("Content-Type: $mime");
+    readfile($targetPath);
+    exit;
+}
+
+http_response_code(404);
+echo "<h1>404 Not Found</h1><p>File not found: $file</p>";

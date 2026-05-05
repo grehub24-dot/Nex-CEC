@@ -1,6 +1,6 @@
 <?php
-require_once '../includes/db.php';
-require_once '../includes/SMSHelper.php';
+require_once 'includes/db.php';
+require_once 'includes/SMSHelper.php';
 
 // Check if logged in and is student
 if (!isLoggedIn() || $_SESSION['role'] !== 'student') {
@@ -78,7 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 ?>
 
-<?php require_once '../includes/header.php'; ?>
+<?php require_once 'includes/header.php'; ?>
 
 <style>
     .reset-wrap {
@@ -213,4 +213,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     });
 </script>
 
-<?php require_once '../includes/footer.php'; ?>
+<?php require_once 'includes/footer.php'; ?>

@@ -1,12 +1,13 @@
 {
   "version": 2,
   "functions": {
-    "Infotess-host/**/*.php": {
+    "Infotess-host/api/index.php": {
       "runtime": "vercel-php@0.8.0",
       "maxDuration": 60
     }
   },
   "routes": [
+    { "src": "/(.*)\\.php", "dest": "/Infotess-host/api/index.php" },
     { "src": "/css/(.*)", "dest": "/Infotess-host/css/$1" },
     { "src": "/js/(.*)", "dest": "/Infotess-host/js/$1" },
     { "src": "/images/(.*)", "dest": "/Infotess-host/images/$1" },

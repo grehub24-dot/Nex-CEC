@@ -1,19 +1,45 @@
 <?php
 // includes/functions.php
-// Global helper functions moved from db.php
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// Restore getBasePath() which was missing
+function getBasePath() {
+    $configured = getenv('APP_BASE_PATH');
+    if ($configured !== false && trim($configured) !== '') {
+        $normalized = '/' . trim(str_replace('\\', '/', trim($configured)), '/');
+        return $normalized === '/' ? '/' : $normalized . '/';
+    }
+
+    $scriptName = str_replace('\\', '/', (string)($_SERVER['SCRIPT_NAME'] ?? '/'));
+    $segments = array_values(array_filter(explode('/', trim($scriptName, '/'))));
+    if (empty($segments)) {
+        return '/';
+    }
+
+    $knownAppDirs = ['admin', 'student', 'api', 'includes', 'jobs', 'css', 'js', 'images', 'receipts', 'database'];
+    $baseSegments = [];
+    foreach ($segments as $index => $segment) {
+        if (in_array($segment, $knownAppDirs, true)) {
+            if ($index === 0) {
+                return '/';
+            }
+            $baseSegments = array_slice($segments, 0, $index);
+            break;
+        }
+    }
+
+    if (!empty($baseSegments)) {
+        return '/' . implode('/', $baseSegments) . '/';
+    }
+
+    return '/';
+}
+
 function isLoggedIn() {
-    // Check for Session (Legacy) OR Supabase JWT (New)
-    if (isset($_SESSION['user_id'])) return true;
-    
-    // Future: Check cookie 'sb-token'
-    if (isset($_COOKIE['sb-access-token'])) return true;
-    
-    return false;
+    return isset($_SESSION['user_id']);
 }
 
 function isAdmin() {
@@ -25,9 +51,8 @@ function isStudent() {
 }
 
 function redirect($url) {
-    // Handle relative vs absolute paths in Vercel
     if (strpos($url, 'http') !== 0) {
-        $basePath = defined('BASE_PATH') ? BASE_PATH : '';
+        $basePath = defined('BASE_PATH') ? BASE_PATH : getBasePath();
         $url = $basePath . '/' . ltrim($url, '/');
     }
     header("Location: $url");

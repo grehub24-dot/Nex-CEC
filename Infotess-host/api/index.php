@@ -1,6 +1,6 @@
 <?php
 // api/index.php
-// Central Router for Vercel PHP — dispatches to src/
+// Central Router — dispatches to PHP files within api/
 
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
@@ -16,11 +16,11 @@ if (file_exists(__DIR__ . '/../.env')) {
     }
 }
 
-// 2. Define base path
+// 2. Define base path (root-level deployment)
 define('BASE_PATH', '');
 
-// 3. Load Supabase client FIRST
-require_once __DIR__ . '/../src/lib/Supabase.php';
+// 3. Load Supabase client FIRST (before any included files need it)
+require_once __DIR__ . '/lib/Supabase.php';
 
 global $supabase;
 try {
@@ -31,9 +31,9 @@ try {
 }
 
 // 4. Load helper functions
-require_once __DIR__ . '/../src/includes/functions.php';
+require_once __DIR__ . '/includes/functions.php';
 
-// 5. Resolve URI to file in src/
+// 5. Resolve URI to file within api/
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $uri = trim($uri, '/');
 
@@ -46,8 +46,7 @@ if (empty($uri)) {
 // Prevent directory traversal
 $file = str_replace(['../', '..\\'], '', $file);
 
-$srcDir = __DIR__ . '/../src/';
-$targetPath = realpath($srcDir . $file);
+$targetPath = realpath(__DIR__ . '/' . $file);
 
 if ($targetPath && pathinfo($targetPath, PATHINFO_EXTENSION) === 'php') {
     require $targetPath;
@@ -62,4 +61,4 @@ if ($targetPath) {
 }
 
 http_response_code(404);
-echo "<h1>404 Not Found</h1><p>Requested: $file</p><p>Path: {$srcDir}{$file}</p>";
+echo "<h1>404 Not Found</h1><p>Requested: $file</p>";

@@ -6,12 +6,14 @@
 require_once __DIR__ . '/functions.php';
 require_once __DIR__ . '/../lib/Supabase.php';
 
-// Initialize Global Supabase Client
+// Use global $supabase (already initialized by api/index.php)
 global $supabase;
-try {
-    $supabase = new SupabaseClient();
-} catch (Exception $e) {
-    $supabase = null; 
+if (!isset($supabase)) {
+    try {
+        $supabase = new SupabaseClient();
+    } catch (Exception $e) {
+        $supabase = null;
+    }
 }
 
 // Legacy PDO Mock

@@ -1,12 +1,13 @@
 <?php
 // api/index.php
-// Central Router for Vercel PHP — dispatches to src/
+// Central Router for Vercel PHP (fallback for non-file routes)
 
+// 1. Enable Error Reporting
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-// 1. Load Environment Variables
+// 2. Load Environment Variables
 if (file_exists(__DIR__ . '/../.env')) {
     $lines = file(__DIR__ . '/../.env', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     foreach ($lines as $line) {
@@ -16,24 +17,14 @@ if (file_exists(__DIR__ . '/../.env')) {
     }
 }
 
-// 2. Define base path
+// 3. Set Base Path for Assets
 define('BASE_PATH', '');
 
-// 3. Load Supabase client FIRST
-require_once __DIR__ . '/../src/lib/Supabase.php';
+// 4. Load Core Library
+require_once __DIR__ . '/../lib/Supabase.php';
+require_once __DIR__ . '/../includes/functions.php';
 
-global $supabase;
-try {
-    $supabase = new SupabaseClient();
-} catch (Exception $e) {
-    echo "DB Error: " . $e->getMessage();
-    exit;
-}
-
-// 4. Load helper functions
-require_once __DIR__ . '/../src/includes/functions.php';
-
-// 5. Resolve URI to file in src/
+// 5. Routing Logic
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $uri = trim($uri, '/');
 
@@ -46,10 +37,16 @@ if (empty($uri)) {
 // Prevent directory traversal
 $file = str_replace(['../', '..\\'], '', $file);
 
-$srcDir = __DIR__ . '/../src/';
-$targetPath = realpath($srcDir . $file);
+$targetPath = realpath(__DIR__ . '/../' . $file);
 
 if ($targetPath && pathinfo($targetPath, PATHINFO_EXTENSION) === 'php') {
+    global $supabase;
+    try {
+        $supabase = new SupabaseClient();
+    } catch (Exception $e) {
+        echo "Database Init Error: " . $e->getMessage();
+        exit;
+    }
     require $targetPath;
     exit;
 }
@@ -62,4 +59,4 @@ if ($targetPath) {
 }
 
 http_response_code(404);
-echo "<h1>404 Not Found</h1><p>Requested: $file</p><p>Path: {$srcDir}{$file}</p>";
+echo "<h1>404 Not Found</h1><p>File not found: $file</p>";

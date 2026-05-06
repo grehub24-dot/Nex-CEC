@@ -1,26 +1,11 @@
 -- ==========================================
--- MIGRATION + SEED DATA: INFOTESS SDMS
+-- MIGRATION: Create Missing Tables for INFOTESS SDMS
 -- Run this ENTIRE script in Supabase SQL Editor
 -- ==========================================
+-- NOTE: payments, system_settings, students, users already exist — skipped here.
+-- ==========================================
 
--- 1. Ensure extensions
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
--- 2. Create missing tables
-CREATE TABLE IF NOT EXISTS payments (
-    id SERIAL PRIMARY KEY,
-    student_id INTEGER NOT NULL REFERENCES students(id),
-    amount NUMERIC(10,2) NOT NULL DEFAULT 0,
-    payment_method VARCHAR(50) NOT NULL DEFAULT 'manual',
-    receipt_number VARCHAR(50) UNIQUE NOT NULL,
-    payment_date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    academic_year VARCHAR(20) NOT NULL DEFAULT '2025/2026',
-    semester VARCHAR(20) NOT NULL DEFAULT '1',
-    status VARCHAR(20) NOT NULL DEFAULT 'completed',
-    reference VARCHAR(100),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
+-- 1. Fee Structures
 CREATE TABLE IF NOT EXISTS fee_structures (
     id SERIAL PRIMARY KEY,
     level VARCHAR(10) NOT NULL DEFAULT '100',
@@ -33,13 +18,7 @@ CREATE TABLE IF NOT EXISTS fee_structures (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS system_settings (
-    id SERIAL PRIMARY KEY,
-    setting_key VARCHAR(100) UNIQUE NOT NULL,
-    setting_value TEXT,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
+-- 2. Messages (Admin → Student communication)
 CREATE TABLE IF NOT EXISTS messages (
     id SERIAL PRIMARY KEY,
     sender_id INTEGER REFERENCES users(id),
@@ -51,6 +30,7 @@ CREATE TABLE IF NOT EXISTS messages (
     read_at TIMESTAMP WITH TIME ZONE
 );
 
+-- 3. Notifications
 CREATE TABLE IF NOT EXISTS notifications (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id),
@@ -60,6 +40,7 @@ CREATE TABLE IF NOT EXISTS notifications (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- 4. Message Read Receipts
 CREATE TABLE IF NOT EXISTS message_reads (
     id SERIAL PRIMARY KEY,
     message_id INTEGER REFERENCES messages(id),
@@ -68,6 +49,7 @@ CREATE TABLE IF NOT EXISTS message_reads (
     UNIQUE(message_id, user_id)
 );
 
+-- 5. Executives
 CREATE TABLE IF NOT EXISTS executives (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id),
@@ -79,13 +61,11 @@ CREATE TABLE IF NOT EXISTS executives (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 3. Insert default system settings
-INSERT INTO system_settings (setting_key, setting_value) VALUES
-('current_academic_year', '2025/2026'),
-('annual_dues_amount', '100.00')
-ON CONFLICT (setting_key) DO NOTHING;
+-- ==========================================
+-- SEED DATA
+-- ==========================================
 
--- 4. Insert fee structures
+-- Fee structures for each level
 INSERT INTO fee_structures (level, amount, academic_year, semester, fee_type, description) VALUES
 ('100', 100.00, '2025/2026', 'All', 'dues', 'Annual membership dues'),
 ('200', 100.00, '2025/2026', 'All', 'dues', 'Annual membership dues'),
@@ -93,22 +73,23 @@ INSERT INTO fee_structures (level, amount, academic_year, semester, fee_type, de
 ('400', 100.00, '2025/2026', 'All', 'dues', 'Annual membership dues')
 ON CONFLICT DO NOTHING;
 
--- 5. Insert test payments (for existing students)
-INSERT INTO payments (student_id, amount, payment_method, receipt_number, academic_year, semester, status, payment_date) VALUES
-(1, 100.00, 'Cash', 'RCP-2026-001', '2025/2026', 'All', 'completed', '2026-05-01'),
-(1, 50.00, 'Mobile Money', 'RCP-2026-002', '2025/2026', 'All', 'completed', '2026-05-01'),
-(2, 100.00, 'Cash', 'RCP-2026-003', '2025/2026', 'All', 'completed', '2026-05-02'),
-(4, 75.00, 'Mobile Money', 'RCP-2026-004', '2025/2026', '1', 'completed', '2026-05-03'),
-(4, 30.00, 'Cash', 'RCP-2026-005', '2025/2026', '2', 'completed', '2026-05-03')
-ON CONFLICT (receipt_number) DO NOTHING;
-
--- 6. Add a Bursar user
+-- Bursar user (for recording payments)
 INSERT INTO users (email, password, role, status, is_password_reset)
 VALUES ('bursar@infotess.org', '$2y$10$YRNoSKY.hpBVI8PGmwOMNOZAmYXoAIzsnr0Py0vqoHiERUihByEkq', 'bursar', 'active', true)
 ON CONFLICT (email) DO NOTHING;
 
+-- Test payments (only if receipt_number doesn't conflict)
+-- Uses the actual payments schema: student_id, amount, academic_year, semester, payment_method, payment_date, receipt_number, recorded_by
+INSERT INTO payments (student_id, amount, academic_year, semester, payment_method, payment_date, receipt_number, recorded_by) VALUES
+(1, 100.00, '2025/2026', 'All', 'Cash', '2026-05-01', 'RCP-2026-001', 2),
+(1, 50.00,  '2025/2026', 'All', 'Mobile Money', '2026-05-01', 'RCP-2026-003', 2),
+(2, 100.00, '2025/2026', 'All', 'Cash', '2026-05-02', 'RCP-2026-004', 2),
+(4, 75.00,  '2025/2026', '1', 'Mobile Money', '2026-05-03', 'RCP-2026-005', 2),
+(4, 30.00,  '2025/2026', '2', 'Cash', '2026-05-03', 'RCP-2026-008', 2)
+ON CONFLICT (receipt_number) DO NOTHING;
+
 -- ==========================================
--- VERIFICATION QUERIES
+-- VERIFICATION
 -- ==========================================
 SELECT 'students' AS tbl, COUNT(*) FROM students
 UNION ALL SELECT 'users', COUNT(*) FROM users

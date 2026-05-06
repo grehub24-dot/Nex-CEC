@@ -67,7 +67,8 @@ class LegacyStatement {
 
     private function parseQuery($sql) {
         $sql = trim($sql);
-        if (preg_match('/^SELECT.*FROM\s+(\w+)/i', $sql, $m)) {
+        // Use [\s\S]* instead of .* to match across newlines
+        if (preg_match('/^SELECT[\s\S]*?FROM\s+(\w+)/i', $sql, $m)) {
             $this->table = $m[1];
         } elseif (preg_match('/^INSERT INTO\s+(\w+)/i', $sql, $m)) {
             $this->table = $m[1];
@@ -124,7 +125,7 @@ class LegacyStatement {
                 $query = $this->client->table($this->table);
                 
                 // Handle WHERE clause with ? (positional) or :name (named) parameters
-                preg_match_all('/WHERE\s+(.+?)(\s+ORDER|\s+LIMIT|$)/i', $this->sql, $whereMatches);
+                preg_match_all('/WHERE\s+([\s\S]+?)(\s+ORDER|\s+LIMIT|$)/i', $this->sql, $whereMatches);
                 
                 $currentParamIndex = 0;
                 if (!empty($whereMatches[1])) {

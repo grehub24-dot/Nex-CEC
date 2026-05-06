@@ -83,6 +83,9 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'students' AND column_name = 'address') THEN
         ALTER TABLE students ADD COLUMN address TEXT;
     END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'students' AND column_name = 'profile_picture') THEN
+        ALTER TABLE students ADD COLUMN profile_picture TEXT;
+    END IF;
 END $$;
 
 -- 3. Update fee_structures columns if needed

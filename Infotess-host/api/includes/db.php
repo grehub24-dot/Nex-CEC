@@ -163,7 +163,24 @@ class LegacyStatement {
                     }
                 }
                 
-                $this->result = $query->update($data);
+                try {
+                    $this->result = $query->update($data);
+                } catch (Exception $updateEx) {
+                    // Strip unknown columns and retry (handles schema mismatches gracefully)
+                    if (strpos($updateEx->getMessage(), 'Could not find') !== false || strpos($updateEx->getMessage(), 'PGRST204') !== false) {
+                        // Extract unknown column name from error: "Could not find the 'col' column"
+                        if (preg_match("/the '(\w+)' column/", $updateEx->getMessage(), $colMatch)) {
+                            $badCol = $colMatch[1];
+                            unset($data[$badCol]);
+                            error_log("Supabase Update: Stripped unknown column '$badCol', retrying...");
+                            $this->result = $query->update($data);
+                        } else {
+                            throw $updateEx;
+                        }
+                    } else {
+                        throw $updateEx;
+                    }
+                }
                 $this->affectedRows = is_array($this->result) ? count($this->result) : 1;
             } elseif ($this->isDelete) {
                 // DELETE FROM table WHERE id = ?

@@ -15,9 +15,14 @@ $stmt->execute([$student_id]);
 $student = $stmt->fetch();
 
 // Fetch Payments
-$stmt = $pdo->prepare("SELECT * FROM payments WHERE student_id = ? ORDER BY payment_date DESC");
-$stmt->execute([$student_id]);
-$payments = $stmt->fetchAll();
+$payments = [];
+try {
+    $stmt = $pdo->prepare("SELECT * FROM payments WHERE student_id = ? ORDER BY payment_date DESC");
+    $stmt->execute([$student_id]);
+    $payments = $stmt->fetchAll();
+} catch (Exception $e) {
+    $payments = [];
+}
 
 // Calculate Total Paid
 $total_paid = 0;
@@ -26,19 +31,28 @@ foreach ($payments as $p) {
 }
 
 // Fetch system settings for dues
-$stmt = $pdo->query("SELECT setting_key, setting_value FROM system_settings WHERE setting_key IN ('current_academic_year', 'annual_dues_amount')");
 $settings = [];
-while ($row = $stmt->fetch()) {
-    $settings[$row['setting_key']] = $row['setting_value'];
+try {
+    $stmt = $pdo->query("SELECT setting_key, setting_value FROM system_settings WHERE setting_key IN ('current_academic_year', 'annual_dues_amount')");
+    while ($row = $stmt->fetch()) {
+        $settings[$row['setting_key']] = $row['setting_value'];
+    }
+} catch (Exception $e) {
+    // system_settings table may not exist yet
 }
 
 // Outstanding balance for current academic year dues
 $current_year = $settings['current_academic_year'] ?? '2025/2026';
 $required_dues = (float)($settings['annual_dues_amount'] ?? 100.00);
 
-$stmt = $pdo->prepare("SELECT COALESCE(SUM(amount),0) FROM payments WHERE student_id = ? AND academic_year = ?");
-$stmt->execute([$student_id, $current_year]);
-$paid_this_year = (float)$stmt->fetchColumn();
+$paid_this_year = 0;
+try {
+    $stmt = $pdo->prepare("SELECT COALESCE(SUM(amount),0) FROM payments WHERE student_id = ? AND academic_year = ?");
+    $stmt->execute([$student_id, $current_year]);
+    $paid_this_year = (float)$stmt->fetchColumn();
+} catch (Exception $e) {
+    // payments table may not exist yet
+}
 $outstanding = max(0, $required_dues - $paid_this_year);
 $status_color = $outstanding <= 0 ? 'green' : 'red';
 $status_text = $outstanding <= 0 ? 'Fully Paid' : 'Unpaid';
@@ -64,22 +78,24 @@ $status_text = $outstanding <= 0 ? 'Fully Paid' : 'Unpaid';
                 <li><a href="profile.php"><i class="fas fa-user"></i> My Profile</a></li>
                 <li><a href="messages.php"><i class="fas fa-envelope"></i> Messages 
                     <?php
-                    $stmt = $pdo->prepare("
-                        SELECT COUNT(*) FROM messages m 
-                        WHERE (m.is_broadcast = 1 OR m.receiver_id = ?)
-                    ");
-                    $stmt->execute([$_SESSION['user_id']]);
-                    $msg_count = $stmt->fetchColumn();
-
-                    // Check if message_reads table exists (Supabase compatible)
-                    $hasMessageReads = false;
+                    $msg_count = 0;
                     try {
-                        $checkMR = $pdo->query("SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'message_reads'");
-                        $hasMessageReads = $checkMR && $checkMR->fetchColumn() > 0;
-                    } catch (Exception $e) {
+                        $stmt = $pdo->prepare("
+                            SELECT COUNT(*) FROM messages m 
+                            WHERE (m.is_broadcast = true OR m.receiver_id = ?)
+                        ");
+                        $stmt->execute([$_SESSION['user_id']]);
+                        $msg_count = $stmt->fetchColumn();
+
+                        // Check if message_reads table exists (Supabase compatible)
                         $hasMessageReads = false;
-                    }
-                    if ($hasMessageReads) {
+                        try {
+                            $checkMR = $pdo->query("SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'message_reads'");
+                            $hasMessageReads = $checkMR && $checkMR->fetchColumn() > 0;
+                        } catch (Exception $e) {
+                            $hasMessageReads = false;
+                        }
+                        if ($hasMessageReads) {
                         $stmt2 = $pdo->prepare("
                             SELECT COUNT(*) FROM messages m 
                             WHERE (m.is_broadcast = 1 OR m.receiver_id = ?) 
@@ -91,6 +107,10 @@ $status_text = $outstanding <= 0 ? 'Fully Paid' : 'Unpaid';
                         $stmt2->execute([$_SESSION['user_id'], $_SESSION['user_id']]);
                         $read_count = $stmt2->fetchColumn();
                         $msg_count = max(0, $msg_count - $read_count);
+                        }
+                    } catch (Exception $e) {
+                        // messages table may not exist yet — silently skip
+                        $msg_count = 0;
                     }
 
                     if ($msg_count > 0):
@@ -161,26 +181,35 @@ $status_text = $outstanding <= 0 ? 'Fully Paid' : 'Unpaid';
                     <a href="messages.php" style="font-size: 0.9rem; color: var(--primary-color);">View all notifications</a>
                 </div>
                 <?php
-                $stmt = $pdo->prepare("
-                    SELECT title, message, created_at
-                    FROM notifications
-                    WHERE user_id = ?
-                    ORDER BY created_at DESC
-                    LIMIT 3
-                ");
-                $stmt->execute([$_SESSION['user_id']]);
-                $recent_notifications = $stmt->fetchAll();
-
-                if (empty($recent_notifications)):
+                $recent_notifications = [];
+                try {
                     $stmt = $pdo->prepare("
-                        SELECT title, content AS message, created_at
-                        FROM messages
-                        WHERE is_broadcast = 1 OR receiver_id = ?
+                        SELECT title, message, created_at
+                        FROM notifications
+                        WHERE user_id = ?
                         ORDER BY created_at DESC
                         LIMIT 3
                     ");
                     $stmt->execute([$_SESSION['user_id']]);
                     $recent_notifications = $stmt->fetchAll();
+                } catch (Exception $e) {
+                    $recent_notifications = [];
+                }
+
+                if (empty($recent_notifications)):
+                    try {
+                        $stmt = $pdo->prepare("
+                            SELECT title, content AS message, created_at
+                            FROM messages
+                            WHERE is_broadcast = true OR receiver_id = ?
+                            ORDER BY created_at DESC
+                            LIMIT 3
+                        ");
+                        $stmt->execute([$_SESSION['user_id']]);
+                        $recent_notifications = $stmt->fetchAll();
+                    } catch (Exception $e) {
+                        $recent_notifications = [];
+                    }
                 endif;
 
                 if (empty($recent_notifications)):

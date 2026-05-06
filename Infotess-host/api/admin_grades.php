@@ -1,9 +1,8 @@
 <?php
 require_once 'includes/db.php';
 
-if (!isLoggedIn() || !isAdmin()) {
-    redirect('../login.php');
-}
+// Enforce access control
+requireAccess('grades');
 
 $settings = [];
 $stmt = $pdo->query("SELECT setting_key, setting_value FROM system_settings");

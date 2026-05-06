@@ -4,9 +4,8 @@ require_once 'includes/ReceiptGenerator.php';
 require_once 'includes/SMSHelper.php';
 require_once 'includes/Mailer.php';
 
-if (!isLoggedIn() || !isAdmin()) {
-    redirect('../login.php');
-}
+// Enforce access control
+requireAccess('payments');
 
 // Fetch Settings
 $settings = [];

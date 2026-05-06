@@ -52,8 +52,154 @@ function isAdmin() {
     return isset($_SESSION['role']) && in_array($_SESSION['role'], ['admin', 'super_admin', 'bursar']);
 }
 
+function isSuperAdmin() {
+    return isset($_SESSION['role']) && in_array($_SESSION['role'], ['admin', 'super_admin']);
+}
+
+function isBursar() {
+    return isset($_SESSION['role']) && $_SESSION['role'] === 'bursar';
+}
+
 function isStudent() {
     return isset($_SESSION['role']) && $_SESSION['role'] === 'student';
+}
+
+/**
+ * RBAC: Define page-to-role permissions.
+ * 'admin' = admin + super_admin only
+ * 'bursar' = bursar only
+ * 'admin_or_bursar' = both
+ * 'student' = student only
+ */
+function getAccessControl() {
+    return [
+        // Full admin only
+        'staff' => ['admin', 'super_admin'],
+        'edit_staff' => ['admin', 'super_admin'],
+        'salary' => ['admin', 'super_admin'],
+        'payroll' => ['admin', 'super_admin'],
+        'pay_slip' => ['admin', 'super_admin'],
+        'grades' => ['admin', 'super_admin'],
+        'attendance' => ['admin', 'super_admin'],
+        'staff_attendance' => ['admin', 'super_admin'],
+        'settings' => ['admin', 'super_admin'],
+        'module_settings' => ['admin', 'super_admin'],
+        'users' => ['admin', 'super_admin'],
+        'bulk_import' => ['admin', 'super_admin'],
+        
+        // Bursar + Admin
+        'dashboard' => ['admin', 'super_admin', 'bursar'],
+        'students' => ['admin', 'super_admin', 'bursar'],
+        'edit_student' => ['admin', 'super_admin', 'bursar'],
+        'payments' => ['admin', 'super_admin', 'bursar'],
+        'fees' => ['admin', 'super_admin', 'bursar'],
+        'reports' => ['admin', 'super_admin', 'bursar'],
+        'verify' => ['admin', 'super_admin', 'bursar'],
+        'messaging' => ['admin', 'super_admin', 'bursar'],
+        'inbox' => ['admin', 'super_admin', 'bursar'],
+    ];
+}
+
+/**
+ * Check if current user can access a page.
+ * Returns true if allowed, false otherwise.
+ */
+function canAccessPage($page) {
+    if (!isLoggedIn()) return false;
+    
+    $role = $_SESSION['role'] ?? '';
+    $acl = getAccessControl();
+    
+    // If page not in ACL, default: only full admins
+    $allowed = $acl[$page] ?? ['admin', 'super_admin'];
+    
+    return in_array($role, $allowed);
+}
+
+/**
+ * Enforce access control. Redirects to dashboard if denied.
+ * Call at top of admin pages: requireAccess('page_name');
+ */
+function requireAccess($page) {
+    if (!isLoggedIn()) {
+        redirect('../login.php');
+    }
+    if (!canAccessPage($page)) {
+        // Flash access denied message
+        $_SESSION['access_denied'] = true;
+        redirect('dashboard.php');
+    }
+}
+
+/**
+ * Get sidebar menu items filtered by user role.
+ */
+function getSidebarMenu($currentPage = '') {
+    $role = $_SESSION['role'] ?? '';
+    $isFullAdmin = in_array($role, ['admin', 'super_admin']);
+    
+    $menu = [
+        ['href' => 'dashboard.php', 'icon' => 'fas fa-home', 'label' => 'Dashboard'],
+        ['href' => 'students.php', 'icon' => 'fas fa-user-graduate', 'label' => 'Students'],
+    ];
+    
+    if ($isFullAdmin) {
+        $menu[] = ['href' => 'staff.php', 'icon' => 'fas fa-chalkboard-teacher', 'label' => 'Staff'];
+    }
+    
+    $menu[] = ['href' => 'payments.php', 'icon' => 'fas fa-money-bill-wave', 'label' => 'Payments'];
+    $menu[] = ['href' => 'fees.php', 'icon' => 'fas fa-list-alt', 'label' => 'Fee Structure'];
+    
+    if ($isFullAdmin) {
+        $menu[] = ['href' => 'payroll.php', 'icon' => 'fas fa-file-invoice-dollar', 'label' => 'Payroll'];
+        $menu[] = ['href' => 'salary.php', 'icon' => 'fas fa-money-check-alt', 'label' => 'Salary Structures'];
+        $menu[] = ['href' => 'grades.php', 'icon' => 'fas fa-clipboard-list', 'label' => 'SBA / Grades'];
+        $menu[] = ['href' => 'attendance.php', 'icon' => 'fas fa-user-check', 'label' => 'Student Attendance'];
+        $menu[] = ['href' => 'staff_attendance.php', 'icon' => 'fas fa-user-tie', 'label' => 'Staff Attendance'];
+    }
+    
+    $menu[] = ['href' => 'reports.php', 'icon' => 'fas fa-chart-bar', 'label' => 'Reports'];
+    $menu[] = ['href' => 'verify.php', 'icon' => 'fas fa-qrcode', 'label' => 'Verify Receipt'];
+    
+    if ($isFullAdmin) {
+        $menu[] = ['href' => 'users.php', 'icon' => 'fas fa-users-cog', 'label' => 'User Management'];
+    }
+    
+    $menu[] = ['href' => 'messaging.php', 'icon' => 'fas fa-envelope', 'label' => 'Messaging'];
+    $menu[] = ['href' => 'inbox.php', 'icon' => 'fas fa-inbox', 'label' => 'Inbox'];
+    
+    if ($isFullAdmin) {
+        $menu[] = ['href' => 'module_settings.php', 'icon' => 'fas fa-cogs', 'label' => 'Module Settings'];
+        $menu[] = ['href' => 'settings.php', 'icon' => 'fas fa-tools', 'label' => 'System Settings'];
+    }
+    
+    $menu[] = ['href' => '../logout.php', 'icon' => 'fas fa-sign-out-alt', 'label' => 'Logout'];
+    
+    return $menu;
+}
+
+/**
+ * Render sidebar menu HTML.
+ */
+function renderSidebar($currentPage = '', $schoolName = 'Nex CEC') {
+    $menu = getSidebarMenu($currentPage);
+    $role = $_SESSION['role'] ?? 'admin';
+    $roleLabel = ucfirst($role);
+    
+    $html = '<aside class="sidebar">';
+    $html .= '<div class="sidebar-header" style="text-align: center; padding: 20px 10px;">';
+    $html .= '<img src="../images/school-logo.png" alt="Logo" style="width: 80px; height: 80px; margin-bottom: 10px; border-radius: 50%; background: #fff; padding: 5px;" onerror="this.src=\'../images/aamusted.jpg\'">';
+    $html .= '<h3>' . htmlspecialchars($schoolName) . ' ' . $roleLabel . '</h3>';
+    $html .= '</div>';
+    $html .= '<ul class="sidebar-menu">';
+    
+    foreach ($menu as $item) {
+        $active = ($currentPage === basename($item['href'], '.php')) ? ' class="active"' : '';
+        $html .= '<li><a href="' . htmlspecialchars($item['href']) . '"' . $active . '><i class="' . htmlspecialchars($item['icon']) . '"></i> ' . htmlspecialchars($item['label']) . '</a></li>';
+    }
+    
+    $html .= '</ul></aside>';
+    return $html;
 }
 
 function redirect($url) {

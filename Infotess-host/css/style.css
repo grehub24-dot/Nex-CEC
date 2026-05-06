@@ -517,10 +517,32 @@ ul {
     border: 1px solid #f5c6cb;
 }
 
-/* Media Queries */
+.alert-info {
+    background: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #bee5eb;
+}
+
+.alert-warning {
+    background: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeeba;
+}
+
+/* ==========================================
+   MOBILE RESPONSIVE ENHANCEMENTS
+   ========================================== */
+
 @media (max-width: 768px) {
+    /* --- Navbar --- */
     .hamburger {
         display: block;
+        font-size: 1.5rem;
+        color: var(--primary-color);
+        background: none;
+        border: none;
+        padding: 5px;
+        cursor: pointer;
     }
 
     .nav-links {
@@ -534,6 +556,7 @@ ul {
         box-shadow: 0 5px 10px rgba(0,0,0,0.1);
         padding: 20px;
         gap: 15px;
+        z-index: 999;
     }
 
     .nav-links.active {
@@ -548,13 +571,14 @@ ul {
         position: static;
         box-shadow: none;
         padding-left: 20px;
-        display: none; /* Hide by default on mobile */
+        display: none;
     }
 
     .dropdown.active .dropdown-content {
-        display: block; /* Show when active class is added via JS */
+        display: block;
     }
 
+    /* --- Hero --- */
     .hero h1 {
         font-size: 2rem;
     }
@@ -563,64 +587,181 @@ ul {
         font-size: 1rem;
     }
 
+    /* --- Dashboard Layout --- */
     .dashboard-container {
         flex-direction: column;
     }
 
+    /* Sidebar as horizontal scroll on mobile */
     .sidebar {
         width: 100%;
         padding-top: 0;
         background: var(--primary-color);
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        position: sticky;
+        top: 0;
+        z-index: 900;
+    }
+
+    .sidebar-header {
+        display: none; /* Hide logo/header on mobile to save space */
     }
 
     .sidebar-menu {
         display: flex;
         overflow-x: auto;
-        padding: 10px 15px;
-        gap: 10px;
+        padding: 8px 10px;
+        gap: 4px;
         -webkit-overflow-scrolling: touch;
-        scrollbar-width: none; /* Firefox */
-        -ms-overflow-style: none; /* IE/Edge */
+        scrollbar-width: none;
+        -ms-overflow-style: none;
     }
 
     .sidebar-menu::-webkit-scrollbar {
-        display: none; /* Chrome/Safari/Webkit */
+        display: none;
+    }
+
+    .sidebar-menu li {
+        flex-shrink: 0;
     }
 
     .sidebar-menu li a {
-        padding: 10px 15px;
+        padding: 8px 14px;
         white-space: nowrap;
         border-left: none;
         border-bottom: 2px solid transparent;
+        font-size: 0.85rem;
+        display: inline-block;
     }
 
     .sidebar-menu li a:hover, .sidebar-menu li a.active {
         border-left: none;
         border-bottom: 2px solid var(--secondary-color);
+        background: rgba(255,255,255,0.08);
     }
 
+    /* --- Main Content --- */
     .main-content {
-        padding: 15px;
+        padding: 12px;
     }
 
     .top-bar {
-        padding: 10px 15px;
+        padding: 12px 15px;
         flex-direction: column;
         gap: 10px;
         text-align: center;
+        margin-bottom: 20px;
     }
 
+    .top-bar h2 {
+        font-size: 1.3rem;
+    }
+
+    /* --- Stat Cards --- */
+    .stat-cards {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+
+    .stat-card {
+        padding: 18px;
+        gap: 15px;
+    }
+
+    .stat-icon {
+        width: 50px;
+        height: 50px;
+        font-size: 1.2rem;
+    }
+
+    .stat-details h3 {
+        font-size: 1.2rem;
+    }
+
+    .stat-details p {
+        font-size: 0.8rem;
+    }
+
+    /* --- Tables --- */
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        margin: 0 -12px;
+        padding: 0 12px;
+    }
+
+    .table th, .table td {
+        padding: 10px 12px;
+        font-size: 0.9rem;
+        white-space: nowrap;
+    }
+
+    .table th {
+        position: sticky;
+        top: 0;
+        background: #f8f9fa;
+        z-index: 1;
+    }
+
+    /* --- Forms --- */
     .grid-form {
         grid-template-columns: 1fr !important;
-        gap: 15px; /* Reduce gap on mobile */
+        gap: 15px;
+    }
+
+    .form-control {
+        padding: 12px;
+        font-size: 16px; /* Prevents zoom on iOS */
     }
 
     .form-container {
         padding: 20px;
         margin: 20px auto;
         width: 100%;
-        max-width: 100%; /* Take full width minus padding */
+        max-width: 100%;
+    }
+
+    /* --- Cards --- */
+    .card-content {
+        padding: 15px;
+    }
+
+    .card-content h3 {
+        font-size: 1.1rem;
+    }
+
+    /* --- Quick Actions (Dashboard) --- */
+    .section h3 {
+        font-size: 1.15rem;
+        margin-bottom: 12px;
+    }
+
+    /* --- Buttons --- */
+    .btn-admin-action,
+    .dashboard-container .btn-primary,
+    .dashboard-container .btn-submit,
+    .dashboard-container .btn-login {
+        padding: 12px 16px;
+        font-size: 0.85rem;
+        min-height: 44px; /* Touch-friendly */
+    }
+
+    .btn-admin-sm {
+        padding: 8px 12px;
+        min-height: 38px;
+    }
+
+    /* --- Alerts --- */
+    .alert {
+        padding: 12px;
+        font-size: 0.9rem;
+    }
+
+    /* --- Charts --- */
+    .section canvas {
+        max-width: 100%;
+        height: auto !important;
     }
 }
 
@@ -630,7 +771,7 @@ ul {
     }
 
     .section {
-        padding: 40px 0;
+        padding: 30px 0;
     }
 
     .card-grid {
@@ -639,5 +780,59 @@ ul {
 
     .stat-cards {
         grid-template-columns: 1fr;
+    }
+
+    .stat-card {
+        padding: 15px;
+    }
+
+    .stat-icon {
+        width: 45px;
+        height: 45px;
+        font-size: 1.1rem;
+    }
+
+    .stat-details h3 {
+        font-size: 1.1rem;
+    }
+
+    .top-bar h2 {
+        font-size: 1.15rem;
+    }
+
+    .table th, .table td {
+        padding: 8px 10px;
+        font-size: 0.85rem;
+    }
+
+    .sidebar-menu li a {
+        padding: 6px 12px;
+        font-size: 0.8rem;
+    }
+}
+
+/* ==========================================
+   PRINT STYLES (for report cards & receipts)
+   ========================================== */
+@media print {
+    .sidebar, .top-bar, .no-print, button, a.btn-login, .sidebar-menu {
+        display: none !important;
+    }
+    .main-content {
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+    .dashboard-container {
+        display: block !important;
+    }
+    body {
+        background: white !important;
+    }
+    .card {
+        box-shadow: none !important;
+        border: 1px solid #ddd !important;
+    }
+    .table th, .table td {
+        border: 1px solid #ddd !important;
     }
 }

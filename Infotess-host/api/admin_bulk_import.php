@@ -2,9 +2,8 @@
 require_once 'includes/db.php';
 require_once 'includes/Mailer.php';
 
-if (!isLoggedIn() || !isAdmin()) {
-    redirect('../login.php');
-}
+// Enforce access control
+requireAccess('bulk_import');
 
 $settings = [];
 try {

@@ -1,9 +1,8 @@
 <?php
 require_once 'includes/db.php';
 
-if (!isLoggedIn() || !isAdmin()) {
-    redirect('../login.php');
-}
+// Enforce access control
+requireAccess('fees');
 
 // Fetch Settings
 $settings = [];

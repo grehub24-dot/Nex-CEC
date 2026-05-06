@@ -1,10 +1,8 @@
 <?php
 require_once 'includes/db.php';
 
-// Ensure Admin Access
-if (!isLoggedIn() || !isAdmin()) {
-    redirect('../login.php');
-}
+// Enforce access control
+requireAccess('dashboard');
 
 // Fetch Current Settings
 $settings = [];
@@ -15,6 +13,8 @@ while ($row = $stmt->fetch()) {
 $school_name = $settings['school_name'] ?? 'Nex CEC';
 $current_year = $settings['current_academic_year'] ?? date('Y') . '/' . (date('Y') + 1);
 $required_dues = isset($settings['annual_dues_amount']) ? (float)$settings['annual_dues_amount'] : 500.00;
+$current_role = $_SESSION['role'] ?? 'admin';
+$display_name = $_SESSION['full_name'] ?? $_SESSION['username'] ?? 'User';
 
 // ==========================================
 // Fetch Stats (without complex views)
@@ -92,40 +92,21 @@ if (empty($chart_labels)) {
 </head>
 <body>
     <div class="dashboard-container">
-        <!-- Sidebar -->
-        <aside class="sidebar">
-            <div class="sidebar-header" style="text-align: center; padding: 20px 10px;">
-                <img src="../images/school-logo.png" alt="Logo" style="width: 80px; height: 80px; margin-bottom: 10px; border-radius: 50%; background: #fff; padding: 5px;" onerror="this.src='../images/aamusted.jpg'">
-                <h3><?php echo htmlspecialchars($school_name); ?> Admin</h3>
-            </div>
-                        <ul class="sidebar-menu">
-                <li><a href="dashboard.php"><i class="fas fa-home"></i> Dashboard</a></li>
-                <li><a href="students.php"><i class="fas fa-user-graduate"></i> Students</a></li>
-                <li><a href="staff.php"><i class="fas fa-chalkboard-teacher"></i> Staff</a></li>
-                <li><a href="payments.php"><i class="fas fa-money-bill-wave"></i> Payments</a></li>
-                <li><a href="fees.php"><i class="fas fa-list-alt"></i> Fee Structure</a></li>
-                <li><a href="payroll.php"><i class="fas fa-file-invoice-dollar"></i> Payroll</a></li>
-                <li><a href="salary.php"><i class="fas fa-money-check-alt"></i> Salary Structures</a></li>
-                <li><a href="grades.php"><i class="fas fa-clipboard-list"></i> SBA / Grades</a></li>
-                <li><a href="attendance.php"><i class="fas fa-user-check"></i> Attendance</a></li>
-                <li><a href="staff_attendance.php"><i class="fas fa-user-tie"></i> Staff Attendance</a></li>
-                <li><a href="reports.php"><i class="fas fa-chart-bar"></i> Reports</a></li>
-                <li><a href="verify.php"><i class="fas fa-qrcode"></i> Verify Receipt</a></li>
-                <li><a href="users.php"><i class="fas fa-users-cog"></i> User Management</a></li>
-                <li><a href="messaging.php"><i class="fas fa-envelope"></i> Messaging</a></li>
-                <li><a href="inbox.php"><i class="fas fa-inbox"></i> Inbox</a></li>
-                <li><a href="module_settings.php"><i class="fas fa-cogs"></i> Module Settings</a></li>
-                <li><a href="settings.php"><i class="fas fa-tools"></i> System Settings</a></li>
-                <li><a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
-            </ul>
-        </aside>
+            <?php echo renderSidebar('dashboard', $school_name); ?>
 
         <!-- Main Content -->
         <main class="main-content">
             <div class="top-bar">
                 <h2>Dashboard Overview</h2>
-                <div class="user-info"><span>Welcome, Admin</span></div>
+                <div class="user-info"><span>Welcome, <?php echo htmlspecialchars($display_name); ?> (<?php echo ucfirst($current_role); ?>)</span></div>
             </div>
+
+            <?php if (isset($_SESSION['access_denied'])): ?>
+                <div class="alert alert-danger">
+                    <i class="fas fa-lock"></i> Access Denied: You do not have permission to view that page.
+                </div>
+                <?php unset($_SESSION['access_denied']); ?>
+            <?php endif; ?>
 
             <!-- Stats -->
             <div class="stat-cards">
@@ -133,10 +114,12 @@ if (empty($chart_labels)) {
                     <div class="stat-icon"><i class="fas fa-user-graduate"></i></div>
                     <div class="stat-details"><h3><?php echo number_format($total_students); ?></h3><p>Total Students</p></div>
                 </div>
+                <?php if (isSuperAdmin()): ?>
                 <div class="stat-card">
                     <div class="stat-icon"><i class="fas fa-chalkboard-teacher"></i></div>
                     <div class="stat-details"><h3><?php echo number_format($total_staff); ?></h3><p>Active Staff</p></div>
                 </div>
+                <?php endif; ?>
                 <div class="stat-card">
                     <div class="stat-icon"><i class="fas fa-wallet"></i></div>
                     <div class="stat-details"><h3>GHS <?php echo number_format($total_revenue, 2); ?></h3><p>Total Revenue</p></div>
@@ -149,10 +132,12 @@ if (empty($chart_labels)) {
                     <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
                     <div class="stat-details"><h3><?php echo $compliance_rate; ?>%</h3><p>Payment Compliance</p></div>
                 </div>
+                <?php if (isSuperAdmin()): ?>
                 <div class="stat-card">
                     <div class="stat-icon"><i class="fas fa-user-clock"></i></div>
                     <div class="stat-details"><h3><?php echo $absent_today; ?></h3><p>Absent Today</p></div>
                 </div>
+                <?php endif; ?>
             </div>
 
             <!-- Quick Links -->
@@ -171,6 +156,7 @@ if (empty($chart_labels)) {
                             <p style="margin-top: 10px; font-weight: bold;">Record Payment</p>
                         </div>
                     </a>
+                    <?php if (isSuperAdmin()): ?>
                     <a href="bulk_import.php" class="card" style="text-decoration: none; color: inherit;">
                         <div class="card-content" style="text-align: center;">
                             <i class="fas fa-file-csv" style="font-size: 2rem; color: #f39c12;"></i>
@@ -189,6 +175,7 @@ if (empty($chart_labels)) {
                             <p style="margin-top: 10px; font-weight: bold;">Generate Payroll</p>
                         </div>
                     </a>
+                    <?php endif; ?>
                     <a href="messaging.php" class="card" style="text-decoration: none; color: inherit;">
                         <div class="card-content" style="text-align: center;">
                             <i class="fas fa-envelope" style="font-size: 2rem; color: #e74c3c;"></i>

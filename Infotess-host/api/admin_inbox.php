@@ -3,9 +3,8 @@ require_once 'includes/db.php';
 require_once 'includes/ImapHelper.php';
 
 // Ensure Admin Access
-if (!isLoggedIn() || !isAdmin()) {
-    redirect('../login.php');
-}
+// Enforce access control
+requireAccess('inbox');
 
 // Fetch Settings
 $settings = [];

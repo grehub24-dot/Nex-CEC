@@ -2,9 +2,8 @@
 require_once 'includes/db.php';
 
 // Ensure Admin Access
-if (!isLoggedIn() || !isAdmin()) {
-    redirect('../login.php');
-}
+// Enforce access control
+requireAccess('settings');
 
 $message = '';
 $error = '';

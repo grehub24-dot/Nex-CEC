@@ -37,8 +37,7 @@ CREATE TABLE IF NOT EXISTS system_settings (
     id SERIAL PRIMARY KEY,
     setting_key VARCHAR(100) UNIQUE NOT NULL,
     setting_value TEXT,
-    description TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS messages (
@@ -81,9 +80,9 @@ CREATE TABLE IF NOT EXISTS executives (
 );
 
 -- 3. Insert default system settings
-INSERT INTO system_settings (setting_key, setting_value, description) VALUES
-('current_academic_year', '2025/2026', 'Current academic year'),
-('annual_dues_amount', '100.00', 'Annual membership dues amount in GHS')
+INSERT INTO system_settings (setting_key, setting_value) VALUES
+('current_academic_year', '2025/2026'),
+('annual_dues_amount', '100.00')
 ON CONFLICT (setting_key) DO NOTHING;
 
 -- 4. Insert fee structures

@@ -26,16 +26,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute(['email' => $identifier]);
             $user = $stmt->fetch();
         } else {
-            // Student Login (Lookup user via students table)
-            // First find student by index number to get user_id
-            $stmt = $pdo->prepare("
-                SELECT u.*, s.index_number 
-                FROM users u 
-                JOIN students s ON u.id = s.user_id 
-                WHERE s.index_number = :index_number
-            ");
-            $stmt->execute(['index_number' => $identifier]);
-            $user = $stmt->fetch();
+            // Student Login (Lookup student by index number, then get user)
+            $stmt = $pdo->prepare("SELECT * FROM students WHERE index_number = ?");
+            $stmt->execute([$identifier]);
+            $student = $stmt->fetch();
+            if ($student) {
+                $stmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
+                $stmt->execute([$student['user_id']]);
+                $user = $stmt->fetch();
+                if ($user) {
+                    $user['index_number'] = $student['index_number'];
+                }
+            }
         }
 
         if ($user && password_verify($password, $user['password'])) {

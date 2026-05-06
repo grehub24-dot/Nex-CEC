@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>INFOTESS - SDMS</title>
+    <title><?php echo $settings['school_name'] ?? 'Nex CEC'; ?> — School Management System</title>
     <!-- CSS -->
     <?php $base_url = getBasePath(); ?>
     <link rel="stylesheet" href="<?php echo $base_url; ?>css/style.css">
@@ -11,51 +11,41 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
+    <?php
+    // Load school settings for branding (available to all pages that include header)
+    if (!isset($settings)) {
+        $settings = [];
+        try {
+            $stmt = $pdo->query("SELECT setting_key, setting_value FROM system_settings");
+            while ($row = $stmt->fetch()) {
+                $settings[$row['setting_key']] = $row['setting_value'];
+            }
+        } catch (Exception $e) {
+            // Settings table may not exist yet
+        }
+    }
+    $school_name = $settings['school_name'] ?? 'Nex CEC';
+    $school_motto = $settings['school_motto'] ?? 'Excellence in Education';
+    ?>
     <!-- Navigation -->
     <nav class="navbar">
         <div class="container">
             <a href="<?php echo $base_url; ?>index.php" class="logo">
-                <img src="<?php echo $base_url; ?>images/infotess.png" alt="INFOTESS Logo" height="40"> INFOTESS
+                <img src="<?php echo $base_url; ?>images/school-logo.png" alt="<?php echo htmlspecialchars($school_name); ?> Logo" height="40" onerror="this.style.display='none'"> <?php echo htmlspecialchars($school_name); ?>
             </a>
             <ul class="nav-links">
                 <li><a href="<?php echo $base_url; ?>index.php">Home</a></li>
-                <li class="dropdown">
-                    <a href="#" class="dropbtn">About <i class="fas fa-caret-down"></i></a>
-                    <div class="dropdown-content">
-                        <a href="<?php echo $base_url; ?>about.php">About INFOTESS</a>
-                        <a href="<?php echo $base_url; ?>department.php">Department</a>
-                        <a href="<?php echo $base_url; ?>executives.php">Executives</a>
-                        <a href="<?php echo $base_url; ?>alumni.php">Alumni</a>
-                    </div>
-                </li>
-                <li class="dropdown">
-                    <a href="#" class="dropbtn">Activities <i class="fas fa-caret-down"></i></a>
-                    <div class="dropdown-content">
-                        <a href="<?php echo $base_url; ?>activities.php">Activities</a>
-                        <a href="<?php echo $base_url; ?>events.php">Events</a>
-                        <a href="<?php echo $base_url; ?>projects.php">Projects</a>
-                        <a href="<?php echo $base_url; ?>gallery.php">Gallery</a>
-                    </div>
-                </li>
-                <li class="dropdown">
-                    <a href="#" class="dropbtn">Resources <i class="fas fa-caret-down"></i></a>
-                    <div class="dropdown-content">
-                        <a href="<?php echo $base_url; ?>fees.php">Fees & Payments</a>
-                        <a href="<?php echo $base_url; ?>resources.php">Student Resources</a>
-                        <a href="<?php echo $base_url; ?>membership.php">Membership</a>
-                    </div>
-                </li>
-                <li><a href="<?php echo $base_url; ?>news.php">News</a></li>
+                <li><a href="<?php echo $base_url; ?>about.php">About</a></li>
                 <li><a href="<?php echo $base_url; ?>contact.php">Contact</a></li>
                 <?php if (isset($_SESSION['user_id'])): ?>
                     <?php if ($_SESSION['role'] === 'admin' || $_SESSION['role'] === 'super_admin'): ?>
-                        <li><a href="<?php echo $base_url; ?>admin/dashboard.php" class="btn-login">Admin Panel</a></li>
+                        <li><a href="<?php echo $base_url; ?>api/admin_dashboard.php" class="btn-login">Admin Panel</a></li>
                     <?php else: ?>
-                        <li><a href="<?php echo $base_url; ?>student/dashboard.php" class="btn-login">Dashboard</a></li>
+                        <li><a href="<?php echo $base_url; ?>api/student_dashboard.php" class="btn-login">Dashboard</a></li>
                     <?php endif; ?>
                     <li><a href="<?php echo $base_url; ?>logout.php">Logout</a></li>
                 <?php else: ?>
-                    <li><a href="<?php echo $base_url; ?>register.php" class="btn-login">Register Now</a></li>
+                    <li><a href="<?php echo $base_url; ?>register.php" class="btn-login">Enroll Now</a></li>
                     <li><a href="<?php echo $base_url; ?>login.php" class="btn-login">Login</a></li>
                 <?php endif; ?>
             </ul>

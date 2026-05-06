@@ -14,7 +14,7 @@ class Mailer {
     private $smtpUsername = 'nexorasystems25@gmail.com'; // Replace with your Gmail address
     private $smtpPassword = 'wahhorvrinmrcqjk';    // Replace with your 16-character Gmail App Password
 
-    public function sendHTML($to, $subject, $html, $fromEmail = null, $fromName = 'INFOTESS Admin') {
+    public function sendHTML($to, $subject, $html, $fromEmail = null, $fromName = 'School Admin') {
         // Save copy locally for reference (skip on read-only filesystem like Vercel)
         $filename = null;
         $dir = __DIR__ . '/../emails';

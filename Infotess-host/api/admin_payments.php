@@ -1,8 +1,6 @@
 <?php
 require_once 'includes/db.php';
-// In a real scenario, use require_once '../vendor/autoload.php';
-// For now, we will simulate the Receipt Generation class
-require_once 'includes/ReceiptGenerator.php'; 
+require_once 'includes/ReceiptGenerator.php';
 require_once 'includes/SMSHelper.php';
 require_once 'includes/Mailer.php';
 
@@ -16,22 +14,24 @@ $stmt = $pdo->query("SELECT setting_key, setting_value FROM system_settings");
 while ($row = $stmt->fetch()) {
     $settings[$row['setting_key']] = $row['setting_value'];
 }
+$school_name = $settings['school_name'] ?? 'Nex CEC';
 $current_academic_year = $settings['current_academic_year'] ?? date('Y') . '/' . (date('Y') + 1);
-$current_semester = $settings['current_semester'] ?? '1';
+$current_term = $settings['current_term'] ?? '1';
 $payment_modes = explode(',', $settings['payment_modes'] ?? 'Cash,Mobile Money,Bank Transfer');
+
+// Basic School fee types
+$fee_types = explode(',', $settings['fee_types'] ?? 'Tuition,PTA Levy,Sports & Culture,ICT,Examination,Development,Feeding,Transport,Uniform,Books & Materials');
 
 $message = '';
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'record_payment') {
     $index_number = sanitize($_POST['index_number']);
-    $level = isset($_POST['level']) ? sanitize($_POST['level']) : '';
-    $class = isset($_POST['class']) ? sanitize($_POST['class']) : '';
-    $stream = isset($_POST['stream']) ? sanitize($_POST['stream']) : '';
-    $programme = isset($_POST['programme']) ? sanitize($_POST['programme']) : '';
+    $class_name = sanitize($_POST['class_name']);
     $amount = floatval($_POST['amount']);
     $year = sanitize($_POST['academic_year']);
-    $semester = sanitize($_POST['semester']);
+    $term = sanitize($_POST['term']);
+    $fee_type = sanitize($_POST['fee_type']);
     $method = sanitize($_POST['payment_method']);
     $date = sanitize($_POST['payment_date']);
 
@@ -49,24 +49,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     if (!$student) {
         $error = "Student with Index Number $index_number not found.";
     } else {
-        // We will allow multiple payments per semester to pay off the balance
-        // So we just proceed with recording the payment
         try {
             $pdo->beginTransaction();
             
-            // Generate Receipt Number: INFO + YEAR + MONTH + RANDOM
-            // Example: INFO-2603-7482
-            $receipt_number = "INFO-" . date('ym') . "-" . rand(1000, 9999);
+            // Generate Receipt Number: SCHOOL + YEAR + MONTH + RANDOM
+            $receipt_number = strtoupper(substr(preg_replace('/[^A-Z]/', '', $school_name), 0, 4)) . "-" . date('ym') . "-" . rand(1000, 9999);
 
             // Insert Payment
-            $stmt = $pdo->prepare("INSERT INTO payments (student_id, amount, academic_year, semester, payment_method, payment_date, receipt_number, recorded_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-            $stmt->execute([$student['id'], $amount, $year, $semester, $method, $date, $receipt_number, $_SESSION['user_id']]);
+            $stmt = $pdo->prepare("INSERT INTO payments (student_id, amount, academic_year, semester, payment_method, payment_date, receipt_number, recorded_by, fee_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt->execute([$student['id'], $amount, $year, $term, $method, $date, $receipt_number, $_SESSION['user_id'], $fee_type]);
             $payment_id = $pdo->lastInsertId();
 
-            // Generate Receipt PDF (Simulation)
+            // Generate Receipt
             $generator = new ReceiptGenerator();
             
-            // Fetch student total paid for the year to calculate balance
+            // Fetch student total paid for the year
             $stmt_paid = $pdo->prepare("SELECT SUM(amount) FROM payments WHERE student_id = ? AND academic_year = ?");
             $stmt_paid->execute([$student['id'], $year]);
             $total_paid = (float)$stmt_paid->fetchColumn();
@@ -74,32 +71,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             // Fetch required dues from settings
             $stmt_settings = $pdo->query("SELECT setting_value FROM system_settings WHERE setting_key = 'annual_dues_amount'");
             $settings_dues = $stmt_settings->fetchColumn();
-            $required_dues = $settings_dues !== false ? (float)$settings_dues : 100.00;
+            $required_dues = $settings_dues !== false ? (float)$settings_dues : 500.00;
             
             $current_balance = max(0, $required_dues - $total_paid);
 
-            $receipt_path = $generator->generate($payment_id, $receipt_number, $student, $amount, $date, $level, $class, $programme, $current_balance, $year, $semester, $method, $stream);
+            $receipt_path = $generator->generate($payment_id, $receipt_number, $student, $amount, $date, $class_name, $fee_type, $school_name, $current_balance, $year, $term, $method);
             
             // Save Receipt Record
-            $hash = md5($receipt_number . $payment_id . 'SALT'); // Simple hash
+            $hash = md5($receipt_number . $payment_id . 'SALT');
             $stmt = $pdo->prepare("INSERT INTO receipts (payment_id, receipt_file_path, verification_hash) VALUES (?, ?, ?)");
             $stmt->execute([$payment_id, $receipt_path, $hash]);
 
             $pdo->commit();
             $message = "Payment recorded and receipt generated successfully. Receipt #: $receipt_number";
             
-            // Send SMS notification
+            // Send SMS notification to student phone
             if (!empty($student['phone_number'])) {
                 $sms = new SMSHelper();
-                $sms_message = "Hello " . $student['full_name'] . ", your payment of GHS " . number_format($amount, 2) . " for " . $year . " " . $semester . " has been received. Receipt #: " . $receipt_number . ". Thank you.";
+                $sms_message = "Hello {$student['full_name']}, payment of GHS " . number_format($amount, 2) . " for $fee_type ($year Term $term) received. Receipt: $receipt_number.";
                 $sms->send($student['phone_number'], $sms_message);
+            }
+
+            // Send SMS to guardian
+            if (!empty($student['guardian_phone'])) {
+                $sms = new SMSHelper();
+                $sms_message = "Payment alert: GHS " . number_format($amount, 2) . " received for {$student['full_name']} - $fee_type ($year Term $term). Receipt: $receipt_number.";
+                $sms->send($student['guardian_phone'], $sms_message);
             }
 
             // Send Email with Receipt
             if (!empty($student['email'])) {
                 $mailer = new Mailer();
                 
-                // Create custom email template matching the provided image
                 $email_html = "
                 <!DOCTYPE html>
                 <html>
@@ -108,20 +111,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     <style>
                         body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; }
                         .email-container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-                        .header { background-color: #1a9e65; color: white; text-align: center; padding: 40px 20px; }
-                        .header h1 { margin: 0; font-size: 28px; }
-                        .header p { margin: 10px 0 0 0; font-size: 14px; }
+                        .header { background: linear-gradient(to right, #1a5276, #2e86c1); color: white; text-align: center; padding: 40px 20px; }
+                        .header h1 { margin: 0; font-size: 26px; }
                         .content { padding: 30px; color: #333; }
-                        .receipt-box { border: 1px solid #1a9e65; border-radius: 8px; padding: 20px; margin-top: 20px; }
-                        .receipt-title { text-align: center; color: #1a9e65; margin-bottom: 20px; }
+                        .receipt-box { border: 1px solid #2e86c1; border-radius: 8px; padding: 20px; margin-top: 20px; }
+                        .receipt-title { text-align: center; color: #2e86c1; margin-bottom: 20px; }
                         .receipt-title h2 { margin: 0; font-size: 20px; }
                         .receipt-title p { margin: 5px 0 0 0; color: #555; font-size: 14px; }
                         .receipt-row { padding: 12px 0; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; }
                         .receipt-row:last-child { border-bottom: none; }
-                        .amount-box { background-color: #1a9e65; color: white; text-align: center; padding: 20px; border-radius: 8px; margin-top: 20px; }
+                        .amount-box { background: linear-gradient(to right, #1a5276, #2e86c1); color: white; text-align: center; padding: 20px; border-radius: 8px; margin-top: 20px; }
                         .amount-box p { margin: 0 0 5px 0; font-size: 14px; }
                         .amount-box h2 { margin: 0; font-size: 28px; }
-                        .paid-badge { background-color: #1a9e65; color: white; padding: 5px 15px; border-radius: 15px; display: inline-block; margin-top: 15px; font-weight: bold; font-size: 14px; }
+                        .paid-badge { background: #1a5276; color: white; padding: 5px 15px; border-radius: 15px; display: inline-block; margin-top: 15px; font-weight: bold; font-size: 14px; }
                         .notes { margin-top: 30px; font-size: 12px; color: #333; }
                         .notes ul { padding-left: 20px; }
                         .footer { text-align: center; padding: 30px; font-size: 12px; color: #666; border-top: 1px solid #eee; }
@@ -131,11 +133,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 <body>
                     <div class='email-container'>
                         <div class='header'>
-                            <h1>Γ£ô Payment Received!</h1>
-                            <p>USTED - Infotess Dues Payment Confirmation</p>
+                            <h1>&#10003; Payment Received!</h1>
+                            <p>" . htmlspecialchars($school_name, ENT_QUOTES, 'UTF-8') . " — Fee Payment Confirmation</p>
                         </div>
                         <div class='content'>
-                            <p>Dear <strong>{$student['full_name']}</strong>,</p>
+                            <p>Dear <strong>" . htmlspecialchars($student['full_name'], ENT_QUOTES, 'UTF-8') . "</strong>,</p>
                             <p>Your payment has been successfully received and recorded in our system.</p>
                             
                             <div class='receipt-box'>
@@ -146,31 +148,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                                 
                                 <div class='receipt-row'>
                                     <span style='color: #666;'>Student Name:</span>
-                                    <strong>{$student['full_name']}</strong>
+                                    <strong>" . htmlspecialchars($student['full_name'], ENT_QUOTES, 'UTF-8') . "</strong>
                                 </div>
                                 <div class='receipt-row'>
                                     <span style='color: #666;'>Index Number:</span>
-                                    <strong>{$student['index_number']}</strong>
-                                </div>
-                                <div class='receipt-row'>
-                                    <span style='color: #666;'>Level:</span>
-                                    <strong>Level " . (!empty($level) ? htmlspecialchars($level) : '100') . "</strong>
+                                    <strong>" . htmlspecialchars($student['index_number'], ENT_QUOTES, 'UTF-8') . "</strong>
                                 </div>
                                 <div class='receipt-row'>
                                     <span style='color: #666;'>Class:</span>
-                                    <strong>Class " . (!empty($class) ? htmlspecialchars($class) : 'E') . "</strong>
+                                    <strong>" . htmlspecialchars($class_name, ENT_QUOTES, 'UTF-8') . "</strong>
                                 </div>
                                 <div class='receipt-row'>
-                                    <span style='color: #666;'>Stream:</span>
-                                    <strong>" . (!empty($stream) ? htmlspecialchars($stream) : 'Regular') . "</strong>
+                                    <span style='color: #666;'>Fee Type:</span>
+                                    <strong>" . htmlspecialchars($fee_type, ENT_QUOTES, 'UTF-8') . "</strong>
                                 </div>
                                 <div class='receipt-row'>
                                     <span style='color: #666;'>Academic Year:</span>
                                     <strong>$year</strong>
                                 </div>
                                 <div class='receipt-row'>
-                                    <span style='color: #666;'>Semester:</span>
-                                    <strong>$semester</strong>
+                                    <span style='color: #666;'>Term:</span>
+                                    <strong>Term $term</strong>
                                 </div>
                                 <div class='receipt-row'>
                                     <span style='color: #666;'>Payment Method:</span>
@@ -183,13 +181,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                                 
                                 <div class='amount-box'>
                                     <p>Amount Paid</p>
-                                    <h2>GHΓé╡ " . number_format($amount, 2) . "</h2>
+                                    <h2>GHS " . number_format($amount, 2) . "</h2>
                                 </div>
                                 
                                 <div style='text-align: center; margin-top: 20px;'>
-                                    <img src='https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=" . urlencode(getAppUrl() . "/verify_public.php?receipt=" . $receipt_number) . "' alt='QR Code' style='width: 100px; height: 100px; margin-bottom: 10px;' />
-                                    <br>
-                                    <div class='paid-badge'>Γ£ô PAID</div>
+                                    <div class='paid-badge'>&#10003; PAID</div>
                                 </div>
                             </div>
                             
@@ -197,8 +193,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                                 <strong>Important Notes:</strong>
                                 <ul>
                                     <li>Keep this email for your records</li>
-                                    <li>This receipt is valid for graduation clearance</li>
-                                    <li>You can access this receipt anytime from the system</li>
+                                    <li>This receipt is valid for school clearance</li>
+                                    <li>You can access this receipt anytime from the portal</li>
                                     <li>Receipt Number: <strong>$receipt_number</strong></li>
                                 </ul>
                                 <p>Thank you for your prompt payment!</p>
@@ -206,10 +202,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         </div>
                         
                         <div class='footer'>
-                            <p><strong>USTED - Infotess - Finance Office</strong></p>
-                            <p><a href='http://usted.edu.gh'>usted.edu.gh</a>, Kumasi, Ghana</p>
-                            <p>Phone: +233 24 091 8031</p>
-                            <p style='color: #999; margin-top: 20px;'>This is an automated email. Please do not reply to this message.<br>For inquiries, contact the finance office directly.</p>
+                            <p><strong>" . htmlspecialchars($school_name, ENT_QUOTES, 'UTF-8') . " — Finance Office</strong></p>
+                            <p style='color: #999; margin-top: 20px;'>This is an automated email. Please do not reply to this message.</p>
                         </div>
                     </div>
                 </body>
@@ -231,45 +225,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Record Payment - Admin</title>
+    <title>Record Payment — <?php echo htmlspecialchars($school_name); ?> Admin</title>
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* Modal Styles */
-        .modal {
-            display: none; 
-            position: fixed; 
-            z-index: 1000; 
-            left: 0;
-            top: 0;
-            width: 100%; 
-            height: 100%; 
-            overflow: auto; 
-            background-color: rgba(0,0,0,0.5); 
-        }
-        .modal-content {
-            background-color: #fefefe;
-            margin: 5% auto; 
-            padding: 20px;
-            border: 1px solid #888;
-            width: 80%; 
-            max-width: 600px;
-            border-radius: 8px;
-            position: relative;
-        }
-        .close-btn {
-            color: #aaa;
-            float: right;
-            font-size: 28px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        .close-btn:hover,
-        .close-btn:focus {
-            color: black;
-            text-decoration: none;
-            cursor: pointer;
-        }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); }
+        .modal-content { background-color: #fefefe; margin: 5% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 600px; border-radius: 8px; position: relative; }
+        .close-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .close-btn:hover, .close-btn:focus { color: black; text-decoration: none; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -277,20 +240,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         <!-- Sidebar -->
         <aside class="sidebar">
             <div class="sidebar-header" style="text-align: center; padding: 20px 10px;">
-                <img src="../images/infotess.png" alt="INFOTESS Logo" style="width: 80px; height: 80px; margin-bottom: 10px; border-radius: 50%; background: #fff; padding: 5px;">
-                <h3>INFOTESS Admin</h3>
+                <img src="../images/school-logo.png" alt="Logo" style="width: 80px; height: 80px; margin-bottom: 10px; border-radius: 50%; background: #fff; padding: 5px;" onerror="this.src='../images/aamusted.jpg'">
+                <h3><?php echo htmlspecialchars($school_name); ?> Admin</h3>
             </div>
             <ul class="sidebar-menu">
-                <li><a href="dashboard.php"><i class="fas fa-home"></i> Dashboard</a></li>
-                <li><a href="students.php"><i class="fas fa-user-graduate"></i> Students</a></li>
-                <li><a href="payments.php" class="active"><i class="fas fa-money-bill-wave"></i> Payments</a></li>
-                <li><a href="reports.php"><i class="fas fa-chart-bar"></i> Reports</a></li>
-                <li><a href="verify.php"><i class="fas fa-qrcode"></i> Verify Receipt</a></li>
-                <li><a href="users.php"><i class="fas fa-users-cog"></i> User Management</a></li>
-                <li><a href="messaging.php"><i class="fas fa-envelope"></i> Messaging</a></li>
-                <li><a href="inbox.php"><i class="fas fa-inbox"></i> Inbox</a></li>
-                <li><a href="module_settings.php"><i class="fas fa-cogs"></i> Module Settings</a></li>
-                <li><a href="settings.php"><i class="fas fa-tools"></i> System Settings</a></li>
+                <li><a href="admin_dashboard.php"><i class="fas fa-home"></i> Dashboard</a></li>
+                <li><a href="admin_students.php"><i class="fas fa-user-graduate"></i> Students</a></li>
+                <li><a href="admin_staff.php"><i class="fas fa-chalkboard-teacher"></i> Staff</a></li>
+                <li><a href="admin_payments.php" class="active"><i class="fas fa-money-bill-wave"></i> Payments</a></li>
+                <li><a href="admin_fees.php"><i class="fas fa-list-alt"></i> Fee Structure</a></li>
+                <li><a href="admin_payroll.php"><i class="fas fa-file-invoice-dollar"></i> Payroll</a></li>
+                <li><a href="admin_grades.php"><i class="fas fa-clipboard-list"></i> SBA / Grades</a></li>
+                <li><a href="admin_attendance.php"><i class="fas fa-user-check"></i> Attendance</a></li>
+                <li><a href="admin_reports.php"><i class="fas fa-chart-bar"></i> Reports</a></li>
+                <li><a href="admin_verify.php"><i class="fas fa-qrcode"></i> Verify Receipt</a></li>
+                <li><a href="admin_users.php"><i class="fas fa-users-cog"></i> User Management</a></li>
+                <li><a href="admin_messaging.php"><i class="fas fa-envelope"></i> Messaging</a></li>
+                <li><a href="admin_inbox.php"><i class="fas fa-inbox"></i> Inbox</a></li>
+                <li><a href="admin_module_settings.php"><i class="fas fa-cogs"></i> Module Settings</a></li>
+                <li><a href="admin_settings.php"><i class="fas fa-tools"></i> System Settings</a></li>
                 <li><a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
             </ul>
         </aside>
@@ -312,28 +280,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             <div class="section">
                 <h3>Recent Payments</h3>
                 <?php
-                // Fetch required dues from settings
                 $stmt_settings = $pdo->query("SELECT setting_value FROM system_settings WHERE setting_key = 'annual_dues_amount'");
                 $settings_dues = $stmt_settings->fetchColumn();
-                $required_dues = $settings_dues !== false ? (float)$settings_dues : 100.00;
+                $required_dues = $settings_dues !== false ? (float)$settings_dues : 500.00;
                 
-                // Pagination settings
                 $limit = 10;
                 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
                 if ($page < 1) $page = 1;
                 $offset = ($page - 1) * $limit;
 
-                // Fetch recent payments for display with pagination
-                $stmt = $pdo->prepare("
-                    SELECT *
-                    FROM payments 
-                    ORDER BY created_at DESC 
-                    LIMIT $limit OFFSET $offset
-                ");
+                $stmt = $pdo->prepare("SELECT * FROM payments ORDER BY created_at DESC LIMIT $limit OFFSET $offset");
                 $stmt->execute();
                 $recent_payments = $stmt->fetchAll();
 
-                // Enrich payments with student data (two-step lookup for Supabase compatibility)
                 foreach ($recent_payments as &$payment) {
                     $s = $pdo->prepare("SELECT full_name, index_number FROM students WHERE id = ?");
                     $s->execute([$payment['student_id']]);
@@ -345,7 +304,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         $payment['full_name'] = 'Unknown';
                         $payment['index_number'] = '-';
                     }
-                    // Calculate total paid for this student in current year
                     $tp = $pdo->prepare("SELECT SUM(amount) FROM payments WHERE student_id = ? AND academic_year = ?");
                     $tp->execute([$payment['student_id'], $current_academic_year]);
                     $payment['total_paid'] = (float)$tp->fetchColumn();
@@ -361,6 +319,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                             <tr>
                                 <th>Receipt #</th>
                                 <th>Student</th>
+                                <th>Fee Type</th>
                                 <th>Amount (GHS)</th>
                                 <th>Balance (GHS)</th>
                                 <th>Date</th>
@@ -378,6 +337,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                                     <?php echo htmlspecialchars($payment['full_name']); ?><br>
                                     <small><?php echo htmlspecialchars($payment['index_number']); ?></small>
                                 </td>
+                                <td><?php echo htmlspecialchars($payment['fee_type'] ?? 'General'); ?></td>
                                 <td><?php echo number_format($payment['amount'], 2); ?></td>
                                 <td>
                                     <span style="color: <?php echo $balance > 0 ? 'red' : 'green'; ?>; font-weight: bold;">
@@ -401,13 +361,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     <?php if ($page > 1): ?>
                         <a href="?page=<?php echo $page - 1; ?>" class="btn-login" style="background: #f8f9fa; color: #333; border: 1px solid #ddd;">&laquo; Prev</a>
                     <?php endif; ?>
-                    
                     <?php for ($i = 1; $i <= $total_pages; $i++): ?>
                         <a href="?page=<?php echo $i; ?>" class="btn-login" style="<?php echo $i == $page ? 'background: var(--primary-color);' : 'background: #f8f9fa; color: #333; border: 1px solid #ddd;'; ?>">
                             <?php echo $i; ?>
                         </a>
                     <?php endfor; ?>
-
                     <?php if ($page < $total_pages): ?>
                         <a href="?page=<?php echo $page + 1; ?>" class="btn-login" style="background: #f8f9fa; color: #333; border: 1px solid #ddd;">Next &raquo;</a>
                     <?php endif; ?>
@@ -420,128 +378,87 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 <div class="modal-content">
                     <span class="close-btn">&times;</span>
                     <h3>Record Payment</h3>
-                    <form action="payments.php" method="POST" class="card-content" style="margin-top: 15px;">
+                    <form action="admin_payments.php" method="POST" style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-top: 15px;">
                         <input type="hidden" name="action" value="record_payment">
                         
-                        <div class="form-group">
+                        <div style="grid-column: span 2;">
                             <label>Student Index Number</label>
-                            <input type="text" name="index_number" class="form-control" required placeholder="e.g. 5231230001">
+                            <input type="text" name="index_number" class="form-control" required placeholder="e.g. NXC/2026/001">
                             <small id="indexLookupStatus" style="display:none; margin-top:6px; font-size:0.85rem;"></small>
                         </div>
 
-                        <div class="form-group">
-                            <label>Programme / Department</label>
-                            <select name="programme" class="form-control" required>
-                                <option value="">-- Select Programme --</option>
-                                <optgroup label="Bachelor's Degree Programmes">
-                                    <option value="B.Sc. Information Technology">B.Sc. Information Technology</option>
-                                    <option value="B.Sc. Cyber Security and Digital Forensics">B.Sc. Cyber Security and Digital Forensics</option>
-                                    <option value="B.Ed. Computing with Artificial Intelligence (AI)">B.Ed. Computing with Artificial Intelligence (AI)</option>
-                                    <option value="B.Ed. Computing with Internet of Things (IOT)">B.Ed. Computing with Internet of Things (IOT)</option>
-                                    <option value="B.Ed. Information Technology">B.Ed. Information Technology</option>
+                        <div>
+                            <label>Class</label>
+                            <select name="class_name" class="form-control" required>
+                                <option value="">-- Select Class --</option>
+                                <optgroup label="Early Childhood">
+                                    <option value="Creche">Creche</option>
+                                    <option value="Nursery">Nursery</option>
+                                    <option value="KG 1">KG 1</option>
+                                    <option value="KG 2">KG 2</option>
                                 </optgroup>
-                                <optgroup label="Diploma Programmes">
-                                    <option value="Diploma in Cyber Security and Digital Forensics">Diploma in Cyber Security and Digital Forensics</option>
-                                    <option value="Diploma in Information Technology">Diploma in Information Technology</option>
+                                <optgroup label="Primary">
+                                    <option value="Basic 1">Basic 1</option>
+                                    <option value="Basic 2">Basic 2</option>
+                                    <option value="Basic 3">Basic 3</option>
+                                    <option value="Basic 4">Basic 4</option>
+                                    <option value="Basic 5">Basic 5</option>
+                                    <option value="Basic 6">Basic 6</option>
                                 </optgroup>
-                                <optgroup label="Postgraduate Programmes">
-                                    <option value="M. Phil. Information Technology">M. Phil. Information Technology</option>
-                                    <option value="M. Sc. Information Technology Education">M. Sc. Information Technology Education</option>
-                                    <option value="M. Phil Information Technology (Top-up)">M. Phil Information Technology (Top-up)</option>
+                                <optgroup label="Junior High School">
+                                    <option value="JHS 1">JHS 1</option>
+                                    <option value="JHS 2">JHS 2</option>
+                                    <option value="JHS 3">JHS 3</option>
                                 </optgroup>
                             </select>
                         </div>
 
-                        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:15px;">
-                            <div class="form-group">
-                                <label>Level</label>
-                                <input type="text" name="level" class="form-control" required placeholder="e.g. 300">
-                            </div>
-                            <div class="form-group">
-                                <label>Class</label>
-                                <select name="class" class="form-control" required>
-                                    <option value="">-- Select Class --</option>
-                                    <optgroup label="IT">
-                                        <option value="IT A">IT A</option>
-                                        <option value="IT B">IT B</option>
-                                        <option value="IT C">IT C</option>
-                                        <option value="IT D">IT D</option>
-                                        <option value="IT E">IT E</option>
-                                        <option value="IT F">IT F</option>
-                                        <option value="IT G">IT G</option>
-                                        <option value="IT H">IT H</option>
-                                    </optgroup>
-                                    <optgroup label="ITE">
-                                        <option value="ITE A">ITE A</option>
-                                        <option value="ITE B">ITE B</option>
-                                        <option value="ITE C">ITE C</option>
-                                        <option value="ITE D">ITE D</option>
-                                        <option value="ITE E">ITE E</option>
-                                        <option value="ITE F">ITE F</option>
-                                        <option value="ITE G">ITE G</option>
-                                        <option value="ITE H">ITE H</option>
-                                        <option value="ITE I">ITE I</option>
-                                        <option value="ITE J">ITE J</option>
-                                        <option value="ITE K">ITE K</option>
-                                    </optgroup>
-                                    <optgroup label="CB">
-                                        <option value="CB A">CB A</option>
-                                        <option value="CB B">CB B</option>
-                                        <option value="CB C">CB C</option>
-                                        <option value="CB D">CB D</option>
-                                        <option value="CB E">CB E</option>
-                                        <option value="CB F">CB F</option>
-                                        <option value="CB G">CB G</option>
-                                        <option value="CB H">CB H</option>
-                                    </optgroup>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Stream</label>
-                                <select name="stream" class="form-control" required>
-                                    <option value="">-- Select Stream --</option>
-                                    <option value="Regular">Regular</option>
-                                    <option value="Sandwich">Sandwich</option>
-                                    <option value="Evening">Evening</option>
-                                </select>
-                            </div>
+                        <div>
+                            <label>Fee Type</label>
+                            <select name="fee_type" class="form-control" required>
+                                <option value="">-- Select Fee --</option>
+                                <?php foreach ($fee_types as $type): ?>
+                                    <option value="<?php echo htmlspecialchars(trim($type)); ?>"><?php echo htmlspecialchars(trim($type)); ?></option>
+                                <?php endforeach; ?>
+                            </select>
                         </div>
 
-                        <div class="form-group">
+                        <div>
                             <label>Amount (GHS)</label>
                             <input type="number" step="0.01" name="amount" class="form-control" required>
                         </div>
 
-                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
-                            <div class="form-group">
-                                <label>Academic Year</label>
-                                <input type="text" name="academic_year" class="form-control" value="<?php echo htmlspecialchars($current_academic_year); ?>" required>
-                            </div>
-                            <div class="form-group">
-                                <label>Semester</label>
-                                <select name="semester" class="form-control" required>
-                                    <option value="1" <?php echo $current_semester == '1' ? 'selected' : ''; ?>>First Semester</option>
-                                    <option value="2" <?php echo $current_semester == '2' ? 'selected' : ''; ?>>Second Semester</option>
-                                </select>
-                            </div>
+                        <div>
+                            <label>Academic Year</label>
+                            <input type="text" name="academic_year" class="form-control" value="<?php echo htmlspecialchars($current_academic_year); ?>" required>
                         </div>
 
-                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
-                            <div class="form-group">
-                                <label>Payment Method</label>
-                                <select name="payment_method" class="form-control" required>
-                                    <?php foreach ($payment_modes as $mode): ?>
-                                        <option value="<?php echo htmlspecialchars(trim($mode)); ?>"><?php echo htmlspecialchars(trim($mode)); ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Payment Date</label>
-                                <input type="date" name="payment_date" class="form-control" value="<?php echo date('Y-m-d'); ?>" required>
-                            </div>
+                        <div>
+                            <label>Term</label>
+                            <select name="term" class="form-control" required>
+                                <option value="1" <?php echo $current_term == '1' ? 'selected' : ''; ?>>Term 1</option>
+                                <option value="2" <?php echo $current_term == '2' ? 'selected' : ''; ?>>Term 2</option>
+                                <option value="3" <?php echo $current_term == '3' ? 'selected' : ''; ?>>Term 3</option>
+                            </select>
                         </div>
 
-                        <button type="submit" class="btn-submit" style="margin-top: 10px;">Record Payment & Generate Receipt</button>
+                        <div>
+                            <label>Payment Method</label>
+                            <select name="payment_method" class="form-control" required>
+                                <?php foreach ($payment_modes as $mode): ?>
+                                    <option value="<?php echo htmlspecialchars(trim($mode)); ?>"><?php echo htmlspecialchars(trim($mode)); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label>Payment Date</label>
+                            <input type="date" name="payment_date" class="form-control" value="<?php echo date('Y-m-d'); ?>" required>
+                        </div>
+
+                        <div style="grid-column: span 2; margin-top: 10px;">
+                            <button type="submit" class="btn-submit" style="width:100%;">Record Payment &amp; Generate Receipt</button>
+                        </div>
                     </form>
                 </div>
             </div>
@@ -553,81 +470,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         const btn = document.getElementById("openModalBtn");
         const span = document.getElementsByClassName("close-btn")[0];
         const indexInput = document.querySelector('input[name="index_number"]');
-        const programmeSelect = document.querySelector('select[name="programme"]');
-        const levelInput = document.querySelector('input[name="level"]');
-        const classSelect = document.querySelector('select[name="class"]');
-        const streamSelect = document.querySelector('select[name="stream"]');
+        const classSelect = document.querySelector('select[name="class_name"]');
         const lookupStatus = document.getElementById('indexLookupStatus');
         let lookupTimer = null;
         let lastLookupValue = '';
 
-        btn.onclick = function() {
-            modal.style.display = "block";
-        }
-
-        span.onclick = function() {
-            modal.style.display = "none";
-        }
-
-        window.onclick = function(event) {
-            if (event.target == modal) {
-                modal.style.display = "none";
-            }
-        }
+        btn.onclick = function() { modal.style.display = "block"; }
+        span.onclick = function() { modal.style.display = "none"; }
+        window.onclick = function(event) { if (event.target == modal) { modal.style.display = "none"; } }
 
         function setLookupStatus(message, color) {
             if (!lookupStatus) return;
-            if (!message) {
-                lookupStatus.style.display = 'none';
-                lookupStatus.textContent = '';
-                return;
-            }
+            if (!message) { lookupStatus.style.display = 'none'; lookupStatus.textContent = ''; return; }
             lookupStatus.style.display = 'block';
             lookupStatus.style.color = color;
             lookupStatus.textContent = message;
-        }
-
-        function selectOrCreateOption(selectElement, value) {
-            if (!selectElement || !value) return;
-            const normalized = String(value).trim().toLowerCase();
-            let matched = false;
-            for (let i = 0; i < selectElement.options.length; i++) {
-                const optionValue = String(selectElement.options[i].value || '').trim().toLowerCase();
-                if (optionValue === normalized) {
-                    selectElement.selectedIndex = i;
-                    matched = true;
-                    break;
-                }
-            }
-            if (!matched) {
-                const option = document.createElement('option');
-                option.value = value;
-                option.text = value;
-                selectElement.add(option);
-                selectElement.value = value;
-            }
-        }
-
-        function clearAutoFilledFields() {
-            if (programmeSelect) programmeSelect.value = '';
-            if (levelInput) levelInput.value = '';
-            if (classSelect) classSelect.value = '';
-            if (streamSelect) streamSelect.value = '';
-        }
-
-        function fillStudentFields(student) {
-            if (programmeSelect && student.department) {
-                selectOrCreateOption(programmeSelect, student.department);
-            }
-            if (levelInput && student.level) {
-                levelInput.value = student.level;
-            }
-            if (classSelect && student.class_name) {
-                selectOrCreateOption(classSelect, student.class_name);
-            }
-            if (streamSelect && student.stream) {
-                selectOrCreateOption(streamSelect, student.stream);
-            }
         }
 
         function lookupStudent(force = false) {
@@ -635,15 +492,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             const rawValue = indexInput.value || '';
             const indexNumber = rawValue.replace(/\s+/g, '').toUpperCase();
             indexInput.value = indexNumber;
-            if (!indexNumber) {
-                lastLookupValue = '';
-                clearAutoFilledFields();
-                setLookupStatus('', '');
-                return;
-            }
-            if (!force && (indexNumber.length < 8 || indexNumber === lastLookupValue)) {
-                return;
-            }
+            if (!indexNumber) { lastLookupValue = ''; setLookupStatus('', ''); return; }
+            if (!force && (indexNumber.length < 3 || indexNumber === lastLookupValue)) return;
             lastLookupValue = indexNumber;
             setLookupStatus('Fetching student details...', '#0c5fb5');
 
@@ -652,40 +502,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             })
                 .then(async response => {
                     const payload = await response.json().catch(() => ({}));
-                    if (!response.ok || !payload.ok || !payload.student) {
-                        throw new Error(payload.error || 'Student not found');
-                    }
+                    if (!response.ok || !payload.ok || !payload.student) throw new Error(payload.error || 'Student not found');
                     return payload.student;
                 })
                 .then(student => {
-                    fillStudentFields(student);
+                    if (classSelect && student.class_name) {
+                        for (let i = 0; i < classSelect.options.length; i++) {
+                            if (classSelect.options[i].value === student.class_name) {
+                                classSelect.selectedIndex = i;
+                                break;
+                            }
+                        }
+                    }
                     setLookupStatus(`Loaded: ${student.full_name} (${student.index_number})`, '#15803d');
                 })
                 .catch(() => {
-                    clearAutoFilledFields();
                     setLookupStatus('No student found for this index number.', '#b42333');
                 });
         }
 
         if (indexInput) {
             indexInput.addEventListener('input', function() {
-                if (lookupTimer) {
-                    clearTimeout(lookupTimer);
-                }
-                lookupTimer = setTimeout(function() {
-                    lookupStudent(false);
-                }, 300);
+                if (lookupTimer) clearTimeout(lookupTimer);
+                lookupTimer = setTimeout(function() { lookupStudent(false); }, 300);
             });
-
-            indexInput.addEventListener('blur', function() {
-                lookupStudent(true);
-            });
-
+            indexInput.addEventListener('blur', function() { lookupStudent(true); });
             indexInput.addEventListener('keydown', function(event) {
-                if (event.key === 'Enter') {
-                    event.preventDefault();
-                    lookupStudent(true);
-                }
+                if (event.key === 'Enter') { event.preventDefault(); lookupStudent(true); }
             });
         }
     </script>

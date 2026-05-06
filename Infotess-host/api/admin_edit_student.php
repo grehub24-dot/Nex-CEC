@@ -5,6 +5,14 @@ if (!isLoggedIn() || !isAdmin()) {
     redirect('../login.php');
 }
 
+// Fetch Settings
+$settings = [];
+$stmt = $pdo->query("SELECT setting_key, setting_value FROM system_settings");
+while ($row = $stmt->fetch()) {
+    $settings[$row['setting_key']] = $row['setting_value'];
+}
+$school_name = $settings['school_name'] ?? 'Nex CEC';
+
 $id = $_GET['id'] ?? null;
 if (!$id) {
     redirect('students.php');
@@ -17,11 +25,11 @@ $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $full_name = sanitize($_POST['full_name']);
     $index_number = sanitize($_POST['index_number']);
-    $department = sanitize($_POST['department']);
-    $level = sanitize($_POST['level']);
-    $class_name = sanitize($_POST['class_name'] ?? '');
-    $stream = sanitize($_POST['stream'] ?? '');
-    $phone = sanitize($_POST['phone_number']);
+    $class_name = sanitize($_POST['class_name']);
+    $gender = sanitize($_POST['gender'] ?? '');
+    $phone = sanitize($_POST['phone_number'] ?? '');
+    $guardian_name = sanitize($_POST['guardian_name'] ?? '');
+    $guardian_phone = sanitize($_POST['guardian_phone'] ?? '');
     $email = sanitize($_POST['email']);
 
     // Handle Profile Picture
@@ -40,11 +48,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->beginTransaction();
 
         // Update Student
-        $stmt = $pdo->prepare("UPDATE students SET full_name = ?, index_number = ?, department = ?, level = ?, stream = ?, phone_number = ?, profile_picture = ? WHERE id = ?");
-        $stmt->execute([$full_name, $index_number, $department, $level, $stream, $phone, $profile_picture, $id]);
+        $stmt = $pdo->prepare("UPDATE students SET full_name = ?, index_number = ?, class_name = ?, gender = ?, phone_number = ?, guardian_name = ?, guardian_phone = ?, profile_picture = ? WHERE id = ?");
+        $stmt->execute([$full_name, $index_number, $class_name, $gender, $phone, $guardian_name, $guardian_phone, $profile_picture, $id]);
 
-        // Update User Email (if needed)
-        // First get user_id
+        // Update User Email
         $stmt = $pdo->prepare("SELECT user_id FROM students WHERE id = ?");
         $stmt->execute([$id]);
         $user_id = $stmt->fetchColumn();
@@ -62,7 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Fetch Student Data (two-step lookup for Supabase compatibility)
+// Fetch Student Data
 $stmt = $pdo->prepare("SELECT * FROM students WHERE id = ?");
 $stmt->execute([$id]);
 $student = $stmt->fetch();
@@ -83,36 +90,39 @@ if (!$student) {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Edit Student - Admin</title>
+    <title>Edit Student — <?php echo htmlspecialchars($school_name); ?> Admin</title>
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        .upload-file-name {
-            margin-top: 8px;
-            font-size: 0.82rem;
-            color: #4b5563;
-        }
+        .upload-file-name { margin-top: 8px; font-size: 0.82rem; color: #4b5563; }
+        .section-divider { grid-column: span 2; border-top: 1px solid #eee; padding-top: 15px; margin-top: 10px; }
+        .section-divider h4 { font-size: 15px; color: #1a5276; margin: 0 0 10px 0; }
     </style>
 </head>
 <body>
     <div class="dashboard-container">
-        <!-- Sidebar -->
         <aside class="sidebar">
             <div class="sidebar-header" style="text-align: center; padding: 20px 10px;">
-                <img src="../images/infotess.png" alt="INFOTESS Logo" style="width: 80px; height: 80px; margin-bottom: 10px; border-radius: 50%; background: #fff; padding: 5px;">
-                <h3>INFOTESS Admin</h3>
+                <img src="../images/school-logo.png" alt="Logo" style="width: 80px; height: 80px; margin-bottom: 10px; border-radius: 50%; background: #fff; padding: 5px;" onerror="this.src='../images/aamusted.jpg'">
+                <h3><?php echo htmlspecialchars($school_name); ?> Admin</h3>
             </div>
-            <ul class="sidebar-menu">
-                <li><a href="dashboard.php"><i class="fas fa-home"></i> Dashboard</a></li>
-                <li><a href="students.php" class="active"><i class="fas fa-user-graduate"></i> Students</a></li>
-                <li><a href="payments.php"><i class="fas fa-money-bill-wave"></i> Payments</a></li>
-                <li><a href="reports.php"><i class="fas fa-chart-bar"></i> Reports</a></li>
-                <li><a href="verify.php"><i class="fas fa-qrcode"></i> Verify Receipt</a></li>
-                <li><a href="users.php"><i class="fas fa-users-cog"></i> User Management</a></li>
-                <li><a href="messaging.php"><i class="fas fa-envelope"></i> Messaging</a></li>
-                <li><a href="inbox.php"><i class="fas fa-inbox"></i> Inbox</a></li>
-                <li><a href="module_settings.php"><i class="fas fa-cogs"></i> Module Settings</a></li>
-                <li><a href="settings.php"><i class="fas fa-tools"></i> System Settings</a></li>
+                        <ul class="sidebar-menu">
+                <li><a href="admin_dashboard.php"><i class="fas fa-home"></i> Dashboard</a></li>
+                <li><a href="admin_students.php"><i class="fas fa-user-graduate"></i> Students</a></li>
+                <li><a href="admin_staff.php"><i class="fas fa-chalkboard-teacher"></i> Staff</a></li>
+                <li><a href="admin_payments.php"><i class="fas fa-money-bill-wave"></i> Payments</a></li>
+                <li><a href="admin_fees.php"><i class="fas fa-list-alt"></i> Fee Structure</a></li>
+                <li><a href="admin_payroll.php"><i class="fas fa-file-invoice-dollar"></i> Payroll</a></li>
+                <li><a href="admin_salary.php"><i class="fas fa-money-check-alt"></i> Salary Structures</a></li>
+                <li><a href="admin_grades.php"><i class="fas fa-clipboard-list"></i> SBA / Grades</a></li>
+                <li><a href="admin_attendance.php"><i class="fas fa-user-check"></i> Attendance</a></li>
+                <li><a href="admin_reports.php"><i class="fas fa-chart-bar"></i> Reports</a></li>
+                <li><a href="admin_verify.php"><i class="fas fa-qrcode"></i> Verify Receipt</a></li>
+                <li><a href="admin_users.php"><i class="fas fa-users-cog"></i> User Management</a></li>
+                <li><a href="admin_messaging.php"><i class="fas fa-envelope"></i> Messaging</a></li>
+                <li><a href="admin_inbox.php"><i class="fas fa-inbox"></i> Inbox</a></li>
+                <li><a href="admin_module_settings.php"><i class="fas fa-cogs"></i> Module Settings</a></li>
+                <li><a href="admin_settings.php"><i class="fas fa-tools"></i> System Settings</a></li>
                 <li><a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
             </ul>
         </aside>
@@ -120,7 +130,7 @@ if (!$student) {
         <main class="main-content">
             <div class="top-bar">
                 <h2>Edit Student</h2>
-                <a href="students.php" class="btn-secondary">Back to List</a>
+                <a href="admin_students.php" class="btn-secondary">Back to List</a>
             </div>
 
             <?php if ($message): ?>
@@ -132,10 +142,10 @@ if (!$student) {
 
             <div class="card">
                 <form action="" method="POST" enctype="multipart/form-data" style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
-                    <input type="hidden" name="current_picture" value="<?php echo $student['profile_picture']; ?>">
+                    <input type="hidden" name="current_picture" value="<?php echo htmlspecialchars($student['profile_picture'] ?? ''); ?>">
                     
                     <div style="grid-column: span 2; text-align: center; margin-bottom: 10px;">
-                        <img id="editStudentPreview" src="../<?php echo $student['profile_picture'] ?? 'images/aamusted.jpg'; ?>" alt="Current Profile" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 2px solid #ddd; margin-bottom: 10px;">
+                        <img id="editStudentPreview" src="../<?php echo htmlspecialchars($student['profile_picture'] ?? 'images/aamusted.jpg'); ?>" alt="Current Profile" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 2px solid #ddd; margin-bottom: 10px;">
                         <br>
                         <label>Update Profile Picture</label><br>
                         <input type="file" name="profile_picture" id="editStudentUpload" class="form-control" accept="image/*">
@@ -151,77 +161,60 @@ if (!$student) {
                         <input type="text" name="index_number" class="form-control" value="<?php echo htmlspecialchars($student['index_number']); ?>" required>
                     </div>
                     <div class="form-group">
+                        <label>Class</label>
+                        <select name="class_name" class="form-control" required>
+                            <option value="">-- Select Class --</option>
+                            <optgroup label="Early Childhood">
+                                <option value="Creche" <?php echo ($student['class_name'] ?? '') === 'Creche' ? 'selected' : ''; ?>>Creche</option>
+                                <option value="Nursery" <?php echo ($student['class_name'] ?? '') === 'Nursery' ? 'selected' : ''; ?>>Nursery</option>
+                                <option value="KG 1" <?php echo ($student['class_name'] ?? '') === 'KG 1' ? 'selected' : ''; ?>>KG 1</option>
+                                <option value="KG 2" <?php echo ($student['class_name'] ?? '') === 'KG 2' ? 'selected' : ''; ?>>KG 2</option>
+                            </optgroup>
+                            <optgroup label="Primary">
+                                <?php foreach (['Basic 1', 'Basic 2', 'Basic 3', 'Basic 4', 'Basic 5', 'Basic 6'] as $c): ?>
+                                    <option value="<?php echo $c; ?>" <?php echo ($student['class_name'] ?? '') === $c ? 'selected' : ''; ?>><?php echo $c; ?></option>
+                                <?php endforeach; ?>
+                            </optgroup>
+                            <optgroup label="Junior High School">
+                                <?php foreach (['JHS 1', 'JHS 2', 'JHS 3'] as $c): ?>
+                                    <option value="<?php echo $c; ?>" <?php echo ($student['class_name'] ?? '') === $c ? 'selected' : ''; ?>><?php echo $c; ?></option>
+                                <?php endforeach; ?>
+                            </optgroup>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Gender</label>
+                        <select name="gender" class="form-control">
+                            <option value="">-- Select --</option>
+                            <option value="Male" <?php echo ($student['gender'] ?? '') === 'Male' ? 'selected' : ''; ?>>Male</option>
+                            <option value="Female" <?php echo ($student['gender'] ?? '') === 'Female' ? 'selected' : ''; ?>>Female</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Student Phone</label>
+                        <input type="text" name="phone_number" class="form-control" value="<?php echo htmlspecialchars($student['phone_number'] ?? ''); ?>">
+                    </div>
+                    <div class="form-group">
                         <label>Email</label>
                         <input type="email" name="email" class="form-control" value="<?php echo htmlspecialchars($student['email']); ?>" required>
                     </div>
+
+                    <!-- Guardian Details -->
+                    <div class="section-divider">
+                        <h4><i class="fas fa-user-shield"></i> Parent / Guardian Details</h4>
+                    </div>
+
                     <div class="form-group">
-                        <label>Phone Number</label>
-                        <input type="text" name="phone_number" class="form-control" value="<?php echo htmlspecialchars($student['phone_number']); ?>">
+                        <label>Guardian Full Name</label>
+                        <input type="text" name="guardian_name" class="form-control" value="<?php echo htmlspecialchars($student['guardian_name'] ?? ''); ?>">
                     </div>
                     <div class="form-group">
-                        <label>Programme / Department</label>
-                        <select name="department" class="form-control" required>
-                            <option value="">-- Select Programme --</option>
-                            <optgroup label="Bachelor's Degree Programmes">
-                                <option value="B.Sc. Information Technology" <?php echo $student['department'] === 'B.Sc. Information Technology' ? 'selected' : ''; ?>>B.Sc. Information Technology</option>
-                                <option value="B.Sc. Cyber Security and Digital Forensics" <?php echo $student['department'] === 'B.Sc. Cyber Security and Digital Forensics' ? 'selected' : ''; ?>>B.Sc. Cyber Security and Digital Forensics</option>
-                                <option value="B.Ed. Computing with Artificial Intelligence (AI)" <?php echo $student['department'] === 'B.Ed. Computing with Artificial Intelligence (AI)' ? 'selected' : ''; ?>>B.Ed. Computing with Artificial Intelligence (AI)</option>
-                                <option value="B.Ed. Computing with Internet of Things (IOT)" <?php echo $student['department'] === 'B.Ed. Computing with Internet of Things (IOT)' ? 'selected' : ''; ?>>B.Ed. Computing with Internet of Things (IOT)</option>
-                                <option value="B.Ed. Information Technology" <?php echo $student['department'] === 'B.Ed. Information Technology' ? 'selected' : ''; ?>>B.Ed. Information Technology</option>
-                            </optgroup>
-                            <optgroup label="Diploma Programmes">
-                                <option value="Diploma in Cyber Security and Digital Forensics" <?php echo $student['department'] === 'Diploma in Cyber Security and Digital Forensics' ? 'selected' : ''; ?>>Diploma in Cyber Security and Digital Forensics</option>
-                                <option value="Diploma in Information Technology" <?php echo $student['department'] === 'Diploma in Information Technology' ? 'selected' : ''; ?>>Diploma in Information Technology</option>
-                            </optgroup>
-                            <optgroup label="Postgraduate Programmes">
-                                <option value="M. Phil. Information Technology" <?php echo $student['department'] === 'M. Phil. Information Technology' ? 'selected' : ''; ?>>M. Phil. Information Technology</option>
-                                <option value="M. Sc. Information Technology Education" <?php echo $student['department'] === 'M. Sc. Information Technology Education' ? 'selected' : ''; ?>>M. Sc. Information Technology Education</option>
-                                <option value="M. Phil Information Technology (Top-up)" <?php echo $student['department'] === 'M. Phil Information Technology (Top-up)' ? 'selected' : ''; ?>>M. Phil Information Technology (Top-up)</option>
-                            </optgroup>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Level</label>
-                        <select name="level" class="form-control" required>
-                            <option value="100" <?php echo $student['level'] === '100' ? 'selected' : ''; ?>>100</option>
-                            <option value="200" <?php echo $student['level'] === '200' ? 'selected' : ''; ?>>200</option>
-                            <option value="300" <?php echo $student['level'] === '300' ? 'selected' : ''; ?>>300</option>
-                            <option value="400" <?php echo $student['level'] === '400' ? 'selected' : ''; ?>>400</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Class</label>
-                        <select name="class_name" class="form-control">
-                            <option value="">-- Select Class --</option>
-                            <optgroup label="IT">
-                                <?php foreach(['IT A', 'IT B', 'IT C', 'IT D', 'IT E', 'IT F', 'IT G', 'IT H'] as $c): ?>
-                                    <option value="<?php echo $c; ?>" <?php echo ($student['class_name'] ?? '') === $c ? 'selected' : ''; ?>><?php echo $c; ?></option>
-                                <?php endforeach; ?>
-                            </optgroup>
-                            <optgroup label="ITE">
-                                <?php foreach(['ITE A', 'ITE B', 'ITE C', 'ITE D', 'ITE E', 'ITE F', 'ITE G', 'ITE H', 'ITE I', 'ITE J', 'ITE K'] as $c): ?>
-                                    <option value="<?php echo $c; ?>" <?php echo ($student['class_name'] ?? '') === $c ? 'selected' : ''; ?>><?php echo $c; ?></option>
-                                <?php endforeach; ?>
-                            </optgroup>
-                            <optgroup label="CB">
-                                <?php foreach(['CB A', 'CB B', 'CB C', 'CB D', 'CB E', 'CB F', 'CB G', 'CB H'] as $c): ?>
-                                    <option value="<?php echo $c; ?>" <?php echo ($student['class_name'] ?? '') === $c ? 'selected' : ''; ?>><?php echo $c; ?></option>
-                                <?php endforeach; ?>
-                            </optgroup>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Stream</label>
-                        <select name="stream" class="form-control">
-                            <option value="">-- Select Stream --</option>
-                            <?php foreach(['Regular', 'Sandwich', 'Evening'] as $s): ?>
-                                <option value="<?php echo $s; ?>" <?php echo ($student['stream'] ?? '') === $s ? 'selected' : ''; ?>><?php echo $s; ?></option>
-                            <?php endforeach; ?>
-                        </select>
+                        <label>Guardian Phone Number</label>
+                        <input type="text" name="guardian_phone" class="form-control" value="<?php echo htmlspecialchars($student['guardian_phone'] ?? ''); ?>">
                     </div>
                     
                     <div style="grid-column: span 2; margin-top: 20px;">
-                        <button type="submit" class="btn-primary">Update Student Details</button>
+                        <button type="submit" class="btn-primary" style="width:100%;">Update Student Details</button>
                     </div>
                 </form>
             </div>
@@ -235,27 +228,12 @@ if (!$student) {
         if (editStudentUpload && editStudentPreview && editStudentUploadName) {
             editStudentUpload.addEventListener('change', function() {
                 const file = this.files && this.files[0] ? this.files[0] : null;
-                const defaultSrc = "../<?php echo $student['profile_picture'] ?? 'images/aamusted.jpg'; ?>";
-
-                if (!file) {
-                    editStudentPreview.src = defaultSrc;
-                    editStudentUploadName.textContent = 'No image selected';
-                    return;
-                }
-
+                const defaultSrc = "../<?php echo htmlspecialchars($student['profile_picture'] ?? 'images/aamusted.jpg'); ?>";
+                if (!file) { editStudentPreview.src = defaultSrc; editStudentUploadName.textContent = 'No image selected'; return; }
                 editStudentUploadName.textContent = file.name;
-
-                if (!file.type.startsWith('image/')) {
-                    editStudentPreview.src = defaultSrc;
-                    editStudentUploadName.textContent = 'Please select an image file';
-                    this.value = '';
-                    return;
-                }
-
+                if (!file.type.startsWith('image/')) { editStudentPreview.src = defaultSrc; editStudentUploadName.textContent = 'Please select an image file'; this.value = ''; return; }
                 const reader = new FileReader();
-                reader.onload = function(event) {
-                    editStudentPreview.src = event.target.result;
-                };
+                reader.onload = function(event) { editStudentPreview.src = event.target.result; };
                 reader.readAsDataURL(file);
             });
         }

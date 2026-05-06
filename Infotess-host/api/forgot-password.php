@@ -68,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 // Send Email
                 $mailer = new Mailer();
-                $subject = "INFOTESS SDMS - Password Reset";
+                $subject = "Password Reset — School Portal";
                 $name = isset($student) ? $student['full_name'] : "User";
                 
                 $email_html = "
@@ -114,7 +114,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Send SMS if student has phone number
                 if (isset($student) && !empty($student['phone_number'])) {
                     $sms = new SMSHelper();
-                    $message = "Hello $name, your INFOTESS SDMS password has been reset. Your temporary password is: $temp_password. Please login and change it.";
+                    $message = "Hello $name, your password has been reset. Your temporary password is: $temp_password. Please login and change it.";
                     $sms->send($student['phone_number'], $message);
                 }
 
@@ -136,7 +136,7 @@ require_once 'includes/header.php';
 
 <div class="section">
     <div class="form-container" style="text-align: center;">
-        <img src="images/infotess.png" alt="INFOTESS Logo" style="width: 100px; margin-bottom: 20px;">
+        <img src="images/school-logo.png" alt="School Logo" style="width: 100px; margin-bottom: 20px;" onerror="this.src='images/aamusted.jpg'">
         <h2 class="section-title">Forgot Password</h2>
         <p style="margin-bottom: 20px; color: #666;">Enter your Email or Index Number to receive a temporary password.</p>
         

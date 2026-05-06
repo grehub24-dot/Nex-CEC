@@ -14,19 +14,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     try {
         $pdo->beginTransaction();
         
-        $settings = [
-            'current_academic_year' => sanitize($_POST['current_academic_year']),
-            'current_semester' => sanitize($_POST['current_semester']),
-            'annual_dues_amount' => sanitize($_POST['annual_dues_amount']),
-            'payment_modes' => sanitize($_POST['payment_modes']),
-            'department_name' => sanitize($_POST['department_name']),
-            'institution_name' => sanitize($_POST['institution_name'])
+        $settings_keys = [
+            'school_name', 'school_motto', 'school_address', 'school_email', 'school_phone',
+            'current_academic_year', 'current_term', 'annual_dues_amount',
+            'payment_modes', 'fee_types'
         ];
 
         $stmt = $pdo->prepare("INSERT INTO system_settings (setting_key, setting_value) VALUES (?, ?) ON CONFLICT (setting_key) DO UPDATE SET setting_value = EXCLUDED.setting_value");
         
-        foreach ($settings as $key => $value) {
-            $stmt->execute([$key, $value]);
+        foreach ($settings_keys as $key) {
+            if (isset($_POST[$key])) {
+                $stmt->execute([$key, sanitize($_POST[$key])]);
+            }
         }
 
         $pdo->commit();
@@ -45,13 +44,18 @@ while ($row = $stmt->fetch()) {
 }
 
 // Default values if not set
+$school_name = $settings['school_name'] ?? 'Nex CEC';
 $defaults = [
-    'current_academic_year' => '2025/2026',
-    'current_semester' => '1',
-    'annual_dues_amount' => '100.00',
-    'payment_modes' => 'Cash,Mobile Money,Bank Transfer',
-    'department_name' => 'Information Technology Education',
-    'institution_name' => 'USTED'
+    'school_name' => 'Nex CEC',
+    'school_motto' => 'Excellence in Education',
+    'school_address' => 'School Address, City, Ghana',
+    'school_email' => 'info@school.edu.gh',
+    'school_phone' => '+233 XX XXX XXXX',
+    'current_academic_year' => date('Y') . '/' . (date('Y') + 1),
+    'current_term' => '1',
+    'annual_dues_amount' => '500.00',
+    'fee_types' => 'Tuition,PTA Levy,Sports & Culture,ICT,Examination,Development,Feeding,Transport,Uniform,Books & Materials',
+    'payment_modes' => 'Cash,Mobile Money,Bank Transfer'
 ];
 $settings = array_merge($defaults, $settings);
 ?>
@@ -61,7 +65,7 @@ $settings = array_merge($defaults, $settings);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>System Settings - INFOTESS SDMS</title>
+    <title>System Settings — <?php echo htmlspecialchars($school_name); ?> Admin</title>
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -120,20 +124,26 @@ $settings = array_merge($defaults, $settings);
         <!-- Sidebar -->
         <aside class="sidebar">
             <div class="sidebar-header" style="text-align: center; padding: 20px 10px;">
-                <img src="../images/infotess.png" alt="INFOTESS Logo" style="width: 80px; height: 80px; margin-bottom: 10px; border-radius: 50%; background: #fff; padding: 5px;">
-                <h3>INFOTESS Admin</h3>
+                <img src="../images/school-logo.png" alt="Logo" style="width: 80px; height: 80px; margin-bottom: 10px; border-radius: 50%; background: #fff; padding: 5px;" onerror="this.src='../images/aamusted.jpg'">
+                <h3><?php echo htmlspecialchars($school_name); ?> Admin</h3>
             </div>
-            <ul class="sidebar-menu">
-                <li><a href="dashboard.php"><i class="fas fa-home"></i> Dashboard</a></li>
-                <li><a href="students.php"><i class="fas fa-user-graduate"></i> Students</a></li>
-                <li><a href="payments.php"><i class="fas fa-money-bill-wave"></i> Payments</a></li>
-                <li><a href="reports.php"><i class="fas fa-chart-bar"></i> Reports</a></li>
-                <li><a href="verify.php"><i class="fas fa-qrcode"></i> Verify Receipt</a></li>
-                <li><a href="users.php"><i class="fas fa-users-cog"></i> User Management</a></li>
-                <li><a href="messaging.php"><i class="fas fa-envelope"></i> Messaging</a></li>
-                <li><a href="inbox.php"><i class="fas fa-inbox"></i> Inbox</a></li>
-                <li><a href="module_settings.php"><i class="fas fa-cogs"></i> Module Settings</a></li>
-                <li><a href="settings.php" class="active"><i class="fas fa-tools"></i> System Settings</a></li>
+                        <ul class="sidebar-menu">
+                <li><a href="admin_dashboard.php"><i class="fas fa-home"></i> Dashboard</a></li>
+                <li><a href="admin_students.php"><i class="fas fa-user-graduate"></i> Students</a></li>
+                <li><a href="admin_staff.php"><i class="fas fa-chalkboard-teacher"></i> Staff</a></li>
+                <li><a href="admin_payments.php"><i class="fas fa-money-bill-wave"></i> Payments</a></li>
+                <li><a href="admin_fees.php"><i class="fas fa-list-alt"></i> Fee Structure</a></li>
+                <li><a href="admin_payroll.php"><i class="fas fa-file-invoice-dollar"></i> Payroll</a></li>
+                <li><a href="admin_salary.php"><i class="fas fa-money-check-alt"></i> Salary Structures</a></li>
+                <li><a href="admin_grades.php"><i class="fas fa-clipboard-list"></i> SBA / Grades</a></li>
+                <li><a href="admin_attendance.php"><i class="fas fa-user-check"></i> Attendance</a></li>
+                <li><a href="admin_reports.php"><i class="fas fa-chart-bar"></i> Reports</a></li>
+                <li><a href="admin_verify.php"><i class="fas fa-qrcode"></i> Verify Receipt</a></li>
+                <li><a href="admin_users.php"><i class="fas fa-users-cog"></i> User Management</a></li>
+                <li><a href="admin_messaging.php"><i class="fas fa-envelope"></i> Messaging</a></li>
+                <li><a href="admin_inbox.php"><i class="fas fa-inbox"></i> Inbox</a></li>
+                <li><a href="admin_module_settings.php"><i class="fas fa-cogs"></i> Module Settings</a></li>
+                <li><a href="admin_settings.php"><i class="fas fa-tools"></i> System Settings</a></li>
                 <li><a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
             </ul>
         </aside>
@@ -160,12 +170,20 @@ $settings = array_merge($defaults, $settings);
                     <div class="card-content">
                         <div class="settings-grid">
                             <div class="setting-item">
+                                <span class="setting-label">School Name</span>
+                                <span class="setting-value"><?php echo htmlspecialchars($settings['school_name'] ?? 'Nex CEC'); ?></span>
+                            </div>
+                            <div class="setting-item">
+                                <span class="setting-label">School Motto</span>
+                                <span class="setting-value"><?php echo htmlspecialchars($settings['school_motto'] ?? 'Excellence in Education'); ?></span>
+                            </div>
+                            <div class="setting-item">
                                 <span class="setting-label">Current Academic Year</span>
                                 <span class="setting-value"><?php echo htmlspecialchars($settings['current_academic_year']); ?></span>
                             </div>
                             <div class="setting-item">
-                                <span class="setting-label">Current Semester</span>
-                                <span class="setting-value"><?php echo $settings['current_semester'] == '1' ? 'First Semester' : 'Second Semester'; ?></span>
+                                <span class="setting-label">Current Term</span>
+                                <span class="setting-value">Term <?php echo htmlspecialchars($settings['current_term'] ?? '1'); ?></span>
                             </div>
                             <div class="setting-item">
                                 <span class="setting-label">Annual Dues Amount</span>
@@ -176,12 +194,12 @@ $settings = array_merge($defaults, $settings);
                                 <span class="setting-value"><?php echo htmlspecialchars($settings['payment_modes']); ?></span>
                             </div>
                             <div class="setting-item">
-                                <span class="setting-label">Department Name</span>
-                                <span class="setting-value"><?php echo htmlspecialchars($settings['department_name']); ?></span>
+                                <span class="setting-label">Fee Types</span>
+                                <span class="setting-value"><?php echo htmlspecialchars($settings['fee_types'] ?? 'N/A'); ?></span>
                             </div>
                             <div class="setting-item">
-                                <span class="setting-label">Institution Name</span>
-                                <span class="setting-value"><?php echo htmlspecialchars($settings['institution_name']); ?></span>
+                                <span class="setting-label">Contact Email</span>
+                                <span class="setting-value"><?php echo htmlspecialchars($settings['school_email'] ?? 'N/A'); ?></span>
                             </div>
                         </div>
                     </div>
@@ -195,16 +213,46 @@ $settings = array_merge($defaults, $settings);
             <form action="settings.php" method="POST">
                 <input type="hidden" name="action" value="update_settings">
                 
+                <h4 style="margin: 0 0 15px 0; color: #1a5276;">School Information</h4>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom: 20px;">
+                    <div class="form-group">
+                        <label>School Name</label>
+                        <input type="text" name="school_name" class="form-control" value="<?php echo htmlspecialchars($settings['school_name'] ?? 'Nex CEC'); ?>" placeholder="e.g. Nex CEC Basic School">
+                    </div>
+                    <div class="form-group">
+                        <label>School Motto</label>
+                        <input type="text" name="school_motto" class="form-control" value="<?php echo htmlspecialchars($settings['school_motto'] ?? 'Excellence in Education'); ?>" placeholder="e.g. Excellence in Education">
+                    </div>
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom: 20px;">
+                    <div class="form-group">
+                        <label>School Address</label>
+                        <input type="text" name="school_address" class="form-control" value="<?php echo htmlspecialchars($settings['school_address'] ?? ''); ?>" placeholder="e.g. Kumasi, Ghana">
+                    </div>
+                    <div class="form-group">
+                        <label>Contact Email</label>
+                        <input type="email" name="school_email" class="form-control" value="<?php echo htmlspecialchars($settings['school_email'] ?? ''); ?>" placeholder="info@school.edu.gh">
+                    </div>
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom: 20px;">
+                    <div class="form-group">
+                        <label>Contact Phone</label>
+                        <input type="text" name="school_phone" class="form-control" value="<?php echo htmlspecialchars($settings['school_phone'] ?? ''); ?>" placeholder="+233 XX XXX XXXX">
+                    </div>
+                </div>
+
+                <h4 style="margin: 20px 0 15px 0; color: #1a5276; border-top: 1px solid #eee; padding-top: 15px;">Academic Settings</h4>
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
                     <div class="form-group">
                         <label>Current Academic Year</label>
                         <input type="text" name="current_academic_year" class="form-control" value="<?php echo htmlspecialchars($settings['current_academic_year']); ?>" required placeholder="e.g. 2025/2026">
                     </div>
                     <div class="form-group">
-                        <label>Current Semester</label>
-                        <select name="current_semester" class="form-control" required>
-                            <option value="1" <?php echo $settings['current_semester'] == '1' ? 'selected' : ''; ?>>First Semester</option>
-                            <option value="2" <?php echo $settings['current_semester'] == '2' ? 'selected' : ''; ?>>Second Semester</option>
+                        <label>Current Term</label>
+                        <select name="current_term" class="form-control" required>
+                            <option value="1" <?php echo ($settings['current_term'] ?? '1') == '1' ? 'selected' : ''; ?>>Term 1</option>
+                            <option value="2" <?php echo ($settings['current_term'] ?? '1') == '2' ? 'selected' : ''; ?>>Term 2</option>
+                            <option value="3" <?php echo ($settings['current_term'] ?? '1') == '3' ? 'selected' : ''; ?>>Term 3</option>
                         </select>
                     </div>
                 </div>
@@ -220,14 +268,11 @@ $settings = array_merge($defaults, $settings);
                     </div>
                 </div>
 
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+                <div style="margin-top: 15px;">
                     <div class="form-group">
-                        <label>Department Name</label>
-                        <input type="text" name="department_name" class="form-control" value="<?php echo htmlspecialchars($settings['department_name']); ?>" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Institution Name</label>
-                        <input type="text" name="institution_name" class="form-control" value="<?php echo htmlspecialchars($settings['institution_name']); ?>" required>
+                        <label>Fee Types (Comma separated)</label>
+                        <input type="text" name="fee_types" class="form-control" value="<?php echo htmlspecialchars($settings['fee_types'] ?? 'Tuition,PTA Levy,Sports & Culture,ICT,Examination,Development,Feeding,Transport,Uniform,Books & Materials'); ?>" placeholder="e.g. Tuition,PTA Levy,Sports,ICT,Examination">
+                        <small style="color: #666;">These are the fee categories that will appear on the student dashboard.</small>
                     </div>
                 </div>
 

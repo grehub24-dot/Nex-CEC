@@ -12,8 +12,9 @@ $stmt = $pdo->query("SELECT setting_key, setting_value FROM system_settings");
 while ($row = $stmt->fetch()) {
     $settings[$row['setting_key']] = $row['setting_value'];
 }
-$current_year = $settings['current_academic_year'] ?? '2025/2026';
-$required_dues = isset($settings['annual_dues_amount']) ? (float)$settings['annual_dues_amount'] : 100.00;
+$school_name = $settings['school_name'] ?? 'Nex CEC';
+$current_year = $settings['current_academic_year'] ?? date('Y') . '/' . (date('Y') + 1);
+$required_dues = isset($settings['annual_dues_amount']) ? (float)$settings['annual_dues_amount'] : 500.00;
 
 // ==========================================
 // UPDATED: Fetch Stats from the new VIEW
@@ -74,7 +75,7 @@ if (empty($chart_labels)) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard - INFOTESS SDMS</title>
+    <title>Admin Dashboard — <?php echo htmlspecialchars($school_name); ?></title>
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -84,20 +85,25 @@ if (empty($chart_labels)) {
         <!-- Sidebar -->
         <aside class="sidebar">
             <div class="sidebar-header" style="text-align: center; padding: 20px 10px;">
-                <img src="../images/infotess.png" alt="INFOTESS Logo" style="width: 80px; height: 80px; margin-bottom: 10px; border-radius: 50%; background: #fff; padding: 5px;">
-                <h3>INFOTESS Admin</h3>
+                <img src="../images/school-logo.png" alt="Logo" style="width: 80px; height: 80px; margin-bottom: 10px; border-radius: 50%; background: #fff; padding: 5px;" onerror="this.src='../images/aamusted.jpg'">
+                <h3><?php echo htmlspecialchars($school_name); ?> Admin</h3>
             </div>
             <ul class="sidebar-menu">
-                <li><a href="dashboard.php" class="active"><i class="fas fa-home"></i> Dashboard</a></li>
-                <li><a href="students.php"><i class="fas fa-user-graduate"></i> Students</a></li>
-                <li><a href="payments.php"><i class="fas fa-money-bill-wave"></i> Payments</a></li>
-                <li><a href="reports.php"><i class="fas fa-chart-bar"></i> Reports</a></li>
-                <li><a href="verify.php"><i class="fas fa-qrcode"></i> Verify Receipt</a></li>
-                <li><a href="users.php"><i class="fas fa-users-cog"></i> User Management</a></li>
-                <li><a href="messaging.php"><i class="fas fa-envelope"></i> Messaging</a></li>
-                <li><a href="inbox.php"><i class="fas fa-inbox"></i> Inbox</a></li>
-                <li><a href="module_settings.php"><i class="fas fa-cogs"></i> Module Settings</a></li>
-                <li><a href="settings.php"><i class="fas fa-tools"></i> System Settings</a></li>
+                <li><a href="admin_dashboard.php" class="active"><i class="fas fa-home"></i> Dashboard</a></li>
+                <li><a href="admin_students.php"><i class="fas fa-user-graduate"></i> Students</a></li>
+                <li><a href="admin_staff.php"><i class="fas fa-chalkboard-teacher"></i> Staff</a></li>
+                <li><a href="admin_payments.php"><i class="fas fa-money-bill-wave"></i> Payments</a></li>
+                <li><a href="admin_fees.php"><i class="fas fa-list-alt"></i> Fee Structure</a></li>
+                <li><a href="admin_payroll.php"><i class="fas fa-file-invoice-dollar"></i> Payroll</a></li>
+                <li><a href="admin_grades.php"><i class="fas fa-clipboard-list"></i> SBA / Grades</a></li>
+                <li><a href="admin_attendance.php"><i class="fas fa-user-check"></i> Attendance</a></li>
+                <li><a href="admin_reports.php"><i class="fas fa-chart-bar"></i> Reports</a></li>
+                <li><a href="admin_verify.php"><i class="fas fa-qrcode"></i> Verify Receipt</a></li>
+                <li><a href="admin_users.php"><i class="fas fa-users-cog"></i> User Management</a></li>
+                <li><a href="admin_messaging.php"><i class="fas fa-envelope"></i> Messaging</a></li>
+                <li><a href="admin_inbox.php"><i class="fas fa-inbox"></i> Inbox</a></li>
+                <li><a href="admin_module_settings.php"><i class="fas fa-cogs"></i> Module Settings</a></li>
+                <li><a href="admin_settings.php"><i class="fas fa-tools"></i> System Settings</a></li>
                 <li><a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
             </ul>
         </aside>

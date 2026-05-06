@@ -1,27 +1,33 @@
 <?php
-// MOCK Generator for Receipt
+// Receipt Generator for Basic School Fees
 // In production, this would use TCPDF or DOMPDF
 class ReceiptGenerator {
-    public function generate($paymentId, $receiptNumber, $student, $amount, $date, $level = '', $class = '', $programme = '', $balance = 0, $academicYear = '', $semester = '', $paymentMethod = 'Mobile Money', $stream = '') {
+    public function generate($paymentId, $receiptNumber, $student, $amount, $date, $class_name = '', $fee_type = '', $school_name = 'School', $balance = 0, $academicYear = '', $term = '', $paymentMethod = 'Mobile Money') {
         // Define the path where receipts will be stored
         $directory = __DIR__ . '/../receipts/';
         if (!is_dir($directory)) {
             mkdir($directory, 0777, true);
         }
         
-        $filename = "receipt_" . $receiptNumber . ".html"; // Using HTML for simplicity in this demo, usually .pdf
+        $filename = "receipt_" . $receiptNumber . ".html";
         $filepath = $directory . $filename;
 
-        // Create a simple HTML receipt
-        // Convert local image to base64 to ensure it displays in email clients that block external images or when offline
-        $logoPath = __DIR__ . '/../images/infotess.png';
+        // Convert local image to base64 for email compatibility
+        $logoPath = __DIR__ . '/../images/school-logo.png';
         $logoData = '';
         if (file_exists($logoPath)) {
             $type = pathinfo($logoPath, PATHINFO_EXTENSION);
             $data = file_get_contents($logoPath);
             $logoData = 'data:image/' . $type . ';base64,' . base64_encode($data);
         } else {
-             $logoData = '../images/infotess.png'; // Fallback
+            $logoPath = __DIR__ . '/../images/infotess.png';
+            if (file_exists($logoPath)) {
+                $type = pathinfo($logoPath, PATHINFO_EXTENSION);
+                $data = file_get_contents($logoPath);
+                $logoData = 'data:image/' . $type . ';base64,' . base64_encode($data);
+            } else {
+                $logoData = '';
+            }
         }
 
         $html = "
@@ -48,12 +54,12 @@ class ReceiptGenerator {
                 }
                 .receipt-header {
                     text-align: center;
-                    border-bottom: 3px solid #4F46E5; /* Blue line */
+                    border-bottom: 3px solid #1a5276;
                     padding-bottom: 20px;
                     margin-bottom: 30px;
                 }
                 .receipt-header h1 {
-                    color: #800020; /* Maroon */
+                    color: #1a5276;
                     font-size: 24px;
                     font-weight: bold;
                     margin-bottom: 5px;
@@ -100,7 +106,7 @@ class ReceiptGenerator {
                 }
                 .details-item strong {
                     display: inline-block;
-                    width: 120px;
+                    width: 130px;
                     color: #555;
                 }
                 table {
@@ -143,13 +149,13 @@ class ReceiptGenerator {
                     margin-bottom: 5px;
                 }
                 .info-box {
-                    background-color: #e0f7fa;
-                    color: #006064;
+                    background-color: #e8f4f8;
+                    color: #1a5276;
                     padding: 15px;
                     border-radius: 4px;
                     font-size: 13px;
                     margin-top: 30px;
-                    border: 1px solid #b2ebf2;
+                    border: 1px solid #b8d9e8;
                 }
                 .status-badge {
                     position: absolute;
@@ -182,11 +188,11 @@ class ReceiptGenerator {
                     gap: 5px;
                 }
                 .btn-print {
-                    background-color: #4F46E5;
+                    background-color: #1a5276;
                     color: white;
                 }
                 .btn-download {
-                    background-color: #10B981;
+                    background-color: #1a865c;
                     color: white;
                 }
                 @media print {
@@ -208,16 +214,15 @@ class ReceiptGenerator {
         </head>
         <body>
             <div class='action-buttons no-print'>
-                <button onclick='window.print()' class='btn btn-print'>🖨️ Print Receipt</button>
-                <button onclick='downloadPDF()' class='btn btn-download'>📥 Download PDF</button>
+                <button onclick='window.print()' class='btn btn-print'>Print Receipt</button>
+                <button onclick='downloadPDF()' class='btn btn-download'>Download PDF</button>
             </div>
             <div class='receipt-container' id='receipt-content'>
                 <div class='receipt-header'>
-                    <img src='$logoData' alt='Logo' class='logo'>
-                    <h1>INFOTESS IT DEPARTMENT</h1>
-                    <p>Infotess.edu.gh, Kumasi, Ghana</p>
-                    <p>Tel: +233 24 091 8031 | Email: info@infotess.edu</p>
-                    <h3>OFFICIAL PAYMENT RECEIPT</h3>
+                    " . (!empty($logoData) ? "<img src='$logoData' alt='Logo' class='logo'>" : "") . "
+                    <h1>" . htmlspecialchars($school_name, ENT_QUOTES, 'UTF-8') . "</h1>
+                    <p>Basic School Management System</p>
+                    <h3>Official Fee Payment Receipt</h3>
                 </div>
 
                 <div class='status-badge'>PAID</div>
@@ -233,8 +238,7 @@ class ReceiptGenerator {
                         <div class='details-title' style='text-align: right;'>Student Details</div>
                         <div class='details-item'><strong>Name:</strong> {$student['full_name']}</div>
                         <div class='details-item'><strong>Index No:</strong> {$student['index_number']}</div>
-                        " . (!empty($programme) ? "<div class='details-item'><strong>Department:</strong> " . htmlspecialchars($programme, ENT_QUOTES, 'UTF-8') . "</div>" : "<div class='details-item'><strong>Department:</strong> ICT</div>") . "
-                        " . (!empty($level) ? "<div class='details-item'><strong>Level:</strong> " . htmlspecialchars($level, ENT_QUOTES, 'UTF-8') . "</div>" : "<div class='details-item'><strong>Level:</strong> 100</div>") . "
+                        <div class='details-item'><strong>Class:</strong> " . (!empty($class_name) ? htmlspecialchars($class_name, ENT_QUOTES, 'UTF-8') : 'N/A') . "</div>
                     </div>
                 </div>
 
@@ -243,15 +247,15 @@ class ReceiptGenerator {
                         <tr>
                             <th>Description</th>
                             <th>Academic Year</th>
-                            <th>Semester</th>
+                            <th>Term</th>
                             <th class='text-end'>Amount</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
-                            <td>Infotess Dues Payment</td>
-                            <td>" . (!empty($academicYear) ? htmlspecialchars($academicYear) : '2025/2026') . "</td>
-                            <td>" . (!empty($semester) ? htmlspecialchars($semester) : 'Semester 1') . "</td>
+                            <td>" . (!empty($fee_type) ? htmlspecialchars($fee_type, ENT_QUOTES, 'UTF-8') . " Fee" : "School Fee") . "</td>
+                            <td>" . (!empty($academicYear) ? htmlspecialchars($academicYear, ENT_QUOTES, 'UTF-8') : date('Y') . '/' . (date('Y')+1)) . "</td>
+                            <td>Term " . (!empty($term) ? htmlspecialchars($term, ENT_QUOTES, 'UTF-8') : '1') . "</td>
                             <td class='text-end'>GHS " . number_format($amount, 2) . "</td>
                         </tr>
                     </tbody>
@@ -264,7 +268,11 @@ class ReceiptGenerator {
                         <tr>
                             <th colspan='3' class='text-end' style='color: red;'>Remaining Balance:</th>
                             <th class='text-end' style='color: red;'>GHS " . number_format($balance, 2) . "</th>
-                        </tr>" : "") . "
+                        </tr>" : "
+                        <tr>
+                            <th colspan='3' class='text-end' style='color: green;'>Balance:</th>
+                            <th class='text-end' style='color: green;'>GHS 0.00</th>
+                        </tr>") . "
                     </tfoot>
                 </table>
 
@@ -281,7 +289,7 @@ class ReceiptGenerator {
                 </div>
 
                 <div class='info-box'>
-                    <strong>ⓘ Information:</strong> This is an official digital receipt. Keep this for your records. You can access this receipt anytime from the payment records.
+                    <strong>Note:</strong> This is an official digital receipt. Keep this for your records. You can access this receipt anytime from the student portal.
                 </div>
             </div>
             

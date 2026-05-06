@@ -47,7 +47,7 @@ $direct_messages = $direct_messages->fetchAll();
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Messages - INFOTESS</title>
+    <title>Messages — Student Portal</title>
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -96,49 +96,19 @@ $direct_messages = $direct_messages->fetchAll();
     <div class="dashboard-container">
         <!-- Sidebar -->
         <aside class="sidebar">
-            <div class="sidebar-header">
-                <h3>My Portal</h3>
+            <div class="sidebar-header" style="text-align:center; padding: 20px 10px;">
+                <img src="../images/school-logo.png" alt="Logo" style="width: 60px; height: 60px; margin-bottom: 8px; border-radius: 50%; background: #fff; padding: 5px;" onerror="this.src='../images/aamusted.jpg'">
+                <h3 style="font-size:15px;">My Portal</h3>
             </div>
-            <ul class="sidebar-menu">
-                <li><a href="dashboard.php"><i class="fas fa-home"></i> Dashboard</a></li>
-                <li><a href="profile.php"><i class="fas fa-user"></i> My Profile</a></li>
-                <li><a href="messages.php" class="active"><i class="fas fa-envelope"></i> Messages 
-                    <?php
-                    $stmt = $pdo->prepare("
-                        SELECT COUNT(*) FROM messages m 
-                        WHERE (m.is_broadcast = true OR m.receiver_id = ?)
-                    ");
-                    $stmt->execute([$_SESSION['user_id']]);
-                    $msg_count = $stmt->fetchColumn();
-
-                    // Subtract already-read messages if message_reads table exists
-                    $hasMR = false;
-                    try {
-                        $checkMR = $pdo->query("SELECT 1 FROM information_schema.tables WHERE table_name = 'message_reads'");
-                        $hasMR = $checkMR && $checkMR->fetchColumn() > 0;
-                    } catch (Exception $e) {
-                        $hasMR = false;
-                    }
-                    if ($hasMR) {
-                        $stmt2 = $pdo->prepare("
-                            SELECT COUNT(*) FROM messages m 
-                            WHERE (m.is_broadcast = true OR m.receiver_id = ?) 
-                            AND EXISTS (
-                                SELECT 1 FROM message_reads mr 
-                                WHERE mr.message_id = m.id AND mr.user_id = ?
-                            )
-                        ");
-                        $stmt2->execute([$_SESSION['user_id'], $_SESSION['user_id']]);
-                        $read_count = $stmt2->fetchColumn();
-                        $msg_count = max(0, $msg_count - $read_count);
-                    }
-
-                    if ($msg_count > 0):
-                    ?>
-                        <span id="sidebar-msg-badge" class="badge" style="background:#dc3545; color:white; padding:2px 6px; border-radius:50%; font-size:0.7rem;"><?php echo $msg_count; ?></span>
-                    <?php endif; ?>
+                        <ul class="sidebar-menu">
+                <li><a href="student_dashboard.php"><i class="fas fa-home"></i> Dashboard</a></li>
+                <li><a href="student_profile.php"><i class="fas fa-user"></i> My Profile</a></li>
+                <li><a href="student_fees.php"><i class="fas fa-list-alt"></i> Fee Structure</a></li>
+                <li><a href="student_messages.php"><i class="fas fa-envelope"></i> Messages 
+                    <span class="badge" style="background:#dc3545; color:white; padding:2px 6px; border-radius:50%; font-size:0.7rem;">0</span>
                 </a></li>
-                <li><a href="history.php"><i class="fas fa-history"></i> Payment History</a></li>
+                <li><a href="student_report_card.php"><i class="fas fa-clipboard"></i> Report Card</a></li>
+                <li><a href="student_history.php"><i class="fas fa-history"></i> Payment History</a></li>
                 <li><a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
             </ul>
         </aside>

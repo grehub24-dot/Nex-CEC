@@ -14,6 +14,21 @@ $stmt = $pdo->prepare("SELECT * FROM students WHERE id = ?");
 $stmt->execute([$student_id]);
 $student = $stmt->fetch();
 
+// Fetch Settings
+$settings = [];
+try {
+    $stmt = $pdo->query("SELECT setting_key, setting_value FROM system_settings");
+    while ($row = $stmt->fetch()) {
+        $settings[$row['setting_key']] = $row['setting_value'];
+    }
+} catch (Exception $e) {
+    // system_settings table may not exist yet
+}
+
+$school_name = $settings['school_name'] ?? 'Nex CEC';
+$current_academic_year = $settings['current_academic_year'] ?? date('Y') . '/' . (date('Y') + 1);
+$current_term = $settings['current_term'] ?? '1';
+
 // Fetch Payments
 $payments = [];
 try {
@@ -30,39 +45,27 @@ foreach ($payments as $p) {
     $total_paid += $p['amount'];
 }
 
-// Fetch system settings for dues
-$settings = [];
-try {
-    $stmt = $pdo->query("SELECT setting_key, setting_value FROM system_settings WHERE setting_key IN ('current_academic_year', 'annual_dues_amount')");
-    while ($row = $stmt->fetch()) {
-        $settings[$row['setting_key']] = $row['setting_value'];
-    }
-} catch (Exception $e) {
-    // system_settings table may not exist yet
-}
-
 // Outstanding balance for current academic year dues
-$current_year = $settings['current_academic_year'] ?? '2025/2026';
-$required_dues = (float)($settings['annual_dues_amount'] ?? 100.00);
+$required_dues = (float)($settings['annual_dues_amount'] ?? 500.00);
 
 $paid_this_year = 0;
 try {
     $stmt = $pdo->prepare("SELECT COALESCE(SUM(amount),0) FROM payments WHERE student_id = ? AND academic_year = ?");
-    $stmt->execute([$student_id, $current_year]);
+    $stmt->execute([$student_id, $current_academic_year]);
     $paid_this_year = (float)$stmt->fetchColumn();
 } catch (Exception $e) {
     // payments table may not exist yet
 }
 $outstanding = max(0, $required_dues - $paid_this_year);
 $status_color = $outstanding <= 0 ? 'green' : 'red';
-$status_text = $outstanding <= 0 ? 'Fully Paid' : 'Unpaid';
+$status_text = $outstanding <= 0 ? 'Fully Paid' : 'Outstanding';
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Student Dashboard - INFOTESS</title>
+    <title>Student Dashboard — <?php echo htmlspecialchars($school_name); ?></title>
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -70,13 +73,15 @@ $status_text = $outstanding <= 0 ? 'Fully Paid' : 'Unpaid';
     <div class="dashboard-container">
         <!-- Sidebar -->
         <aside class="sidebar">
-            <div class="sidebar-header">
-                <h3>My Portal</h3>
+            <div class="sidebar-header" style="text-align:center; padding: 20px 10px;">
+                <img src="../images/school-logo.png" alt="Logo" style="width: 60px; height: 60px; margin-bottom: 8px; border-radius: 50%; background: #fff; padding: 5px;" onerror="this.src='../images/aamusted.jpg'">
+                <h3 style="font-size:15px;">My Portal</h3>
             </div>
             <ul class="sidebar-menu">
-                <li><a href="dashboard.php" class="active"><i class="fas fa-home"></i> Dashboard</a></li>
-                <li><a href="profile.php"><i class="fas fa-user"></i> My Profile</a></li>
-                <li><a href="messages.php"><i class="fas fa-envelope"></i> Messages 
+                <li><a href="student_dashboard.php" class="active"><i class="fas fa-home"></i> Dashboard</a></li>
+                <li><a href="student_profile.php"><i class="fas fa-user"></i> My Profile</a></li>
+                <li><a href="student_fees.php"><i class="fas fa-list-alt"></i> Fee Structure</a></li>
+                <li><a href="student_messages.php"><i class="fas fa-envelope"></i> Messages 
                     <?php
                     $msg_count = 0;
                     try {
@@ -87,38 +92,30 @@ $status_text = $outstanding <= 0 ? 'Fully Paid' : 'Unpaid';
                         $stmt->execute([$_SESSION['user_id']]);
                         $msg_count = $stmt->fetchColumn();
 
-                        // Check if message_reads table exists (Supabase compatible)
                         $hasMessageReads = false;
                         try {
                             $checkMR = $pdo->query("SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'message_reads'");
                             $hasMessageReads = $checkMR && $checkMR->fetchColumn() > 0;
-                        } catch (Exception $e) {
-                            $hasMessageReads = false;
-                        }
+                        } catch (Exception $e) { $hasMessageReads = false; }
                         if ($hasMessageReads) {
                         $stmt2 = $pdo->prepare("
                             SELECT COUNT(*) FROM messages m 
                             WHERE (m.is_broadcast = true OR m.receiver_id = ?) 
-                            AND EXISTS (
-                                SELECT 1 FROM message_reads mr 
-                                WHERE mr.message_id = m.id AND mr.user_id = ?
-                            )
+                            AND EXISTS ( SELECT 1 FROM message_reads mr WHERE mr.message_id = m.id AND mr.user_id = ? )
                         ");
                         $stmt2->execute([$_SESSION['user_id'], $_SESSION['user_id']]);
                         $read_count = $stmt2->fetchColumn();
                         $msg_count = max(0, $msg_count - $read_count);
                         }
-                    } catch (Exception $e) {
-                        // messages table may not exist yet — silently skip
-                        $msg_count = 0;
-                    }
+                    } catch (Exception $e) { $msg_count = 0; }
 
                     if ($msg_count > 0):
                     ?>
                         <span class="badge" style="background:#dc3545; color:white; padding:2px 6px; border-radius:50%; font-size:0.7rem;"><?php echo $msg_count; ?></span>
                     <?php endif; ?>
                 </a></li>
-                <li><a href="history.php"><i class="fas fa-history"></i> Payment History</a></li>
+                <li><a href="student_report_card.php"><i class="fas fa-clipboard"></i> Report Card</a></li>
+                <li><a href="student_history.php"><i class="fas fa-history"></i> Payment History</a></li>
                 <li><a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
             </ul>
         </aside>
@@ -129,7 +126,7 @@ $status_text = $outstanding <= 0 ? 'Fully Paid' : 'Unpaid';
                     <img src="../<?php echo !empty($student['profile_picture']) ? htmlspecialchars($student['profile_picture']) : 'images/aamusted.jpg'; ?>" alt="Profile" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
                     <div>
                         <h2>Welcome, <?php echo htmlspecialchars($student['full_name']); ?></h2>
-                        <div style="color: #666;"><?php echo htmlspecialchars($student['index_number']); ?></div>
+                        <div style="color: #666;"><?php echo htmlspecialchars($student['index_number']); ?> &bull; <?php echo htmlspecialchars($student['class_name'] ?? 'N/A'); ?></div>
                     </div>
                 </div>
             </div>
@@ -142,7 +139,7 @@ $status_text = $outstanding <= 0 ? 'Fully Paid' : 'Unpaid';
                     </div>
                     <div class="stat-details">
                         <h3>GHS <?php echo number_format($total_paid, 2); ?></h3>
-                        <p>Total Contribution</p>
+                        <p>Total Paid</p>
                     </div>
                 </div>
                 <div class="stat-card">
@@ -160,7 +157,7 @@ $status_text = $outstanding <= 0 ? 'Fully Paid' : 'Unpaid';
                     </div>
                     <div class="stat-details">
                         <h3>GHS <?php echo number_format($outstanding, 2); ?></h3>
-                        <p>Outstanding (<?php echo htmlspecialchars($current_year); ?>)</p>
+                        <p>Outstanding (<?php echo htmlspecialchars($current_academic_year); ?>)</p>
                     </div>
                 </div>
                 <div class="stat-card">
@@ -169,8 +166,65 @@ $status_text = $outstanding <= 0 ? 'Fully Paid' : 'Unpaid';
                     </div>
                     <div class="stat-details">
                         <h3 style="color: <?php echo $status_color; ?>;"><?php echo $status_text; ?></h3>
-                        <p>Status (<?php echo htmlspecialchars($current_year); ?>)</p>
+                        <p>Status (<?php echo htmlspecialchars($current_academic_year); ?>)</p>
                     </div>
+                </div>
+            </div>
+
+            <!-- Term Fee Breakdown -->
+            <div class="section" style="margin-bottom: 30px;">
+                <h3>Fee Breakdown — <?php echo htmlspecialchars($current_academic_year); ?> Term <?php echo htmlspecialchars($current_term); ?></h3>
+                <?php
+                $fee_types = explode(',', $settings['fee_types'] ?? 'Tuition,PTA Levy,Sports & Culture,ICT,Examination,Development,Feeding,Transport,Uniform,Books & Materials');
+                
+                // Group payments by fee type for current year
+                $payments_by_type = [];
+                foreach ($payments as $p) {
+                    if ($p['academic_year'] === $current_academic_year) {
+                        $type = $p['fee_type'] ?? 'General';
+                        if (!isset($payments_by_type[$type])) {
+                            $payments_by_type[$type] = 0;
+                        }
+                        $payments_by_type[$type] += $p['amount'];
+                    }
+                }
+                
+                // Estimate per-type dues (split equally for now, can be customized in settings)
+                $num_fees = count($fee_types);
+                $estimated_per_fee = $num_fees > 0 ? $required_dues / $num_fees : 0;
+                ?>
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Fee Type</th>
+                                <th>Estimated (GHS)</th>
+                                <th>Paid (GHS)</th>
+                                <th>Balance (GHS)</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($fee_types as $type): 
+                                $type = trim($type);
+                                $paid = isset($payments_by_type[$type]) ? $payments_by_type[$type] : 0;
+                                $bal = max(0, $estimated_per_fee - $paid);
+                                $is_paid = $paid >= $estimated_per_fee;
+                            ?>
+                            <tr>
+                                <td><?php echo htmlspecialchars($type); ?></td>
+                                <td><?php echo number_format($estimated_per_fee, 2); ?></td>
+                                <td><?php echo number_format($paid, 2); ?></td>
+                                <td style="color: <?php echo $bal > 0 ? 'red' : 'green'; ?>; font-weight:bold;"><?php echo number_format($bal, 2); ?></td>
+                                <td>
+                                    <span style="color: <?php echo $is_paid ? 'green' : 'red'; ?>; font-weight:bold;">
+                                        <?php echo $is_paid ? '&#10003; Paid' : 'Pending'; ?>
+                                    </span>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
@@ -178,39 +232,23 @@ $status_text = $outstanding <= 0 ? 'Fully Paid' : 'Unpaid';
             <div class="section" style="margin-bottom: 30px;">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <h3>Recent Notifications</h3>
-                    <a href="messages.php" style="font-size: 0.9rem; color: var(--primary-color);">View all notifications</a>
+                    <a href="student_messages.php" style="font-size: 0.9rem; color: var(--primary-color);">View all notifications</a>
                 </div>
                 <?php
                 $recent_notifications = [];
                 try {
-                    $stmt = $pdo->prepare("
-                        SELECT title, message, created_at
-                        FROM notifications
-                        WHERE user_id = ?
-                        ORDER BY created_at DESC
-                        LIMIT 3
-                    ");
+                    $stmt = $pdo->prepare("SELECT title, message, created_at FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 3");
                     $stmt->execute([$_SESSION['user_id']]);
                     $recent_notifications = $stmt->fetchAll();
-                } catch (Exception $e) {
-                    $recent_notifications = [];
-                }
+                } catch (Exception $e) { $recent_notifications = []; }
 
-                if (empty($recent_notifications)):
+                if (empty($recent_notifications)) {
                     try {
-                        $stmt = $pdo->prepare("
-                            SELECT title, content AS message, created_at
-                            FROM messages
-                            WHERE is_broadcast = true OR receiver_id = ?
-                            ORDER BY created_at DESC
-                            LIMIT 3
-                        ");
+                        $stmt = $pdo->prepare("SELECT title, content AS message, created_at FROM messages WHERE is_broadcast = true OR receiver_id = ? ORDER BY created_at DESC LIMIT 3");
                         $stmt->execute([$_SESSION['user_id']]);
                         $recent_notifications = $stmt->fetchAll();
-                    } catch (Exception $e) {
-                        $recent_notifications = [];
-                    }
-                endif;
+                    } catch (Exception $e) { $recent_notifications = []; }
+                }
 
                 if (empty($recent_notifications)):
                 ?>
@@ -225,7 +263,7 @@ $status_text = $outstanding <= 0 ? 'Fully Paid' : 'Unpaid';
                             <p style="margin-top: 5px; font-size: 0.95rem; color: #444;">
                                 <?php echo htmlspecialchars(substr((string)$item['message'], 0, 120)) . (strlen((string)$item['message']) > 120 ? '...' : ''); ?>
                             </p>
-                            <a href="messages.php" style="font-size: 0.85rem; color: var(--secondary-color); font-weight: bold; margin-top: 5px; display: inline-block;">Read Full Message &rarr;</a>
+                            <a href="student_messages.php" style="font-size: 0.85rem; color: var(--secondary-color); font-weight: bold; margin-top: 5px; display: inline-block;">Read Full Message &rarr;</a>
                         </div>
                     <?php endforeach; ?>
                 <?php endif; ?>
@@ -240,8 +278,9 @@ $status_text = $outstanding <= 0 ? 'Fully Paid' : 'Unpaid';
                             <tr>
                                 <th>Receipt #</th>
                                 <th>Date</th>
+                                <th>Fee Type</th>
                                 <th>Amount</th>
-                                <th>Semester</th>
+                                <th>Term</th>
                                 <th>Status</th>
                                 <th>Download</th>
                             </tr>
@@ -251,18 +290,18 @@ $status_text = $outstanding <= 0 ? 'Fully Paid' : 'Unpaid';
                             <tr>
                                 <td><?php echo htmlspecialchars($payment['receipt_number']); ?></td>
                                 <td><?php echo htmlspecialchars($payment['payment_date']); ?></td>
+                                <td><?php echo htmlspecialchars($payment['fee_type'] ?? 'General'); ?></td>
                                 <td>GHS <?php echo number_format($payment['amount'], 2); ?></td>
-                                <td><?php echo htmlspecialchars($payment['academic_year'] . ' - Sem ' . $payment['semester']); ?></td>
+                                <td><?php echo htmlspecialchars($payment['academic_year'] . ' — Term ' . $payment['semester']); ?></td>
                                 <td><span style="color:green; font-weight:bold;">Paid</span></td>
                                 <td>
-                                    <!-- In real app, this links to the PDF file -->
-                                    <a href="../receipts/receipt_<?php echo $payment['receipt_number']; ?>.html" target="_blank" class="btn-login" style="padding: 5px 10px;">View Receipt</a>
+                                    <a href="../receipts/receipt_<?php echo htmlspecialchars($payment['receipt_number']); ?>.html" target="_blank" class="btn-login" style="padding: 5px 10px;">View Receipt</a>
                                 </td>
                             </tr>
                             <?php endforeach; ?>
                             <?php if (count($payments) === 0): ?>
                             <tr>
-                                <td colspan="6" style="text-align:center;">No payment records found.</td>
+                                <td colspan="7" style="text-align:center;">No payment records found.</td>
                             </tr>
                             <?php endif; ?>
                         </tbody>

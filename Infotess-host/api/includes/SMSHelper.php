@@ -46,7 +46,7 @@ class SMSHelper {
 
         $api_key = '$2y$10$6oYYcjc6Ge3/W.P.1Yqk6eHBs0ERVFR6IaBQ2qpYGBnMYp28B3uPe';
         $username = 'amanvid'; // using sender ID as username per standard Wigal API docs
-        $sender_id = 'INFOTESS'; // Must be an approved sender ID, falling back to INFOTESS
+        $sender_id = 'SCHOOL'; // Must be an approved sender ID
         $endpoint = 'https://frogapi.wigal.com.gh/api/v3/sms/send';
 
         $postData = array(

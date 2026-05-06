@@ -11,32 +11,36 @@ $student_id = $_SESSION['student_id'];
 $message = '';
 $error = '';
 
+// Fetch Settings
+$settings = [];
+try {
+    $stmt = $pdo->query("SELECT setting_key, setting_value FROM system_settings");
+    while ($row = $stmt->fetch()) {
+        $settings[$row['setting_key']] = $row['setting_value'];
+    }
+} catch (Exception $e) {}
+$school_name = $settings['school_name'] ?? 'Nex CEC';
+
 // Handle Profile Update
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $phone = sanitize($_POST['phone_number']);
     $email = sanitize($_POST['email']);
     
-    // Handle Profile Picture Upload
     $profile_picture = null;
     if (isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] === UPLOAD_ERR_OK) {
         $upload_dir = __DIR__ . '/../images/profiles/';
-        if (!is_dir($upload_dir)) {
-            mkdir($upload_dir, 0777, true);
-        }
+        if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
         $file_extension = pathinfo($_FILES['profile_picture']['name'], PATHINFO_EXTENSION);
         $file_name = $_SESSION['index_number'] . '_' . time() . '.' . $file_extension;
         $target_file = $upload_dir . $file_name;
-        
         if (move_uploaded_file($_FILES['profile_picture']['tmp_name'], $target_file)) {
             $profile_picture = 'images/profiles/' . $file_name;
         }
     }
 
-    // Update user email
-    $stmt = $pdo->prepare("UPDATE users SET email = ? WHERE id = ?");
     try {
+        $stmt = $pdo->prepare("UPDATE users SET email = ? WHERE id = ?");
         $stmt->execute([$email, $_SESSION['user_id']]);
-        // Update student phone and picture
         if ($profile_picture) {
             $stmt = $pdo->prepare("UPDATE students SET phone_number = ?, profile_picture = ? WHERE id = ?");
             $stmt->execute([$phone, $profile_picture, $student_id]);
@@ -45,12 +49,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute([$phone, $student_id]);
         }
         $message = "Profile updated successfully.";
-    } catch (PDOException $e) {
+    } catch (Exception $e) {
         $error = "Error updating profile: " . $e->getMessage();
     }
 }
 
-// Fetch Student Data (two-step lookup for Supabase compatibility)
+// Fetch Student Data
 $stmt = $pdo->prepare("SELECT * FROM students WHERE id = ?");
 $stmt->execute([$student_id]);
 $student = $stmt->fetch();
@@ -66,38 +70,34 @@ if ($student) {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>My Profile - INFOTESS</title>
+    <title>My Profile — <?php echo htmlspecialchars($school_name); ?></title>
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        .profile-upload-name {
-            margin-top: 8px;
-            font-size: 0.82rem;
-            color: #4b5563;
-        }
+        .profile-upload-name { margin-top: 8px; font-size: 0.82rem; color: #4b5563; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee; }
+        .info-item label { font-size: 0.85rem; color: #666; display: block; margin-bottom: 4px; }
+        .info-item span { font-weight: 600; color: #333; }
+        .section-divider { grid-column: span 2; border-top: 1px solid #eee; padding-top: 15px; margin-top: 10px; }
+        .section-divider h4 { font-size: 14px; color: #1a5276; margin: 0 0 10px 0; }
     </style>
 </head>
 <body>
     <div class="dashboard-container">
-        <!-- Sidebar -->
         <aside class="sidebar">
-            <div class="sidebar-header">
-                <h3>My Portal</h3>
+            <div class="sidebar-header" style="text-align:center; padding: 20px 10px;">
+                <img src="../images/school-logo.png" alt="Logo" style="width: 60px; height: 60px; margin-bottom: 8px; border-radius: 50%; background: #fff; padding: 5px;" onerror="this.src='../images/aamusted.jpg'">
+                <h3 style="font-size:15px;">My Portal</h3>
             </div>
-            <ul class="sidebar-menu">
-                <li><a href="dashboard.php"><i class="fas fa-home"></i> Dashboard</a></li>
-                <li><a href="profile.php" class="active"><i class="fas fa-user"></i> My Profile</a></li>
-                <li><a href="messages.php"><i class="fas fa-envelope"></i> Messages 
-                    <?php
-                    $stmt = $pdo->prepare("SELECT COUNT(*) FROM messages WHERE is_broadcast = true OR receiver_id = ?");
-                    $stmt->execute([$_SESSION['user_id']]);
-                    $msg_count = $stmt->fetchColumn();
-                    if ($msg_count > 0):
-                    ?>
-                        <span class="badge" style="background:#dc3545; color:white; padding:2px 6px; border-radius:50%; font-size:0.7rem;"><?php echo $msg_count; ?></span>
-                    <?php endif; ?>
+                        <ul class="sidebar-menu">
+                <li><a href="student_dashboard.php"><i class="fas fa-home"></i> Dashboard</a></li>
+                <li><a href="student_profile.php"><i class="fas fa-user"></i> My Profile</a></li>
+                <li><a href="student_fees.php"><i class="fas fa-list-alt"></i> Fee Structure</a></li>
+                <li><a href="student_messages.php"><i class="fas fa-envelope"></i> Messages 
+                    <span class="badge" style="background:#dc3545; color:white; padding:2px 6px; border-radius:50%; font-size:0.7rem;">0</span>
                 </a></li>
-                <li><a href="history.php"><i class="fas fa-history"></i> Payment History</a></li>
+                <li><a href="student_report_card.php"><i class="fas fa-clipboard"></i> Report Card</a></li>
+                <li><a href="student_history.php"><i class="fas fa-history"></i> Payment History</a></li>
                 <li><a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
             </ul>
         </aside>
@@ -118,45 +118,61 @@ if ($student) {
                 <h3>Personal Information</h3>
                 <form method="POST" action="" enctype="multipart/form-data">
                     <div class="form-group" style="text-align:center;">
-                        <img id="profilePicturePreview" src="../<?php echo $student['profile_picture'] ?? 'images/aamusted.jpg'; ?>" alt="Profile Picture" style="width:150px; height:150px; border-radius:50%; object-fit:cover; margin-bottom:10px;">
+                        <img id="profilePicturePreview" src="../<?php echo htmlspecialchars($student['profile_picture'] ?? 'images/aamusted.jpg'); ?>" alt="Profile Picture" style="width:150px; height:150px; border-radius:50%; object-fit:cover; margin-bottom:10px;">
                         <br>
                         <label for="profile_picture" class="btn-login" style="cursor:pointer; display:inline-block;">Change Picture</label>
                         <input type="file" name="profile_picture" id="profile_picture" style="display:none;" accept="image/*">
                         <div id="profileUploadName" class="profile-upload-name">No image selected</div>
                     </div>
-                    <div class="form-group">
-                        <label>Full Name</label>
-                        <input type="text" class="form-control" value="<?php echo htmlspecialchars($student['full_name']); ?>" disabled>
+                    
+                    <!-- Read-Only Fields -->
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <label>Full Name</label>
+                            <span><?php echo htmlspecialchars($student['full_name']); ?></span>
+                        </div>
+                        <div class="info-item">
+                            <label>Index Number</label>
+                            <span><?php echo htmlspecialchars($student['index_number']); ?></span>
+                        </div>
+                        <div class="info-item">
+                            <label>Class</label>
+                            <span><?php echo htmlspecialchars($student['class_name'] ?? 'N/A'); ?></span>
+                        </div>
+                        <div class="info-item">
+                            <label>Gender</label>
+                            <span><?php echo htmlspecialchars($student['gender'] ?? 'N/A'); ?></span>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>Index Number</label>
-                        <input type="text" class="form-control" value="<?php echo htmlspecialchars($student['index_number']); ?>" disabled>
+
+                    <!-- Guardian Info -->
+                    <div class="section-divider">
+                        <h4><i class="fas fa-user-shield"></i> Guardian Information</h4>
                     </div>
-                    <div class="form-group">
-                        <label>Department</label>
-                        <input type="text" class="form-control" value="<?php echo htmlspecialchars($student['department']); ?>" disabled>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <label>Guardian Name</label>
+                            <span><?php echo htmlspecialchars($student['guardian_name'] ?? 'N/A'); ?></span>
+                        </div>
+                        <div class="info-item">
+                            <label>Guardian Phone</label>
+                            <span><?php echo htmlspecialchars($student['guardian_phone'] ?? 'N/A'); ?></span>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>Level</label>
-                        <input type="text" class="form-control" value="<?php echo htmlspecialchars($student['level']); ?>" disabled>
+
+                    <!-- Editable Fields -->
+                    <div style="margin-top: 25px;">
+                        <div class="form-group">
+                            <label>Email (for fee receipts)</label>
+                            <input type="email" name="email" class="form-control" value="<?php echo htmlspecialchars($student['email']); ?>" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Phone Number</label>
+                            <input type="text" name="phone_number" class="form-control" value="<?php echo htmlspecialchars($student['phone_number'] ?? ''); ?>">
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>Class</label>
-                        <input type="text" class="form-control" value="<?php echo htmlspecialchars($student['class_name'] ?? ''); ?>" disabled>
-                    </div>
-                    <div class="form-group">
-                        <label>Stream</label>
-                        <input type="text" class="form-control" value="<?php echo htmlspecialchars($student['stream'] ?? ''); ?>" disabled>
-                    </div>
-                    <div class="form-group">
-                        <label>Email</label>
-                        <input type="email" name="email" class="form-control" value="<?php echo htmlspecialchars($student['email']); ?>" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Phone Number</label>
-                        <input type="text" name="phone_number" class="form-control" value="<?php echo htmlspecialchars($student['phone_number']); ?>">
-                    </div>
-                    <button type="submit" class="btn-primary">Update Profile</button>
+
+                    <button type="submit" class="btn-primary" style="margin-top: 15px;">Update Profile</button>
                 </form>
             </div>
         </main>
@@ -169,27 +185,12 @@ if ($student) {
         if (profilePictureInput && profilePicturePreview && profileUploadName) {
             profilePictureInput.addEventListener('change', function() {
                 const file = this.files && this.files[0] ? this.files[0] : null;
-                const defaultSrc = "../<?php echo $student['profile_picture'] ?? 'images/aamusted.jpg'; ?>";
-
-                if (!file) {
-                    profilePicturePreview.src = defaultSrc;
-                    profileUploadName.textContent = 'No image selected';
-                    return;
-                }
-
+                const defaultSrc = "../<?php echo htmlspecialchars($student['profile_picture'] ?? 'images/aamusted.jpg'); ?>";
+                if (!file) { profilePicturePreview.src = defaultSrc; profileUploadName.textContent = 'No image selected'; return; }
                 profileUploadName.textContent = file.name;
-
-                if (!file.type.startsWith('image/')) {
-                    profilePicturePreview.src = defaultSrc;
-                    profileUploadName.textContent = 'Please select an image file';
-                    this.value = '';
-                    return;
-                }
-
+                if (!file.type.startsWith('image/')) { profilePicturePreview.src = defaultSrc; profileUploadName.textContent = 'Please select an image file'; this.value = ''; return; }
                 const reader = new FileReader();
-                reader.onload = function(event) {
-                    profilePicturePreview.src = event.target.result;
-                };
+                reader.onload = function(event) { profilePicturePreview.src = event.target.result; };
                 reader.readAsDataURL(file);
             });
         }

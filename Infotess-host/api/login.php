@@ -108,8 +108,8 @@ require_once 'includes/header.php';
 
 <div class="section">
     <div class="form-container" style="text-align: center;">
-        <img src="images/infotess.png" alt="INFOTESS Logo" style="width: 100px; margin-bottom: 20px;">
-        <h2 class="section-title">Login to SDMS</h2>
+        <img src="images/school-logo.png" alt="School Logo" style="width: 100px; margin-bottom: 20px;" onerror="this.src='images/aamusted.jpg'">
+        <h2 class="section-title">Login to Portal</h2>
         <?php if ($error): ?>
             <div class="alert alert-danger"><?php echo $error; ?></div>
         <?php endif; ?>

@@ -2,79 +2,67 @@
 require_once 'includes/db.php';
 require_once 'includes/header.php';
 
-// Fetch recent news/events for the homepage
-$activities = [];
+// Fetch Settings
+$settings = [];
 try {
-    $stmt = $pdo->query("SELECT * FROM activities ORDER BY activity_date DESC LIMIT 3");
-    $activities = $stmt->fetchAll();
-} catch (Exception $e) {
-    $activities = [];
-}
+    $stmt = $pdo->query("SELECT setting_key, setting_value FROM system_settings");
+    while ($row = $stmt->fetch()) {
+        $settings[$row['setting_key']] = $row['setting_value'];
+    }
+} catch (Exception $e) {}
+$school_name = $settings['school_name'] ?? 'Nex CEC';
+$school_motto = $settings['school_motto'] ?? 'Excellence in Education';
 ?>
 
 <!-- Hero Section -->
 <section class="hero">
-    <h1>Welcome to INFOTESS</h1>
-    <p>Information Technology StudentsΓÇÖ Society of USTED. Empowering students through technology, innovation, and leadership.</p>
-    <a href="about.php" class="btn-cta">Learn More</a>
+    <h1>Welcome to <?php echo htmlspecialchars($school_name); ?></h1>
+    <p><?php echo htmlspecialchars($school_motto); ?> — Providing quality education from Creche through Junior High School.</p>
+    <a href="register.php" class="btn-cta">Enroll Now</a>
 </section>
 
 <!-- About Preview -->
 <section class="section">
     <div class="container">
-        <h2 class="section-title">Who We Are</h2>
+        <h2 class="section-title">Our School</h2>
         <div style="text-align: center; max-width: 800px; margin: 0 auto;">
-            <p>INFOTESS is the official student body for the Department of Information Technology Education (DITE) at USTED. We are dedicated to bridging the gap between academic theory and industry practice through workshops, seminars, and collaborative projects.</p>
+            <p><?php echo htmlspecialchars($school_name); ?> is a nurturing learning environment dedicated to building strong academic foundations, character development, and holistic growth for every child from Creche to JHS 3.</p>
         </div>
     </div>
 </section>
 
-<!-- Activities/News -->
+<!-- What We Offer -->
 <section class="section" style="background: var(--light-bg);">
     <div class="container">
-        <h2 class="section-title">Latest Activities</h2>
+        <h2 class="section-title">What We Offer</h2>
         <div class="card-grid">
-            <?php if (count($activities) > 0): ?>
-                <?php foreach ($activities as $activity): ?>
-                <div class="card">
-                    <img src="<?php echo !empty($activity['image_url']) ? $activity['image_url'] : 'images/default-activity.jpg'; ?>" alt="Activity">
-                    <div class="card-content">
-                        <h3 class="card-title"><?php echo htmlspecialchars($activity['title']); ?></h3>
-                        <p><?php echo substr(htmlspecialchars($activity['description']), 0, 100) . '...'; ?></p>
-                        <a href="activities.php" style="color: var(--primary-color); font-weight: bold; margin-top: 10px; display: inline-block;">Read More &rarr;</a>
-                    </div>
+            <div class="card" style="text-align:center;">
+                <div style="padding: 30px 20px 10px;">
+                    <i class="fas fa-baby" style="font-size: 48px; color: var(--primary-color);"></i>
                 </div>
-                <?php endforeach; ?>
-            <?php else: ?>
-                <!-- Static placeholders if no DB data -->
-                <div class="card">
-                    <img src="images/aamusted.jpg" alt="Freshers Week Celebration" style="background:#ccc;">
-                    <div class="card-content">
-                        <span style="display:inline-block; font-size:0.8rem; color:#666; margin-bottom:8px;">Activity</span>
-                        <h3 class="card-title">Freshers Week Celebration</h3>
-                        <p>Welcome program for new students with orientation, networking, and onboarding activities.</p>
-                        <a href="activities.php" style="color: var(--primary-color); font-weight: bold; margin-top: 10px; display: inline-block;">Read More &rarr;</a>
-                    </div>
+                <div class="card-content">
+                    <h3 class="card-title">Early Childhood</h3>
+                    <p>Creche, Nursery, and Kindergarten programs designed to spark curiosity and love for learning.</p>
                 </div>
-                <div class="card">
-                    <img src="images/infotess.png" alt="Community of Practice" style="background:#ccc;">
-                    <div class="card-content">
-                        <span style="display:inline-block; font-size:0.8rem; color:#666; margin-bottom:8px;">Activity</span>
-                        <h3 class="card-title">Community of Practice</h3>
-                        <p>Peer-led knowledge sharing sessions focused on practical skills and collaborative learning.</p>
-                        <a href="activities.php" style="color: var(--primary-color); font-weight: bold; margin-top: 10px; display: inline-block;">Read More &rarr;</a>
-                    </div>
+            </div>
+            <div class="card" style="text-align:center;">
+                <div style="padding: 30px 20px 10px;">
+                    <i class="fas fa-book-reader" style="font-size: 48px; color: var(--primary-color);"></i>
                 </div>
-                <div class="card">
-                    <img src="images/aamusted-logo.svg" alt="Infotess Cloud 9 Connection" style="background:#ccc;">
-                    <div class="card-content">
-                        <span style="display:inline-block; font-size:0.8rem; color:#666; margin-bottom:8px;">Activity</span>
-                        <h3 class="card-title">Infotess Cloud 9 Connection: Chocolate + Photoshoot (Valentine)</h3>
-                        <p>Valentine special social-tech event featuring community bonding, treats, and themed photoshoot moments.</p>
-                        <a href="activities.php" style="color: var(--primary-color); font-weight: bold; margin-top: 10px; display: inline-block;">Read More &rarr;</a>
-                    </div>
+                <div class="card-content">
+                    <h3 class="card-title">Primary Education</h3>
+                    <p>Basic 1 to 6 with a comprehensive curriculum covering core subjects and creative arts.</p>
                 </div>
-            <?php endif; ?>
+            </div>
+            <div class="card" style="text-align:center;">
+                <div style="padding: 30px 20px 10px;">
+                    <i class="fas fa-graduation-cap" style="font-size: 48px; color: var(--primary-color);"></i>
+                </div>
+                <div class="card-content">
+                    <h3 class="card-title">Junior High School</h3>
+                    <p>JHS 1 to 3 preparing students for the BECE with strong academic and life skills.</p>
+                </div>
+            </div>
         </div>
     </div>
 </section>
@@ -82,9 +70,10 @@ try {
 <!-- Call to Action -->
 <section class="section" style="text-align: center;">
     <div class="container">
-        <h2>Ready to join the movement?</h2>
-        <p style="margin: 20px 0;">Become an active member of INFOTESS today.</p>
-        <a href="contact.php" class="btn-cta">Contact Us</a>
+        <h2>Enroll Your Child Today</h2>
+        <p style="margin: 20px 0;">Give your child the best foundation for a bright future. Registration is now open.</p>
+        <a href="register.php" class="btn-cta">Enroll Now</a>
+        <a href="contact.php" class="btn-cta" style="background: transparent; color: var(--primary-color); border: 2px solid var(--primary-color); margin-left: 10px;">Contact Us</a>
     </div>
 </section>
 

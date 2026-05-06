@@ -62,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($phone_number) {
                 try {
                     $sms = new SMSHelper();
-                    $message = "Hello " . $student_name . ", your INFOTESS SDMS password has been successfully reset. You can now use your new password to login. Thank you.";
+                    $message = "Hello " . $student_name . ", your password has been successfully reset. You can now use your new password to login. Thank you.";
                     $sms->send($phone_number, $message);
                 } catch (Exception $e) {
                     // Silently ignore SMS error - password is already reset

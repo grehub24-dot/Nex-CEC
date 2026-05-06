@@ -17,28 +17,38 @@ $current_year = $settings['current_academic_year'] ?? date('Y') . '/' . (date('Y
 $required_dues = isset($settings['annual_dues_amount']) ? (float)$settings['annual_dues_amount'] : 500.00;
 
 // ==========================================
-// UPDATED: Fetch Stats from the new VIEW
+// Fetch Stats (without complex views)
 // ==========================================
-try {
-    $stmt = $pdo->query("SELECT * FROM admin_dashboard_stats");
-    $stats = $stmt->fetch();
-    $total_students = $stats['total_students'] ?? 0;
-    $total_revenue = $stats['total_revenue'] ?? 0;
-    $payments_today = $stats['payments_today'] ?? 0;
-    $students_paid = $stats['compliant_students'] ?? 0;
-} catch (Exception $e) {
-    $total_students = 0; $total_revenue = 0; $payments_today = 0; $students_paid = 0;
-}
+try { $total_students = (int)$pdo->query("SELECT COUNT(*) FROM students")->fetchColumn(); } catch (Exception $e) { $total_students = 0; }
+try { $total_staff = (int)$pdo->query("SELECT COUNT(*) FROM staff WHERE status = 'active'")->fetchColumn(); } catch (Exception $e) { $total_staff = 0; }
+try { $total_revenue = (float)$pdo->query("SELECT COALESCE(SUM(amount), 0) FROM payments")->fetchColumn(); } catch (Exception $e) { $total_revenue = 0; }
+try { $payments_today = (int)$pdo->query("SELECT COUNT(*) FROM payments WHERE payment_date = CURRENT_DATE")->fetchColumn(); } catch (Exception $e) { $payments_today = 0; }
+try { $total_payments = (int)$pdo->query("SELECT COUNT(*) FROM payments")->fetchColumn(); } catch (Exception $e) { $total_payments = 0; }
+try { $students_paid = (int)$pdo->query("SELECT COUNT(DISTINCT student_id) FROM payments")->fetchColumn(); } catch (Exception $e) { $students_paid = 0; }
+try { $pending_messages = (int)$pdo->query("SELECT COUNT(*) FROM messages WHERE is_read = false OR is_read IS NULL")->fetchColumn(); } catch (Exception $e) { $pending_messages = 0; }
+try { $absent_today = (int)$pdo->query("SELECT COUNT(*) FROM student_attendance WHERE attendance_date = CURRENT_DATE AND status = 'absent'")->fetchColumn(); } catch (Exception $e) { $absent_today = 0; }
 
 $compliance_rate = $total_students > 0 ? round(($students_paid / (int)$total_students) * 100, 1) : 0;
 $outstanding_students = max(0, (int)$total_students - $students_paid);
 
-// ==========================================
-// UPDATED: Recent Payments from VIEW
-// ==========================================
+// Recent Payments (direct query)
 try {
-    $stmt = $pdo->query("SELECT * FROM recent_payments_view");
+    $stmt = $pdo->query("SELECT * FROM payments ORDER BY created_at DESC LIMIT 10");
     $recent_payments = $stmt->fetchAll();
+    
+    // Enrich with student names
+    foreach ($recent_payments as &$payment) {
+        $s = $pdo->prepare("SELECT full_name, index_number FROM students WHERE id = ?");
+        $s->execute([$payment['student_id']]);
+        $stu = $s->fetch();
+        if ($stu) {
+            $payment['full_name'] = $stu['full_name'];
+            $payment['index_number'] = $stu['index_number'];
+        } else {
+            $payment['full_name'] = 'Unknown';
+            $payment['index_number'] = '-';
+        }
+    }
 } catch (Exception $e) {
     $recent_payments = [];
 }
@@ -98,6 +108,7 @@ if (empty($chart_labels)) {
                 <li><a href="salary.php"><i class="fas fa-money-check-alt"></i> Salary Structures</a></li>
                 <li><a href="grades.php"><i class="fas fa-clipboard-list"></i> SBA / Grades</a></li>
                 <li><a href="attendance.php"><i class="fas fa-user-check"></i> Attendance</a></li>
+                <li><a href="staff_attendance.php"><i class="fas fa-user-tie"></i> Staff Attendance</a></li>
                 <li><a href="reports.php"><i class="fas fa-chart-bar"></i> Reports</a></li>
                 <li><a href="verify.php"><i class="fas fa-qrcode"></i> Verify Receipt</a></li>
                 <li><a href="users.php"><i class="fas fa-users-cog"></i> User Management</a></li>
@@ -119,8 +130,12 @@ if (empty($chart_labels)) {
             <!-- Stats -->
             <div class="stat-cards">
                 <div class="stat-card">
-                    <div class="stat-icon"><i class="fas fa-users"></i></div>
+                    <div class="stat-icon"><i class="fas fa-user-graduate"></i></div>
                     <div class="stat-details"><h3><?php echo number_format($total_students); ?></h3><p>Total Students</p></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-chalkboard-teacher"></i></div>
+                    <div class="stat-details"><h3><?php echo number_format($total_staff); ?></h3><p>Active Staff</p></div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon"><i class="fas fa-wallet"></i></div>
@@ -132,11 +147,54 @@ if (empty($chart_labels)) {
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
-                    <div class="stat-details"><h3><?php echo $compliance_rate; ?>%</h3><p>Compliance Rate</p></div>
+                    <div class="stat-details"><h3><?php echo $compliance_rate; ?>%</h3><p>Payment Compliance</p></div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon"><i class="fas fa-user-clock"></i></div>
-                    <div class="stat-details"><h3><?php echo number_format($outstanding_students); ?></h3><p>Outstanding Students</p></div>
+                    <div class="stat-details"><h3><?php echo $absent_today; ?></h3><p>Absent Today</p></div>
+                </div>
+            </div>
+
+            <!-- Quick Links -->
+            <div class="section" style="margin-bottom: 30px;">
+                <h3>Quick Actions</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;">
+                    <a href="students.php" class="card" style="text-decoration: none; color: inherit;">
+                        <div class="card-content" style="text-align: center;">
+                            <i class="fas fa-user-plus" style="font-size: 2rem; color: var(--primary-color);"></i>
+                            <p style="margin-top: 10px; font-weight: bold;">Add Student</p>
+                        </div>
+                    </a>
+                    <a href="payments.php" class="card" style="text-decoration: none; color: inherit;">
+                        <div class="card-content" style="text-align: center;">
+                            <i class="fas fa-money-bill-wave" style="font-size: 2rem; color: #27ae60;"></i>
+                            <p style="margin-top: 10px; font-weight: bold;">Record Payment</p>
+                        </div>
+                    </a>
+                    <a href="bulk_import.php" class="card" style="text-decoration: none; color: inherit;">
+                        <div class="card-content" style="text-align: center;">
+                            <i class="fas fa-file-csv" style="font-size: 2rem; color: #f39c12;"></i>
+                            <p style="margin-top: 10px; font-weight: bold;">Bulk Import</p>
+                        </div>
+                    </a>
+                    <a href="attendance.php" class="card" style="text-decoration: none; color: inherit;">
+                        <div class="card-content" style="text-align: center;">
+                            <i class="fas fa-user-check" style="font-size: 2rem; color: #2e86c1;"></i>
+                            <p style="margin-top: 10px; font-weight: bold;">Take Attendance</p>
+                        </div>
+                    </a>
+                    <a href="payroll.php" class="card" style="text-decoration: none; color: inherit;">
+                        <div class="card-content" style="text-align: center;">
+                            <i class="fas fa-file-invoice-dollar" style="font-size: 2rem; color: #8e44ad;"></i>
+                            <p style="margin-top: 10px; font-weight: bold;">Generate Payroll</p>
+                        </div>
+                    </a>
+                    <a href="messaging.php" class="card" style="text-decoration: none; color: inherit;">
+                        <div class="card-content" style="text-align: center;">
+                            <i class="fas fa-envelope" style="font-size: 2rem; color: #e74c3c;"></i>
+                            <p style="margin-top: 10px; font-weight: bold;">Send Message<?php echo $pending_messages > 0 ? " ($pending_messages)" : ""; ?></p>
+                        </div>
+                    </a>
                 </div>
             </div>
 

@@ -272,6 +272,7 @@ $submissions = []; try { $submissions = $pdo->query("SELECT * FROM contact_submi
                                     <ul class="sidebar-menu">
                 <li><a href="dashboard.php"><i class="fas fa-home"></i> Dashboard</a></li>
                 <li><a href="students.php"><i class="fas fa-user-graduate"></i> Students</a></li>
+                <li><a href="bulk_import.php"><i class="fas fa-file-csv"></i> Bulk Import</a></li>
                 <li><a href="staff.php"><i class="fas fa-chalkboard-teacher"></i> Staff</a></li>
                 <li><a href="payments.php"><i class="fas fa-money-bill-wave"></i> Payments</a></li>
                 <li><a href="fees.php"><i class="fas fa-list-alt"></i> Fee Structure</a></li>

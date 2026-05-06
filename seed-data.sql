@@ -5,18 +5,19 @@
 -- NOTE: payments, system_settings, students, users already exist — skipped here.
 -- ==========================================
 
--- 1. Fee Structures
-CREATE TABLE IF NOT EXISTS fee_structures (
-    id SERIAL PRIMARY KEY,
-    level VARCHAR(10) NOT NULL DEFAULT '100',
-    department VARCHAR(100),
-    amount NUMERIC(10,2) NOT NULL DEFAULT 0,
-    academic_year VARCHAR(20) NOT NULL DEFAULT '2025/2026',
-    semester VARCHAR(20) NOT NULL DEFAULT '1',
-    fee_type VARCHAR(50) NOT NULL DEFAULT 'dues',
-    description TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+-- 1. Fee Structures — ALREADY EXISTS, no CREATE needed
+-- Schema: id (uuid), school_id, class_id, title, amount, academic_year, term, is_mandatory, created_at
+
+-- Seed fee structures (only if title doesn't conflict)
+-- Note: existing table has no unique constraint on title, so we check first
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM fee_structures WHERE title = 'Exam Fee') THEN
+        INSERT INTO fee_structures (school_id, class_id, title, amount, academic_year, term, is_mandatory) VALUES
+        (NULL, NULL, 'Exam Fee', 75.00, '2025/2026', 'Semester 1', true),
+        (NULL, NULL, 'Lab Fee', 30.00, '2025/2026', 'Semester 2', false);
+    END IF;
+END $$;
 
 -- 2. Messages (Admin → Student communication)
 CREATE TABLE IF NOT EXISTS messages (
@@ -64,14 +65,6 @@ CREATE TABLE IF NOT EXISTS executives (
 -- ==========================================
 -- SEED DATA
 -- ==========================================
-
--- Fee structures for each level
-INSERT INTO fee_structures (level, amount, academic_year, semester, fee_type, description) VALUES
-('100', 100.00, '2025/2026', 'All', 'dues', 'Annual membership dues'),
-('200', 100.00, '2025/2026', 'All', 'dues', 'Annual membership dues'),
-('300', 100.00, '2025/2026', 'All', 'dues', 'Annual membership dues'),
-('400', 100.00, '2025/2026', 'All', 'dues', 'Annual membership dues')
-ON CONFLICT DO NOTHING;
 
 -- Bursar user (for recording payments)
 INSERT INTO users (email, password, role, status, is_password_reset)

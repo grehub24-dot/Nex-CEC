@@ -118,6 +118,9 @@ class LegacyStatement {
                 $this->result = $res;
             } else {
                 // SELECT
+                if (!$this->table) {
+                    throw new Exception("Bridge parseQuery failed to extract table from SQL: " . $this->sql);
+                }
                 $query = $this->client->table($this->table);
                 
                 // Handle WHERE clause with ? (positional) or :name (named) parameters

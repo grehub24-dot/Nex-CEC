@@ -33,6 +33,14 @@ class SupabaseClient {
         return $newClient;
     }
 
+    public function in($column, $values) {
+        $newClient = clone $this;
+        // PostgREST uses in.(val1,val2,val3) syntax
+        $valStr = implode(',', (array)$values);
+        $newClient->filters[] = "$column=in.($valStr)";
+        return $newClient;
+    }
+
     public function like($column, $pattern) {
         $newClient = clone $this;
         $newClient->filters[] = "$column=like.$pattern";

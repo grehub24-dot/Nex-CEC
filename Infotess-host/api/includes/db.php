@@ -57,6 +57,10 @@ class LegacyStatement {
     private $currentIndex = 0;
     private $table = null;
     private $isInsert = false;
+    private $isUpdate = false;
+    private $isDelete = false;
+    private $updateColumns = [];
+    private $affectedRows = 0;
 
     public function __construct($client, $sql, $pdoRef) {
         $this->client = $client;
@@ -67,12 +71,23 @@ class LegacyStatement {
 
     private function parseQuery($sql) {
         $sql = trim($sql);
-        // Use [\s\S]* instead of .* to match across newlines
         if (preg_match('/^SELECT[\s\S]*?FROM\s+(\w+)/i', $sql, $m)) {
             $this->table = $m[1];
         } elseif (preg_match('/^INSERT INTO\s+(\w+)/i', $sql, $m)) {
             $this->table = $m[1];
             $this->isInsert = true;
+        } elseif (preg_match('/^UPDATE\s+(\w+)/i', $sql, $m)) {
+            $this->table = $m[1];
+            $this->isUpdate = true;
+            // Extract SET columns
+            if (preg_match('/SET\s+([\s\S]+?)\s+WHERE/i', $sql, $setMatch)) {
+                $setPart = $setMatch[1];
+                preg_match_all('/(\w+)\s*=/i', $setPart, $colMatches);
+                $this->updateColumns = $colMatches[1] ?? [];
+            }
+        } elseif (preg_match('/^DELETE\s+FROM\s+(\w+)/i', $sql, $m)) {
+            $this->table = $m[1];
+            $this->isDelete = true;
         }
     }
 
@@ -97,7 +112,6 @@ class LegacyStatement {
                 preg_match('/VALUES\s*\(([^)]+)\)/i', $this->sql, $valMatch);
                 $rawValues = [];
                 if ($valMatch) {
-                    // Split by comma but respect quoted strings
                     $rawValues = $this->parseValues($valMatch[1]);
                 }
 
@@ -106,11 +120,9 @@ class LegacyStatement {
                 foreach ($columns as $i => $col) {
                     $rawVal = $rawValues[$i] ?? '?';
                     if ($rawVal === '?') {
-                        // Use positional parameter
                         $data[$col] = $this->params[$paramIndex] ?? null;
                         $paramIndex++;
                     } else {
-                        // Use literal value from SQL (strip quotes for strings)
                         $data[$col] = $this->parseLiteral($rawVal);
                     }
                 }
@@ -120,6 +132,61 @@ class LegacyStatement {
                     $this->pdoRef->setLastInsertId($res[0]['id']);
                 }
                 $this->result = $res;
+            } elseif ($this->isUpdate) {
+                // UPDATE table SET col1 = ?, col2 = ? WHERE id = ?
+                // Build data object from SET columns + params
+                $data = [];
+                $paramIndex = 0;
+                
+                // SET columns consume params first
+                foreach ($this->updateColumns as $col) {
+                    $data[$col] = $this->params[$paramIndex] ?? null;
+                    $paramIndex++;
+                }
+                
+                // Parse WHERE clause for the filter
+                preg_match_all('/WHERE\s+([\s\S]+?)(\s+ORDER|\s+LIMIT|$)/i', $this->sql, $whereMatches);
+                
+                $query = $this->client->table($this->table);
+                if (!empty($whereMatches[1])) {
+                    $conditions = explode(' AND ', $whereMatches[1][0]);
+                    foreach ($conditions as $cond) {
+                        $parts = preg_split('/\s*=\s*/', trim($cond));
+                        if (count($parts) === 2) {
+                            $col = $parts[0];
+                            $val = trim($parts[1]);
+                            if ($val === '?') {
+                                $query = $query->where($col, $this->params[$paramIndex]);
+                                $paramIndex++;
+                            }
+                        }
+                    }
+                }
+                
+                $this->result = $query->update($data);
+                $this->affectedRows = is_array($this->result) ? count($this->result) : 1;
+            } elseif ($this->isDelete) {
+                // DELETE FROM table WHERE id = ?
+                preg_match_all('/WHERE\s+([\s\S]+?)(\s+ORDER|\s+LIMIT|$)/i', $this->sql, $whereMatches);
+                
+                $query = $this->client->table($this->table);
+                $paramIndex = 0;
+                if (!empty($whereMatches[1])) {
+                    $conditions = explode(' AND ', $whereMatches[1][0]);
+                    foreach ($conditions as $cond) {
+                        $parts = preg_split('/\s*=\s*/', trim($cond));
+                        if (count($parts) === 2) {
+                            $col = $parts[0];
+                            $val = trim($parts[1]);
+                            if ($val === '?') {
+                                $query = $query->where($col, $this->params[$paramIndex]);
+                                $paramIndex++;
+                            }
+                        }
+                    }
+                }
+                
+                $this->result = $query->delete();
             } else {
                 // SELECT
                 if (!$this->table) {
@@ -139,15 +206,12 @@ class LegacyStatement {
                             $col = $parts[0];
                             $val = trim($parts[1]);
                             if ($val === '?') {
-                                // Positional parameter
                                 $query = $query->where($col, $this->params[$currentParamIndex]);
                                 $currentParamIndex++;
                             } elseif (strpos($val, ':') === 0) {
-                                // Named parameter (e.g. :uid)
                                 $paramName = substr($val, 1);
                                 $query = $query->where($col, $this->params[$paramName] ?? null);
                             }
-                            // else: literal value in SQL
                         }
                     }
                 }
@@ -163,7 +227,6 @@ class LegacyStatement {
             return true;
         } catch (Exception $e) {
             error_log("Supabase Query Error: " . $e->getMessage());
-            // Re-throw as PDOException so application catch blocks work
             throw new PDOException($e->getMessage());
         }
     }
@@ -182,6 +245,13 @@ class LegacyStatement {
     public function fetchColumn() {
         $row = $this->fetch();
         return $row ? reset($row) : null;
+    }
+
+    public function rowCount() {
+        if ($this->affectedRows > 0) {
+            return $this->affectedRows;
+        }
+        return is_array($this->result) ? count($this->result) : 0;
     }
 
     /**

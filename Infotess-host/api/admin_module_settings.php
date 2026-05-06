@@ -193,12 +193,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Fetch Data for Tables
-$executives = $pdo->query("SELECT * FROM executives")->fetchAll();
-$alumni = $pdo->query("SELECT * FROM alumni")->fetchAll();
-$gallery = $pdo->query("SELECT * FROM gallery ORDER BY created_at DESC")->fetchAll();
-$projects = $pdo->query("SELECT * FROM projects ORDER BY project_date DESC")->fetchAll();
-$submissions = $pdo->query("SELECT * FROM contact_submissions ORDER BY created_at DESC")->fetchAll();
+// Fetch Data for Tables (wrapped for missing tables)
+$executives = []; try { $executives = $pdo->query("SELECT * FROM executives")->fetchAll(); } catch (Exception $e) { $executives = []; }
+$alumni = []; try { $alumni = $pdo->query("SELECT * FROM alumni")->fetchAll(); } catch (Exception $e) { $alumni = []; }
+$gallery = []; try { $gallery = $pdo->query("SELECT * FROM gallery ORDER BY created_at DESC")->fetchAll(); } catch (Exception $e) { $gallery = []; }
+$projects = []; try { $projects = $pdo->query("SELECT * FROM projects ORDER BY project_date DESC")->fetchAll(); } catch (Exception $e) { $projects = []; }
+$submissions = []; try { $submissions = $pdo->query("SELECT * FROM contact_submissions ORDER BY created_at DESC")->fetchAll(); } catch (Exception $e) { $submissions = []; }
 ?>
 
 <!DOCTYPE html>

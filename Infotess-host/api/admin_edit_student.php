@@ -75,10 +75,13 @@ $stmt->execute([$id]);
 $student = $stmt->fetch();
 
 if ($student) {
-    $u = $pdo->prepare("SELECT email FROM users WHERE id = ?");
-    $u->execute([$student['user_id']]);
-    $urow = $u->fetch();
-    $student['email'] = $urow ? $urow['email'] : '';
+    $userId = isset($student['user_id']) && $student['user_id'] !== '' && $student['user_id'] !== null ? (int)$student['user_id'] : 0;
+    if ($userId > 0) {
+        $u = $pdo->prepare("SELECT email FROM users WHERE id = ?");
+        $u->execute([$userId]);
+        $urow = $u->fetch();
+        $student['email'] = $urow ? $urow['email'] : '';
+    }
 }
 
 if (!$student) {

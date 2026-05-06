@@ -69,6 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $saved = 0;
         
         foreach ($_POST['scores'] as $student_id => $data) {
+            $student_id = (int)$student_id;
             $class_test = (float)($data['class_test'] ?? 0);
             $mid_term = (float)($data['mid_term'] ?? 0);
             $end_term = (float)($data['end_term'] ?? 0);

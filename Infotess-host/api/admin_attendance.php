@@ -42,6 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $saved = 0;
         
         foreach ($_POST['attendance'] as $student_id => $status) {
+            $student_id = (int)$student_id;
             $reason = sanitize($_POST['reasons'][$student_id] ?? '');
             
             $stmt = $pdo->prepare("INSERT INTO student_attendance (student_id, class_id, attendance_date, status, reason, recorded_by) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT (student_id, attendance_date) DO UPDATE SET status=?, reason=?, recorded_by=?");

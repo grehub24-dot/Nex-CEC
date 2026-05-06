@@ -77,7 +77,10 @@ class LegacyStatement {
     }
 
     public function execute($params = []) {
-        $this->params = $params;
+        // Convert empty strings to null for PostgreSQL integer/numeric columns
+        $this->params = array_map(function($v) {
+            return $v === '' ? null : $v;
+        }, $params);
         
         if (!$this->client) return false;
 

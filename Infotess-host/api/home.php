@@ -3,8 +3,13 @@ require_once 'includes/db.php';
 require_once 'includes/header.php';
 
 // Fetch recent news/events for the homepage
-$stmt = $pdo->query("SELECT * FROM activities ORDER BY activity_date DESC LIMIT 3");
-$activities = $stmt->fetchAll();
+$activities = [];
+try {
+    $stmt = $pdo->query("SELECT * FROM activities ORDER BY activity_date DESC LIMIT 3");
+    $activities = $stmt->fetchAll();
+} catch (Exception $e) {
+    $activities = [];
+}
 ?>
 
 <!-- Hero Section -->

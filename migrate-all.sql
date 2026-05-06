@@ -294,7 +294,8 @@ CREATE TABLE IF NOT EXISTS subjects (
     code VARCHAR(20),
     class_id INTEGER REFERENCES classes(id),
     teacher_id INTEGER REFERENCES staff(id),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(name, class_id)
 );
 
 -- Seed basic school subjects
@@ -317,7 +318,8 @@ CREATE TABLE IF NOT EXISTS grade_boundaries (
     min_score INTEGER NOT NULL,
     max_score INTEGER NOT NULL,
     grade INTEGER,
-    remark VARCHAR(50)
+    remark VARCHAR(50),
+    UNIQUE(min_score, max_score)
 );
 
 -- Seed Ghana Basic School grading system

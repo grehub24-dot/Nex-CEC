@@ -80,3 +80,16 @@ function flash($name, $message = '', $class = 'success') {
         unset($_SESSION[$name . '_class']);
     }
 }
+
+/**
+ * Enforce password reset for students who haven't reset their temporary password.
+ */
+function enforcePasswordReset() {
+    if (isset($_SESSION['is_password_reset']) && $_SESSION['is_password_reset'] == 0) {
+        // Only redirect if not already on the password reset page
+        $currentScript = $_SERVER['REQUEST_URI'] ?? '';
+        if (strpos($currentScript, 'password-reset') === false) {
+            redirect('student/password-reset.php');
+        }
+    }
+}

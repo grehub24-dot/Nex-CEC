@@ -71,8 +71,15 @@ $status_text = $outstanding <= 0 ? 'Fully Paid' : 'Unpaid';
                     $stmt->execute([$_SESSION['user_id']]);
                     $msg_count = $stmt->fetchColumn();
 
-                    $checkMR = $pdo->query("SHOW TABLES LIKE 'message_reads'");
-                    if ($checkMR->rowCount() > 0) {
+                    // Check if message_reads table exists (Supabase compatible)
+                    $hasMessageReads = false;
+                    try {
+                        $checkMR = $pdo->query("SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'message_reads'");
+                        $hasMessageReads = $checkMR && $checkMR->fetchColumn() > 0;
+                    } catch (Exception $e) {
+                        $hasMessageReads = false;
+                    }
+                    if ($hasMessageReads) {
                         $stmt2 = $pdo->prepare("
                             SELECT COUNT(*) FROM messages m 
                             WHERE (m.is_broadcast = 1 OR m.receiver_id = ?) 

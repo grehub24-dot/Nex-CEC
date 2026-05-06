@@ -35,7 +35,7 @@ $payments = $stmt->fetchAll();
                 <li><a href="profile.php"><i class="fas fa-user"></i> My Profile</a></li>
                 <li><a href="messages.php"><i class="fas fa-envelope"></i> Messages 
                     <?php
-                    $stmt = $pdo->prepare("SELECT COUNT(*) FROM messages WHERE is_broadcast = 1 OR receiver_id = ?");
+                    $stmt = $pdo->prepare("SELECT COUNT(*) FROM messages WHERE is_broadcast = true OR receiver_id = ?");
                     $stmt->execute([$_SESSION['user_id']]);
                     $msg_count = $stmt->fetchColumn();
                     if ($msg_count > 0):

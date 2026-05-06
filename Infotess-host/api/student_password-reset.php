@@ -26,10 +26,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         try {
             // Safely update password with is_password_reset column fallback
-            // First try with is_password_reset column (if it exists)
-            $checkCol = $pdo->query("SHOW COLUMNS FROM users LIKE 'is_password_reset'");
-            if ($checkCol->rowCount() > 0) {
-                $stmt = $pdo->prepare("UPDATE users SET password = :password, is_password_reset = 1 WHERE id = :id");
+            // First check if is_password_reset column exists (PostgreSQL compatible)
+            $hasColumn = false;
+            try {
+                $checkCol = $pdo->query("SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'is_password_reset'");
+                $hasColumn = $checkCol && $checkCol->fetchColumn() > 0;
+            } catch (Exception $e) {
+                $hasColumn = true; // Assume column exists if check fails
+            }
+            if ($hasColumn) {
+                $stmt = $pdo->prepare("UPDATE users SET password = :password, is_password_reset = true WHERE id = :id");
                 $stmt->execute(['password' => $hash, 'id' => $user_id]);
             } else {
                 // Fallback: update password without is_password_reset column

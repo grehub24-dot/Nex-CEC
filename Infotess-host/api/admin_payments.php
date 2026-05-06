@@ -35,15 +35,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $method = sanitize($_POST['payment_method']);
     $date = sanitize($_POST['payment_date']);
 
-    // Find Student
-    $stmt = $pdo->prepare("
-        SELECT s.id, s.full_name, s.index_number, s.phone_number, u.email 
-        FROM students s 
-        LEFT JOIN users u ON s.user_id = u.id 
-        WHERE s.index_number = ?
-    ");
+    // Find Student (two-step lookup for Supabase compatibility)
+    $stmt = $pdo->prepare("SELECT * FROM students WHERE index_number = ?");
     $stmt->execute([$index_number]);
     $student = $stmt->fetch();
+    if ($student) {
+        $u = $pdo->prepare("SELECT email FROM users WHERE id = ?");
+        $u->execute([$student['user_id']]);
+        $urow = $u->fetch();
+        $student['email'] = $urow ? $urow['email'] : '';
+    }
 
     if (!$student) {
         $error = "Student with Index Number $index_number not found.";
@@ -324,17 +325,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
                 // Fetch recent payments for display with pagination
                 $stmt = $pdo->prepare("
-                    SELECT SQL_CALC_FOUND_ROWS p.*, s.full_name, s.index_number,
-                           (SELECT SUM(amount) FROM payments WHERE student_id = s.id AND academic_year = :year_sub) as total_paid
-                    FROM payments p 
-                    JOIN students s ON p.student_id = s.id 
-                    ORDER BY p.created_at DESC 
+                    SELECT *
+                    FROM payments 
+                    ORDER BY created_at DESC 
                     LIMIT $limit OFFSET $offset
                 ");
-                $stmt->execute(['year_sub' => $current_academic_year]);
+                $stmt->execute();
                 $recent_payments = $stmt->fetchAll();
 
-                $total_stmt = $pdo->query("SELECT FOUND_ROWS()");
+                // Enrich payments with student data (two-step lookup for Supabase compatibility)
+                foreach ($recent_payments as &$payment) {
+                    $s = $pdo->prepare("SELECT full_name, index_number FROM students WHERE id = ?");
+                    $s->execute([$payment['student_id']]);
+                    $stu = $s->fetch();
+                    if ($stu) {
+                        $payment['full_name'] = $stu['full_name'];
+                        $payment['index_number'] = $stu['index_number'];
+                    } else {
+                        $payment['full_name'] = 'Unknown';
+                        $payment['index_number'] = '-';
+                    }
+                    // Calculate total paid for this student in current year
+                    $tp = $pdo->prepare("SELECT SUM(amount) FROM payments WHERE student_id = ? AND academic_year = ?");
+                    $tp->execute([$payment['student_id'], $current_academic_year]);
+                    $payment['total_paid'] = (float)$tp->fetchColumn();
+                }
+
+                $total_stmt = $pdo->query("SELECT COUNT(*) FROM payments");
                 $total_rows = (int)$total_stmt->fetchColumn();
                 $total_pages = ceil($total_rows / $limit);
                 ?>

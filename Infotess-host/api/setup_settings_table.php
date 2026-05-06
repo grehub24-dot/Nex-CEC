@@ -23,7 +23,7 @@ try {
         'institution_name' => 'USTED'
     ];
 
-    $stmt = $pdo->prepare("INSERT IGNORE INTO system_settings (setting_key, setting_value) VALUES (?, ?)");
+    $stmt = $pdo->prepare("INSERT INTO system_settings (setting_key, setting_value) VALUES (?, ?) ON CONFLICT (setting_key) DO NOTHING");
     foreach ($defaultSettings as $key => $value) {
         $stmt->execute([$key, $value]);
     }

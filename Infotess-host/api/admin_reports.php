@@ -12,13 +12,25 @@ $headers = [];
 
 if ($report_type) {
     if ($report_type === 'payments_per_dept') {
-        $stmt = $pdo->query("
-            SELECT s.department, COUNT(p.id) as payment_count, SUM(p.amount) as total_amount 
-            FROM payments p 
-            JOIN students s ON p.student_id = s.id 
-            GROUP BY s.department
-        ");
-        $data = $stmt->fetchAll();
+        // Two-step lookup for Supabase: fetch payments, then enrich with student dept
+        $all_payments = $pdo->query("SELECT student_id, amount FROM payments")->fetchAll();
+        $dept_map = [];
+        $seen_students = [];
+        foreach ($all_payments as $p) {
+            if (!isset($seen_students[$p['student_id']])) {
+                $s = $pdo->prepare("SELECT department FROM students WHERE id = ?");
+                $s->execute([$p['student_id']]);
+                $stu = $s->fetch();
+                $seen_students[$p['student_id']] = $stu ? $stu['department'] : 'Unknown';
+            }
+            $dept = $seen_students[$p['student_id']];
+            if (!isset($dept_map[$dept])) {
+                $dept_map[$dept] = ['department' => $dept, 'payment_count' => 0, 'total_amount' => 0];
+            }
+            $dept_map[$dept]['payment_count']++;
+            $dept_map[$dept]['total_amount'] += (float)$p['amount'];
+        }
+        $data = array_values($dept_map);
         $headers = ['Department', 'Payment Count', 'Total Amount'];
     } elseif ($report_type === 'payments_per_year') {
         $stmt = $pdo->query("

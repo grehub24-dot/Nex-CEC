@@ -11,11 +11,22 @@ $history = [];
 
 if ($receipt_number) {
     // Fetch specific payment
-    $stmt = $pdo->prepare("SELECT p.*, s.full_name, s.index_number, s.department, s.level FROM payments p JOIN students s ON p.student_id = s.id WHERE p.receipt_number = ?");
+    $stmt = $pdo->prepare("SELECT * FROM payments WHERE receipt_number = ?");
     $stmt->execute([$receipt_number]);
     $payment = $stmt->fetch();
 
     if ($payment) {
+        // Enrich with student data (two-step lookup for Supabase compatibility)
+        $s = $pdo->prepare("SELECT full_name, index_number, department, level FROM students WHERE id = ?");
+        $s->execute([$payment['student_id']]);
+        $stu = $s->fetch();
+        if ($stu) {
+            $payment['full_name'] = $stu['full_name'];
+            $payment['index_number'] = $stu['index_number'];
+            $payment['department'] = $stu['department'];
+            $payment['level'] = $stu['level'];
+        }
+
         // Fetch full history for this student
         $stmt = $pdo->prepare("SELECT * FROM payments WHERE student_id = ? ORDER BY payment_date DESC");
         $stmt->execute([$payment['student_id']]);

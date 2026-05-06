@@ -47,8 +47,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $user_id = $pdo->lastInsertId();
 
             // 2. Create Student Record
-            $stmt = $pdo->prepare("INSERT INTO students (user_id, index_number, full_name, department, level, class_name, stream, phone_number, profile_picture) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-            $stmt->execute([$user_id, $index_number, $full_name, $department, $level, $class, $stream, $phone, $profile_picture]);
+            $stmt = $pdo->prepare("INSERT INTO students (user_id, index_number, full_name, department, level, stream, phone_number, profile_picture) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt->execute([$user_id, $index_number, $full_name, $department, $level, $stream, $phone, $profile_picture]);
             
             $student_id = $pdo->lastInsertId();
 
@@ -115,7 +115,7 @@ $offset = ($page - 1) * $limit;
 
 // Fetch Students
 $search = $_GET['search'] ?? '';
-$query = "SELECT SQL_CALC_FOUND_ROWS * FROM students";
+$query = "SELECT * FROM students";
 $params = [];
 if ($search) {
     $query .= " WHERE full_name LIKE ? OR index_number LIKE ?";
@@ -126,7 +126,15 @@ $stmt = $pdo->prepare($query);
 $stmt->execute($params);
 $students = $stmt->fetchAll();
 
-$total_stmt = $pdo->query("SELECT FOUND_ROWS()");
+// Get total count (PostgreSQL compatible — replace FOUND_ROWS())
+$total_query = "SELECT COUNT(*) FROM students";
+$total_params = [];
+if ($search) {
+    $total_query .= " WHERE full_name LIKE ? OR index_number LIKE ?";
+    $total_params = ["%$search%", "%$search%"];
+}
+$total_stmt = $pdo->prepare($total_query);
+$total_stmt->execute($total_params);
 $total_rows = (int)$total_stmt->fetchColumn();
 $total_pages = ceil($total_rows / $limit);
 ?>
@@ -363,7 +371,6 @@ $total_pages = ceil($total_rows / $limit);
                                 <th>Name</th>
                                 <th>Programme</th>
                                 <th>Level</th>
-                                <th>Class</th>
                                 <th>Stream</th>
                                 <th>Contact</th>
                                 <th>Actions</th>
@@ -379,7 +386,6 @@ $total_pages = ceil($total_rows / $limit);
                                 <td><?php echo htmlspecialchars($student['full_name']); ?></td>
                                 <td><?php echo htmlspecialchars($student['department']); ?></td>
                                 <td><?php echo htmlspecialchars($student['level']); ?></td>
-                                <td><?php echo htmlspecialchars($student['class_name'] ?? '-'); ?></td>
                                 <td><?php echo htmlspecialchars($student['stream'] ?? '-'); ?></td>
                                 <td>
                                     <?php echo htmlspecialchars($student['phone_number']); ?>

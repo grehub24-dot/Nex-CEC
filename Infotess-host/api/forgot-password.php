@@ -34,16 +34,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                  $student = $stmt_s->fetch();
             }
         } else {
-            // Student via Index Number
-            $stmt = $pdo->prepare("
-                SELECT u.*, s.index_number, s.full_name, s.phone_number 
-                FROM users u 
-                JOIN students s ON u.id = s.user_id 
-                WHERE s.index_number = :index_number
-            ");
-            $stmt->execute(['index_number' => $identifier]);
-            $user = $stmt->fetch();
-            $student = $user; // $user array has the student data joined
+            // Student via Index Number (two-step lookup for Supabase compatibility)
+            $stmt_s = $pdo->prepare("SELECT user_id, index_number, full_name, phone_number FROM students WHERE index_number = :index_number");
+            $stmt_s->execute(['index_number' => $identifier]);
+            $student = $stmt_s->fetch();
+            if ($student) {
+                $stmt = $pdo->prepare("SELECT * FROM users WHERE id = :uid");
+                $stmt->execute(['uid' => $student['user_id']]);
+                $user = $stmt->fetch();
+                if ($user) {
+                    $user['index_number'] = $student['index_number'];
+                    $user['full_name'] = $student['full_name'];
+                    $user['phone_number'] = $student['phone_number'];
+                }
+            }
+            $student = $user;
         }
 
         if ($user) {

@@ -50,10 +50,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Fetch Student Data
-$stmt = $pdo->prepare("SELECT s.*, u.email FROM students s JOIN users u ON s.user_id = u.id WHERE s.id = ?");
+// Fetch Student Data (two-step lookup for Supabase compatibility)
+$stmt = $pdo->prepare("SELECT * FROM students WHERE id = ?");
 $stmt->execute([$student_id]);
 $student = $stmt->fetch();
+if ($student) {
+    $u = $pdo->prepare("SELECT email FROM users WHERE id = ?");
+    $u->execute([$student['user_id']]);
+    $urow = $u->fetch();
+    $student['email'] = $urow ? $urow['email'] : '';
+}
 ?>
 
 <!DOCTYPE html>
@@ -83,7 +89,7 @@ $student = $stmt->fetch();
                 <li><a href="profile.php" class="active"><i class="fas fa-user"></i> My Profile</a></li>
                 <li><a href="messages.php"><i class="fas fa-envelope"></i> Messages 
                     <?php
-                    $stmt = $pdo->prepare("SELECT COUNT(*) FROM messages WHERE is_broadcast = 1 OR receiver_id = ?");
+                    $stmt = $pdo->prepare("SELECT COUNT(*) FROM messages WHERE is_broadcast = true OR receiver_id = ?");
                     $stmt->execute([$_SESSION['user_id']]);
                     $msg_count = $stmt->fetchColumn();
                     if ($msg_count > 0):

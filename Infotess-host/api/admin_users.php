@@ -32,10 +32,11 @@ if ($page < 1) $page = 1;
 $offset = ($page - 1) * $limit;
 
 // Fetch Users
-$stmt = $pdo->query("SELECT SQL_CALC_FOUND_ROWS * FROM users ORDER BY created_at DESC LIMIT $limit OFFSET $offset");
+$stmt = $pdo->prepare("SELECT * FROM users ORDER BY created_at DESC LIMIT ? OFFSET ?");
+$stmt->execute([$limit, $offset]);
 $users = $stmt->fetchAll();
 
-$total_stmt = $pdo->query("SELECT FOUND_ROWS()");
+$total_stmt = $pdo->query("SELECT COUNT(*) FROM users");
 $total_rows = (int)$total_stmt->fetchColumn();
 $total_pages = ceil($total_rows / $limit);
 ?>

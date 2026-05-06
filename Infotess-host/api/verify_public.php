@@ -6,16 +6,21 @@ $status = 'invalid';
 $data = null;
 
 if ($receipt_number) {
-    $stmt = $pdo->prepare("
-        SELECT p.*, s.full_name, s.index_number, s.level, s.class_name, s.stream
-        FROM payments p 
-        JOIN students s ON p.student_id = s.id 
-        WHERE p.receipt_number = ?
-    ");
+    $stmt = $pdo->prepare("SELECT * FROM payments WHERE receipt_number = ?");
     $stmt->execute([$receipt_number]);
     $data = $stmt->fetch();
     
     if ($data) {
+        // Enrich with student data (two-step lookup for Supabase compatibility)
+        $s = $pdo->prepare("SELECT full_name, index_number, level, stream FROM students WHERE id = ?");
+        $s->execute([$data['student_id']]);
+        $stu = $s->fetch();
+        if ($stu) {
+            $data['full_name'] = $stu['full_name'];
+            $data['index_number'] = $stu['index_number'];
+            $data['level'] = $stu['level'];
+            $data['stream'] = $stu['stream'] ?? '-';
+        }
         $status = 'valid';
     }
 }

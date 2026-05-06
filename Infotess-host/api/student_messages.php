@@ -35,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 }
 
 // Fetch Broadcast Messages
-$broadcasts = $pdo->query("SELECT * FROM messages WHERE is_broadcast = 1 ORDER BY created_at DESC LIMIT 10")->fetchAll();
+$broadcasts = $pdo->query("SELECT * FROM messages WHERE is_broadcast = true ORDER BY created_at DESC LIMIT 10")->fetchAll();
 
 // Fetch Direct Messages for this student
 $direct_messages = $pdo->prepare("SELECT * FROM messages WHERE receiver_id = ? AND is_broadcast = 0 ORDER BY created_at DESC");
@@ -106,17 +106,23 @@ $direct_messages = $direct_messages->fetchAll();
                     <?php
                     $stmt = $pdo->prepare("
                         SELECT COUNT(*) FROM messages m 
-                        WHERE (m.is_broadcast = 1 OR m.receiver_id = ?)
+                        WHERE (m.is_broadcast = true OR m.receiver_id = ?)
                     ");
                     $stmt->execute([$_SESSION['user_id']]);
                     $msg_count = $stmt->fetchColumn();
 
                     // Subtract already-read messages if message_reads table exists
-                    $checkMR = $pdo->query("SHOW TABLES LIKE 'message_reads'");
-                    if ($checkMR->rowCount() > 0) {
+                    $hasMR = false;
+                    try {
+                        $checkMR = $pdo->query("SELECT 1 FROM information_schema.tables WHERE table_name = 'message_reads'");
+                        $hasMR = $checkMR && $checkMR->fetchColumn() > 0;
+                    } catch (Exception $e) {
+                        $hasMR = false;
+                    }
+                    if ($hasMR) {
                         $stmt2 = $pdo->prepare("
                             SELECT COUNT(*) FROM messages m 
-                            WHERE (m.is_broadcast = 1 OR m.receiver_id = ?) 
+                            WHERE (m.is_broadcast = true OR m.receiver_id = ?) 
                             AND EXISTS (
                                 SELECT 1 FROM message_reads mr 
                                 WHERE mr.message_id = m.id AND mr.user_id = ?

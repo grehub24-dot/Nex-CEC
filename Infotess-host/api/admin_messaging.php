@@ -24,12 +24,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $sms = new SMSHelper();
                 $smsText = trim($title . ': ' . $content);
                 $students = $pdo->query("
-                    SELECT DISTINCT s.phone_number
-                    FROM students s
-                    LEFT JOIN users u ON s.user_id = u.id
-                    WHERE s.phone_number IS NOT NULL
-                      AND s.phone_number != ''
-                      AND (u.id IS NULL OR u.status = 'active')
+                    SELECT DISTINCT phone_number
+                    FROM students
+                    WHERE phone_number IS NOT NULL
+                      AND phone_number != ''
                 ")->fetchAll();
                 $sentCount = 0;
                 $failedCount = 0;
@@ -75,12 +73,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 if ($recipient_type === 'all') {
                     $students = $pdo->query("
-                        SELECT DISTINCT s.phone_number
-                        FROM students s
-                        LEFT JOIN users u ON s.user_id = u.id
-                        WHERE s.phone_number IS NOT NULL
-                          AND s.phone_number != ''
-                          AND (u.id IS NULL OR u.status = 'active')
+                        SELECT DISTINCT phone_number
+                        FROM students
+                        WHERE phone_number IS NOT NULL
+                          AND phone_number != ''
                     ")->fetchAll();
                     foreach ($students as $student) {
                         if ($sms->send($student['phone_number'], $sms_content)) {
@@ -207,13 +203,21 @@ $all_students = $pdo->query("SELECT id, full_name, index_number FROM students OR
                     <h3>Messages from Students</h3>
                     <?php
                     $student_msgs = $pdo->query("
-                        SELECT m.*, s.full_name as sender_name, s.index_number 
-                        FROM messages m 
-                        JOIN students s ON m.sender_id = s.user_id 
-                        WHERE m.is_broadcast = 0 AND m.receiver_id IN (SELECT id FROM users WHERE role = 'admin')
-                        ORDER BY m.created_at DESC 
+                        SELECT *
+                        FROM messages 
+                        WHERE is_broadcast = 0 AND receiver_id IN (SELECT id FROM users WHERE role = 'admin')
+                        ORDER BY created_at DESC 
                         LIMIT 15
                     ")->fetchAll();
+                    
+                    // Enrich with student names (two-step lookup for Supabase compatibility)
+                    foreach ($student_msgs as &$msg) {
+                        $s = $pdo->prepare("SELECT full_name, index_number FROM students WHERE user_id = ?");
+                        $s->execute([$msg['sender_id']]);
+                        $stu = $s->fetch();
+                        $msg['sender_name'] = $stu ? $stu['full_name'] : 'Unknown';
+                        $msg['index_number'] = $stu ? $stu['index_number'] : '-';
+                    }
                     
                     if (empty($student_msgs)):
                     ?>
@@ -259,12 +263,23 @@ $all_students = $pdo->query("SELECT id, full_name, index_number FROM students OR
                     <h3>Message History</h3>
                     <?php
                     $all_msgs = $pdo->query("
-                        SELECT m.*, s.full_name as recipient_name 
-                        FROM messages m 
-                        LEFT JOIN students s ON m.receiver_id = s.user_id 
-                        ORDER BY m.created_at DESC 
+                        SELECT *
+                        FROM messages 
+                        ORDER BY created_at DESC 
                         LIMIT 20
                     ")->fetchAll();
+                    
+                    // Enrich with recipient names (two-step lookup for Supabase compatibility)
+                    foreach ($all_msgs as &$msg) {
+                        if ($msg['is_broadcast']) {
+                            $msg['recipient_name'] = 'All Students (Broadcast)';
+                        } else {
+                            $s = $pdo->prepare("SELECT full_name FROM students WHERE user_id = ?");
+                            $s->execute([$msg['receiver_id']]);
+                            $stu = $s->fetch();
+                            $msg['recipient_name'] = $stu ? $stu['full_name'] : 'Admin/System';
+                        }
+                    }
                     
                     if (empty($all_msgs)):
                     ?>

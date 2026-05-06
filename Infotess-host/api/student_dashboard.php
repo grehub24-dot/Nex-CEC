@@ -98,7 +98,7 @@ $status_text = $outstanding <= 0 ? 'Fully Paid' : 'Unpaid';
                         if ($hasMessageReads) {
                         $stmt2 = $pdo->prepare("
                             SELECT COUNT(*) FROM messages m 
-                            WHERE (m.is_broadcast = 1 OR m.receiver_id = ?) 
+                            WHERE (m.is_broadcast = true OR m.receiver_id = ?) 
                             AND EXISTS (
                                 SELECT 1 FROM message_reads mr 
                                 WHERE mr.message_id = m.id AND mr.user_id = ?

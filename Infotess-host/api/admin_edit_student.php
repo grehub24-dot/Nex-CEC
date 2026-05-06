@@ -40,8 +40,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->beginTransaction();
 
         // Update Student
-        $stmt = $pdo->prepare("UPDATE students SET full_name = ?, index_number = ?, department = ?, level = ?, class_name = ?, stream = ?, phone_number = ?, profile_picture = ? WHERE id = ?");
-        $stmt->execute([$full_name, $index_number, $department, $level, $class_name, $stream, $phone, $profile_picture, $id]);
+        $stmt = $pdo->prepare("UPDATE students SET full_name = ?, index_number = ?, department = ?, level = ?, stream = ?, phone_number = ?, profile_picture = ? WHERE id = ?");
+        $stmt->execute([$full_name, $index_number, $department, $level, $stream, $phone, $profile_picture, $id]);
 
         // Update User Email (if needed)
         // First get user_id
@@ -62,15 +62,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Fetch Student Data
-$stmt = $pdo->prepare("
-    SELECT s.*, u.email 
-    FROM students s 
-    LEFT JOIN users u ON s.user_id = u.id 
-    WHERE s.id = ?
-");
+// Fetch Student Data (two-step lookup for Supabase compatibility)
+$stmt = $pdo->prepare("SELECT * FROM students WHERE id = ?");
 $stmt->execute([$id]);
 $student = $stmt->fetch();
+
+if ($student) {
+    $u = $pdo->prepare("SELECT email FROM users WHERE id = ?");
+    $u->execute([$student['user_id']]);
+    $urow = $u->fetch();
+    $student['email'] = $urow ? $urow['email'] : '';
+}
 
 if (!$student) {
     redirect('students.php');

@@ -68,7 +68,7 @@ $month_name = date('F', mktime(0, 0, 0, $payroll['month'], 1));
 </head>
 <body>
     <div class="no-print" style="text-align: center; padding: 20px;">
-        <a href="admin_payroll.php" class="btn-login"><i class="fas fa-arrow-left"></i> Back to Payroll</a>
+        <a href="payroll.php" class="btn-login"><i class="fas fa-arrow-left"></i> Back to Payroll</a>
         <button onclick="window.print()" class="btn-primary"><i class="fas fa-print"></i> Print Pay Slip</button>
     </div>
 

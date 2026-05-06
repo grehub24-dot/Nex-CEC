@@ -104,15 +104,15 @@ $outstanding = max(0, $total_expected - $total_paid);
                 <img src="../images/school-logo.png" alt="Logo" style="width: 60px; height: 60px; margin-bottom: 8px; border-radius: 50%; background: #fff; padding: 5px;" onerror="this.src='../images/aamusted.jpg'">
                 <h3 style="font-size:15px;">My Portal</h3>
             </div>
-                        <ul class="sidebar-menu">
-                <li><a href="student_dashboard.php"><i class="fas fa-home"></i> Dashboard</a></li>
-                <li><a href="student_profile.php"><i class="fas fa-user"></i> My Profile</a></li>
-                <li><a href="student_fees.php"><i class="fas fa-list-alt"></i> Fee Structure</a></li>
-                <li><a href="student_messages.php"><i class="fas fa-envelope"></i> Messages 
+                                    <ul class="sidebar-menu">
+                <li><a href="dashboard.php"><i class="fas fa-home"></i> Dashboard</a></li>
+                <li><a href="profile.php"><i class="fas fa-user"></i> My Profile</a></li>
+                <li><a href="fees.php"><i class="fas fa-list-alt"></i> Fee Structure</a></li>
+                <li><a href="report_card.php"><i class="fas fa-clipboard"></i> Report Card</a></li>
+                <li><a href="messages.php"><i class="fas fa-envelope"></i> Messages 
                     <span class="badge" style="background:#dc3545; color:white; padding:2px 6px; border-radius:50%; font-size:0.7rem;">0</span>
                 </a></li>
-                <li><a href="student_report_card.php"><i class="fas fa-clipboard"></i> Report Card</a></li>
-                <li><a href="student_history.php"><i class="fas fa-history"></i> Payment History</a></li>
+                <li><a href="history.php"><i class="fas fa-history"></i> Payment History</a></li>
                 <li><a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
             </ul>
         </aside>

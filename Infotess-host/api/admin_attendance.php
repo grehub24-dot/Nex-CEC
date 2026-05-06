@@ -107,23 +107,23 @@ if ($selected_class) {
                 <img src="../images/school-logo.png" alt="Logo" style="width: 80px; height: 80px; margin-bottom: 10px; border-radius: 50%; background: #fff; padding: 5px;" onerror="this.src='../images/aamusted.jpg'">
                 <h3><?php echo htmlspecialchars($school_name); ?> Admin</h3>
             </div>
-            <ul class="sidebar-menu">
-                <li><a href="admin_dashboard.php"><i class="fas fa-home"></i> Dashboard</a></li>
-                <li><a href="admin_students.php"><i class="fas fa-user-graduate"></i> Students</a></li>
-                <li><a href="admin_staff.php"><i class="fas fa-chalkboard-teacher"></i> Staff</a></li>
-                <li><a href="admin_payments.php"><i class="fas fa-money-bill-wave"></i> Payments</a></li>
-                <li><a href="admin_fees.php"><i class="fas fa-list-alt"></i> Fee Structure</a></li>
-                <li><a href="admin_payroll.php"><i class="fas fa-file-invoice-dollar"></i> Payroll</a></li>
-                <li><a href="admin_salary.php"><i class="fas fa-money-check-alt"></i> Salary Structures</a></li>
-                <li><a href="admin_grades.php"><i class="fas fa-clipboard-list"></i> SBA / Grades</a></li>
-                <li><a href="admin_attendance.php" class="active"><i class="fas fa-user-check"></i> Attendance</a></li>
-                <li><a href="admin_reports.php"><i class="fas fa-chart-bar"></i> Reports</a></li>
-                <li><a href="admin_verify.php"><i class="fas fa-qrcode"></i> Verify Receipt</a></li>
-                <li><a href="admin_users.php"><i class="fas fa-users-cog"></i> User Management</a></li>
-                <li><a href="admin_messaging.php"><i class="fas fa-envelope"></i> Messaging</a></li>
-                <li><a href="admin_inbox.php"><i class="fas fa-inbox"></i> Inbox</a></li>
-                <li><a href="admin_module_settings.php"><i class="fas fa-cogs"></i> Module Settings</a></li>
-                <li><a href="admin_settings.php"><i class="fas fa-tools"></i> System Settings</a></li>
+                        <ul class="sidebar-menu">
+                <li><a href="dashboard.php"><i class="fas fa-home"></i> Dashboard</a></li>
+                <li><a href="students.php"><i class="fas fa-user-graduate"></i> Students</a></li>
+                <li><a href="staff.php"><i class="fas fa-chalkboard-teacher"></i> Staff</a></li>
+                <li><a href="payments.php"><i class="fas fa-money-bill-wave"></i> Payments</a></li>
+                <li><a href="fees.php"><i class="fas fa-list-alt"></i> Fee Structure</a></li>
+                <li><a href="payroll.php"><i class="fas fa-file-invoice-dollar"></i> Payroll</a></li>
+                <li><a href="salary.php"><i class="fas fa-money-check-alt"></i> Salary Structures</a></li>
+                <li><a href="grades.php"><i class="fas fa-clipboard-list"></i> SBA / Grades</a></li>
+                <li><a href="attendance.php"><i class="fas fa-user-check"></i> Attendance</a></li>
+                <li><a href="reports.php"><i class="fas fa-chart-bar"></i> Reports</a></li>
+                <li><a href="verify.php"><i class="fas fa-qrcode"></i> Verify Receipt</a></li>
+                <li><a href="users.php"><i class="fas fa-users-cog"></i> User Management</a></li>
+                <li><a href="messaging.php"><i class="fas fa-envelope"></i> Messaging</a></li>
+                <li><a href="inbox.php"><i class="fas fa-inbox"></i> Inbox</a></li>
+                <li><a href="module_settings.php"><i class="fas fa-cogs"></i> Module Settings</a></li>
+                <li><a href="settings.php"><i class="fas fa-tools"></i> System Settings</a></li>
                 <li><a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
             </ul>
         </aside>
@@ -143,7 +143,7 @@ if ($selected_class) {
             <!-- Selection -->
             <div class="card" style="margin-bottom: 30px;">
                 <div class="card-content">
-                    <form method="GET" action="admin_attendance.php" style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
+                    <form method="GET" action="attendance.php" style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
                         <div>
                             <label><strong>Class</strong></label>
                             <select name="class_id" class="form-control" style="width: 200px;" required>
@@ -191,7 +191,7 @@ if ($selected_class) {
                         <button type="button" class="btn-login" onclick="markAll('absent')" style="background: #e74c3c;"><i class="fas fa-times"></i> Mark All Absent</button>
                     </div>
 
-                    <form method="POST" action="admin_attendance.php">
+                    <form method="POST" action="attendance.php">
                         <input type="hidden" name="action" value="save_attendance">
                         <input type="hidden" name="class_id" value="<?php echo $selected_class; ?>">
                         <input type="hidden" name="attendance_date" value="<?php echo htmlspecialchars($selected_date); ?>">

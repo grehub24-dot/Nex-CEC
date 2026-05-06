@@ -135,7 +135,7 @@ $average = $subject_count > 0 ? round($total_sba / $subject_count, 1) : 0;
 </head>
 <body>
     <div class="no-print" style="text-align: center; padding: 20px;">
-        <a href="student_dashboard.php" class="btn-login"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+        <a href="dashboard.php" class="btn-login"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
         <button onclick="window.print()" class="btn-primary"><i class="fas fa-print"></i> Print Report Card</button>
         <select onchange="window.location.href='student_report_card.php?term_id='+this.value" class="form-control" style="width: 200px; display: inline-block; margin-left: 10px;">
             <option value="">-- Select Term --</option>

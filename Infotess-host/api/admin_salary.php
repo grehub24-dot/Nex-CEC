@@ -115,21 +115,23 @@ $net = $gross - $ssnit - $tax - $recurring_deductions;
                 <img src="../images/school-logo.png" alt="Logo" style="width: 80px; height: 80px; margin-bottom: 10px; border-radius: 50%; background: #fff; padding: 5px;" onerror="this.src='../images/aamusted.jpg'">
                 <h3><?php echo htmlspecialchars($school_name); ?> Admin</h3>
             </div>
-            <ul class="sidebar-menu">
-                <li><a href="admin_dashboard.php"><i class="fas fa-home"></i> Dashboard</a></li>
-                <li><a href="admin_students.php"><i class="fas fa-user-graduate"></i> Students</a></li>
-                <li><a href="admin_staff.php"><i class="fas fa-chalkboard-teacher"></i> Staff</a></li>
-                <li><a href="admin_payments.php"><i class="fas fa-money-bill-wave"></i> Payments</a></li>
-                <li><a href="admin_fees.php"><i class="fas fa-list-alt"></i> Fee Structure</a></li>
-                <li><a href="admin_payroll.php"><i class="fas fa-file-invoice-dollar"></i> Payroll</a></li>
-                <li><a href="admin_salary.php" class="active"><i class="fas fa-money-check-alt"></i> Salary Structures</a></li>
-                <li><a href="admin_reports.php"><i class="fas fa-chart-bar"></i> Reports</a></li>
-                <li><a href="admin_verify.php"><i class="fas fa-qrcode"></i> Verify Receipt</a></li>
-                <li><a href="admin_users.php"><i class="fas fa-users-cog"></i> User Management</a></li>
-                <li><a href="admin_messaging.php"><i class="fas fa-envelope"></i> Messaging</a></li>
-                <li><a href="admin_inbox.php"><i class="fas fa-inbox"></i> Inbox</a></li>
-                <li><a href="admin_module_settings.php"><i class="fas fa-cogs"></i> Module Settings</a></li>
-                <li><a href="admin_settings.php"><i class="fas fa-tools"></i> System Settings</a></li>
+                        <ul class="sidebar-menu">
+                <li><a href="dashboard.php"><i class="fas fa-home"></i> Dashboard</a></li>
+                <li><a href="students.php"><i class="fas fa-user-graduate"></i> Students</a></li>
+                <li><a href="staff.php"><i class="fas fa-chalkboard-teacher"></i> Staff</a></li>
+                <li><a href="payments.php"><i class="fas fa-money-bill-wave"></i> Payments</a></li>
+                <li><a href="fees.php"><i class="fas fa-list-alt"></i> Fee Structure</a></li>
+                <li><a href="payroll.php"><i class="fas fa-file-invoice-dollar"></i> Payroll</a></li>
+                <li><a href="salary.php"><i class="fas fa-money-check-alt"></i> Salary Structures</a></li>
+                <li><a href="grades.php"><i class="fas fa-clipboard-list"></i> SBA / Grades</a></li>
+                <li><a href="attendance.php"><i class="fas fa-user-check"></i> Attendance</a></li>
+                <li><a href="reports.php"><i class="fas fa-chart-bar"></i> Reports</a></li>
+                <li><a href="verify.php"><i class="fas fa-qrcode"></i> Verify Receipt</a></li>
+                <li><a href="users.php"><i class="fas fa-users-cog"></i> User Management</a></li>
+                <li><a href="messaging.php"><i class="fas fa-envelope"></i> Messaging</a></li>
+                <li><a href="inbox.php"><i class="fas fa-inbox"></i> Inbox</a></li>
+                <li><a href="module_settings.php"><i class="fas fa-cogs"></i> Module Settings</a></li>
+                <li><a href="settings.php"><i class="fas fa-tools"></i> System Settings</a></li>
                 <li><a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
             </ul>
         </aside>
@@ -149,7 +151,7 @@ $net = $gross - $ssnit - $tax - $recurring_deductions;
             <!-- Staff Selector -->
             <div class="card" style="margin-bottom: 30px;">
                 <div class="card-content">
-                    <form method="GET" action="admin_salary.php" style="display: flex; gap: 15px; align-items: center;">
+                    <form method="GET" action="salary.php" style="display: flex; gap: 15px; align-items: center;">
                         <label><strong>Select Staff:</strong></label>
                         <select name="staff_id" class="form-control" style="width: 300px;" onchange="this.form.submit()">
                             <option value="">-- Choose Staff Member --</option>
@@ -169,7 +171,7 @@ $net = $gross - $ssnit - $tax - $recurring_deductions;
                 <div class="card">
                     <div class="card-content">
                         <h3><i class="fas fa-money-check-alt" style="color: var(--primary-color);"></i> Salary Structure</h3>
-                        <form method="POST" action="admin_salary.php" style="margin-top: 20px;">
+                        <form method="POST" action="salary.php" style="margin-top: 20px;">
                             <input type="hidden" name="action" value="save_salary">
                             <input type="hidden" name="staff_id" value="<?php echo $selected_staff_id; ?>">
                             
@@ -247,7 +249,7 @@ $net = $gross - $ssnit - $tax - $recurring_deductions;
                 <div class="card-content">
                     <h3><i class="fas fa-minus-circle" style="color: #e74c3c;"></i> Deductions</h3>
                     
-                    <form method="POST" action="admin_salary.php" style="display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; align-items: flex-end;">
+                    <form method="POST" action="salary.php" style="display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; align-items: flex-end;">
                         <input type="hidden" name="action" value="add_deduction">
                         <input type="hidden" name="staff_id" value="<?php echo $selected_staff_id; ?>">
                         <div>
@@ -297,7 +299,7 @@ $net = $gross - $ssnit - $tax - $recurring_deductions;
                                 <td><?php echo $d['is_recurring'] ? '<span style="color: green;">Yes</span>' : 'No'; ?></td>
                                 <td><?php echo date('M d, Y', strtotime($d['created_at'])); ?></td>
                                 <td>
-                                    <a href="admin_salary.php?staff_id=<?php echo $selected_staff_id; ?>&delete_deduction=<?php echo $d['id']; ?>" class="btn-login" style="background: #e74c3c; padding: 5px 10px; font-size: 0.8rem;" onclick="return confirm('Remove this deduction?');">Remove</a>
+                                    <a href="salary.php?staff_id=<?php echo $selected_staff_id; ?>&delete_deduction=<?php echo $d['id']; ?>" class="btn-login" style="background: #e74c3c; padding: 5px 10px; font-size: 0.8rem;" onclick="return confirm('Remove this deduction?');">Remove</a>
                                 </td>
                             </tr>
                             <?php endforeach; ?>

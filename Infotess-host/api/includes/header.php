@@ -39,9 +39,9 @@
                 <li><a href="<?php echo $base_url; ?>contact.php">Contact</a></li>
                 <?php if (isset($_SESSION['user_id'])): ?>
                     <?php if ($_SESSION['role'] === 'admin' || $_SESSION['role'] === 'super_admin'): ?>
-                        <li><a href="<?php echo $base_url; ?>api/admin_dashboard.php" class="btn-login">Admin Panel</a></li>
+                        <li><a href="<?php echo $base_url; ?>admin/dashboard.php" class="btn-login">Admin Panel</a></li>
                     <?php else: ?>
-                        <li><a href="<?php echo $base_url; ?>api/student_dashboard.php" class="btn-login">Dashboard</a></li>
+                        <li><a href="<?php echo $base_url; ?>student/dashboard.php" class="btn-login">Dashboard</a></li>
                     <?php endif; ?>
                     <li><a href="<?php echo $base_url; ?>logout.php">Logout</a></li>
                 <?php else: ?>

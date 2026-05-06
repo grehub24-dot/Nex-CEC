@@ -76,20 +76,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 <img src="../images/school-logo.png" alt="Logo" style="width: 80px; height: 80px; margin-bottom: 10px; border-radius: 50%; background: #fff; padding: 5px;" onerror="this.src='../images/aamusted.jpg'">
                 <h3><?php echo htmlspecialchars($school_name); ?> Admin</h3>
             </div>
-            <ul class="sidebar-menu">
-                <li><a href="admin_dashboard.php"><i class="fas fa-home"></i> Dashboard</a></li>
-                <li><a href="admin_students.php"><i class="fas fa-user-graduate"></i> Students</a></li>
-                <li><a href="admin_staff.php" class="active"><i class="fas fa-chalkboard-teacher"></i> Staff</a></li>
-                <li><a href="admin_payments.php"><i class="fas fa-money-bill-wave"></i> Payments</a></li>
-                <li><a href="admin_fees.php"><i class="fas fa-list-alt"></i> Fee Structure</a></li>
-                <li><a href="admin_payroll.php"><i class="fas fa-file-invoice-dollar"></i> Payroll</a></li>
-                <li><a href="admin_reports.php"><i class="fas fa-chart-bar"></i> Reports</a></li>
-                <li><a href="admin_verify.php"><i class="fas fa-qrcode"></i> Verify Receipt</a></li>
-                <li><a href="admin_users.php"><i class="fas fa-users-cog"></i> User Management</a></li>
-                <li><a href="admin_messaging.php"><i class="fas fa-envelope"></i> Messaging</a></li>
-                <li><a href="admin_inbox.php"><i class="fas fa-inbox"></i> Inbox</a></li>
-                <li><a href="admin_module_settings.php"><i class="fas fa-cogs"></i> Module Settings</a></li>
-                <li><a href="admin_settings.php"><i class="fas fa-tools"></i> System Settings</a></li>
+                        <ul class="sidebar-menu">
+                <li><a href="dashboard.php"><i class="fas fa-home"></i> Dashboard</a></li>
+                <li><a href="students.php"><i class="fas fa-user-graduate"></i> Students</a></li>
+                <li><a href="staff.php"><i class="fas fa-chalkboard-teacher"></i> Staff</a></li>
+                <li><a href="payments.php"><i class="fas fa-money-bill-wave"></i> Payments</a></li>
+                <li><a href="fees.php"><i class="fas fa-list-alt"></i> Fee Structure</a></li>
+                <li><a href="payroll.php"><i class="fas fa-file-invoice-dollar"></i> Payroll</a></li>
+                <li><a href="salary.php"><i class="fas fa-money-check-alt"></i> Salary Structures</a></li>
+                <li><a href="grades.php"><i class="fas fa-clipboard-list"></i> SBA / Grades</a></li>
+                <li><a href="attendance.php"><i class="fas fa-user-check"></i> Attendance</a></li>
+                <li><a href="reports.php"><i class="fas fa-chart-bar"></i> Reports</a></li>
+                <li><a href="verify.php"><i class="fas fa-qrcode"></i> Verify Receipt</a></li>
+                <li><a href="users.php"><i class="fas fa-users-cog"></i> User Management</a></li>
+                <li><a href="messaging.php"><i class="fas fa-envelope"></i> Messaging</a></li>
+                <li><a href="inbox.php"><i class="fas fa-inbox"></i> Inbox</a></li>
+                <li><a href="module_settings.php"><i class="fas fa-cogs"></i> Module Settings</a></li>
+                <li><a href="settings.php"><i class="fas fa-tools"></i> System Settings</a></li>
                 <li><a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
             </ul>
         </aside>
@@ -97,7 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         <main class="main-content">
             <div class="top-bar">
                 <h2>Edit Staff Member</h2>
-                <a href="admin_staff.php" class="btn-login" style="background: #6c757d;"><i class="fas fa-arrow-left"></i> Back to Staff</a>
+                <a href="staff.php" class="btn-login" style="background: #6c757d;"><i class="fas fa-arrow-left"></i> Back to Staff</a>
             </div>
 
             <?php if ($message): ?>
@@ -110,7 +113,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             <div class="card" style="max-width: 800px;">
                 <div class="card-content">
                     <h3><?php echo htmlspecialchars($staff['full_name']); ?> (<?php echo htmlspecialchars($staff['staff_id']); ?>)</h3>
-                    <form action="admin_edit_staff.php?id=<?php echo $staff_id; ?>" method="POST" style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-top: 20px;">
+                    <form action="edit_staff.php?id=<?php echo $staff_id; ?>" method="POST" style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-top: 20px;">
                         <input type="hidden" name="action" value="update_staff">
                         
                         <div>

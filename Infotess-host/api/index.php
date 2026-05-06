@@ -45,13 +45,13 @@ $routes = [
 ];
 
 // Admin routes
-$adminPages = ['dashboard','students','payments','reports','settings','users','edit_student','inbox','messaging','module_settings','verify'];
+$adminPages = ['dashboard','students','staff','edit_staff','payments','fees','payroll','pay_slip','salary','grades','attendance','reports','settings','users','edit_student','inbox','messaging','module_settings','verify'];
 foreach ($adminPages as $page) {
     $routes["admin/$page.php"] = "admin_$page.php";
 }
 
 // Student routes
-$studentPages = ['dashboard','history','messages','password-reset','profile'];
+$studentPages = ['dashboard','history','messages','password-reset','profile','fees','report_card'];
 foreach ($studentPages as $page) {
     $routes["student/$page.php"] = "student_$page.php";
 }

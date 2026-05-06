@@ -77,45 +77,15 @@ $status_text = $outstanding <= 0 ? 'Fully Paid' : 'Outstanding';
                 <img src="../images/school-logo.png" alt="Logo" style="width: 60px; height: 60px; margin-bottom: 8px; border-radius: 50%; background: #fff; padding: 5px;" onerror="this.src='../images/aamusted.jpg'">
                 <h3 style="font-size:15px;">My Portal</h3>
             </div>
-            <ul class="sidebar-menu">
-                <li><a href="student_dashboard.php" class="active"><i class="fas fa-home"></i> Dashboard</a></li>
-                <li><a href="student_profile.php"><i class="fas fa-user"></i> My Profile</a></li>
-                <li><a href="student_fees.php"><i class="fas fa-list-alt"></i> Fee Structure</a></li>
-                <li><a href="student_messages.php"><i class="fas fa-envelope"></i> Messages 
-                    <?php
-                    $msg_count = 0;
-                    try {
-                        $stmt = $pdo->prepare("
-                            SELECT COUNT(*) FROM messages m 
-                            WHERE (m.is_broadcast = true OR m.receiver_id = ?)
-                        ");
-                        $stmt->execute([$_SESSION['user_id']]);
-                        $msg_count = $stmt->fetchColumn();
-
-                        $hasMessageReads = false;
-                        try {
-                            $checkMR = $pdo->query("SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'message_reads'");
-                            $hasMessageReads = $checkMR && $checkMR->fetchColumn() > 0;
-                        } catch (Exception $e) { $hasMessageReads = false; }
-                        if ($hasMessageReads) {
-                        $stmt2 = $pdo->prepare("
-                            SELECT COUNT(*) FROM messages m 
-                            WHERE (m.is_broadcast = true OR m.receiver_id = ?) 
-                            AND EXISTS ( SELECT 1 FROM message_reads mr WHERE mr.message_id = m.id AND mr.user_id = ? )
-                        ");
-                        $stmt2->execute([$_SESSION['user_id'], $_SESSION['user_id']]);
-                        $read_count = $stmt2->fetchColumn();
-                        $msg_count = max(0, $msg_count - $read_count);
-                        }
-                    } catch (Exception $e) { $msg_count = 0; }
-
-                    if ($msg_count > 0):
-                    ?>
-                        <span class="badge" style="background:#dc3545; color:white; padding:2px 6px; border-radius:50%; font-size:0.7rem;"><?php echo $msg_count; ?></span>
-                    <?php endif; ?>
+                        <ul class="sidebar-menu">
+                <li><a href="dashboard.php"><i class="fas fa-home"></i> Dashboard</a></li>
+                <li><a href="profile.php"><i class="fas fa-user"></i> My Profile</a></li>
+                <li><a href="fees.php"><i class="fas fa-list-alt"></i> Fee Structure</a></li>
+                <li><a href="report_card.php"><i class="fas fa-clipboard"></i> Report Card</a></li>
+                <li><a href="messages.php"><i class="fas fa-envelope"></i> Messages 
+                    <span class="badge" style="background:#dc3545; color:white; padding:2px 6px; border-radius:50%; font-size:0.7rem;">0</span>
                 </a></li>
-                <li><a href="student_report_card.php"><i class="fas fa-clipboard"></i> Report Card</a></li>
-                <li><a href="student_history.php"><i class="fas fa-history"></i> Payment History</a></li>
+                <li><a href="history.php"><i class="fas fa-history"></i> Payment History</a></li>
                 <li><a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
             </ul>
         </aside>
@@ -232,7 +202,7 @@ $status_text = $outstanding <= 0 ? 'Fully Paid' : 'Outstanding';
             <div class="section" style="margin-bottom: 30px;">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <h3>Recent Notifications</h3>
-                    <a href="student_messages.php" style="font-size: 0.9rem; color: var(--primary-color);">View all notifications</a>
+                    <a href="messages.php" style="font-size: 0.9rem; color: var(--primary-color);">View all notifications</a>
                 </div>
                 <?php
                 $recent_notifications = [];
@@ -263,7 +233,7 @@ $status_text = $outstanding <= 0 ? 'Fully Paid' : 'Outstanding';
                             <p style="margin-top: 5px; font-size: 0.95rem; color: #444;">
                                 <?php echo htmlspecialchars(substr((string)$item['message'], 0, 120)) . (strlen((string)$item['message']) > 120 ? '...' : ''); ?>
                             </p>
-                            <a href="student_messages.php" style="font-size: 0.85rem; color: var(--secondary-color); font-weight: bold; margin-top: 5px; display: inline-block;">Read Full Message &rarr;</a>
+                            <a href="messages.php" style="font-size: 0.85rem; color: var(--secondary-color); font-weight: bold; margin-top: 5px; display: inline-block;">Read Full Message &rarr;</a>
                         </div>
                     <?php endforeach; ?>
                 <?php endif; ?>

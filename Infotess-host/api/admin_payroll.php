@@ -138,20 +138,23 @@ $pending_count = count(array_filter($payroll_records, fn($r) => $r['status'] ===
                 <img src="../images/school-logo.png" alt="Logo" style="width: 80px; height: 80px; margin-bottom: 10px; border-radius: 50%; background: #fff; padding: 5px;" onerror="this.src='../images/aamusted.jpg'">
                 <h3><?php echo htmlspecialchars($school_name); ?> Admin</h3>
             </div>
-            <ul class="sidebar-menu">
-                <li><a href="admin_dashboard.php"><i class="fas fa-home"></i> Dashboard</a></li>
-                <li><a href="admin_students.php"><i class="fas fa-user-graduate"></i> Students</a></li>
-                <li><a href="admin_staff.php"><i class="fas fa-chalkboard-teacher"></i> Staff</a></li>
-                <li><a href="admin_payments.php"><i class="fas fa-money-bill-wave"></i> Payments</a></li>
-                <li><a href="admin_fees.php"><i class="fas fa-list-alt"></i> Fee Structure</a></li>
-                <li><a href="admin_payroll.php" class="active"><i class="fas fa-file-invoice-dollar"></i> Payroll</a></li>
-                <li><a href="admin_reports.php"><i class="fas fa-chart-bar"></i> Reports</a></li>
-                <li><a href="admin_verify.php"><i class="fas fa-qrcode"></i> Verify Receipt</a></li>
-                <li><a href="admin_users.php"><i class="fas fa-users-cog"></i> User Management</a></li>
-                <li><a href="admin_messaging.php"><i class="fas fa-envelope"></i> Messaging</a></li>
-                <li><a href="admin_inbox.php"><i class="fas fa-inbox"></i> Inbox</a></li>
-                <li><a href="admin_module_settings.php"><i class="fas fa-cogs"></i> Module Settings</a></li>
-                <li><a href="admin_settings.php"><i class="fas fa-tools"></i> System Settings</a></li>
+                        <ul class="sidebar-menu">
+                <li><a href="dashboard.php"><i class="fas fa-home"></i> Dashboard</a></li>
+                <li><a href="students.php"><i class="fas fa-user-graduate"></i> Students</a></li>
+                <li><a href="staff.php"><i class="fas fa-chalkboard-teacher"></i> Staff</a></li>
+                <li><a href="payments.php"><i class="fas fa-money-bill-wave"></i> Payments</a></li>
+                <li><a href="fees.php"><i class="fas fa-list-alt"></i> Fee Structure</a></li>
+                <li><a href="payroll.php"><i class="fas fa-file-invoice-dollar"></i> Payroll</a></li>
+                <li><a href="salary.php"><i class="fas fa-money-check-alt"></i> Salary Structures</a></li>
+                <li><a href="grades.php"><i class="fas fa-clipboard-list"></i> SBA / Grades</a></li>
+                <li><a href="attendance.php"><i class="fas fa-user-check"></i> Attendance</a></li>
+                <li><a href="reports.php"><i class="fas fa-chart-bar"></i> Reports</a></li>
+                <li><a href="verify.php"><i class="fas fa-qrcode"></i> Verify Receipt</a></li>
+                <li><a href="users.php"><i class="fas fa-users-cog"></i> User Management</a></li>
+                <li><a href="messaging.php"><i class="fas fa-envelope"></i> Messaging</a></li>
+                <li><a href="inbox.php"><i class="fas fa-inbox"></i> Inbox</a></li>
+                <li><a href="module_settings.php"><i class="fas fa-cogs"></i> Module Settings</a></li>
+                <li><a href="settings.php"><i class="fas fa-tools"></i> System Settings</a></li>
                 <li><a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
             </ul>
         </aside>
@@ -171,7 +174,7 @@ $pending_count = count(array_filter($payroll_records, fn($r) => $r['status'] ===
             <!-- Month Selector & Generate -->
             <div class="card" style="margin-bottom: 30px;">
                 <div class="card-content" style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
-                    <form method="GET" action="admin_payroll.php" style="display: flex; gap: 10px; align-items: center;">
+                    <form method="GET" action="payroll.php" style="display: flex; gap: 10px; align-items: center;">
                         <label><strong>Select Period:</strong></label>
                         <select name="month" class="form-control" style="width: auto;">
                             <?php for ($m = 1; $m <= 12; $m++): ?>
@@ -186,7 +189,7 @@ $pending_count = count(array_filter($payroll_records, fn($r) => $r['status'] ===
                         <button type="submit" class="btn-login"><i class="fas fa-search"></i> View</button>
                     </form>
                     
-                    <form method="POST" action="admin_payroll.php" style="margin-left: auto;">
+                    <form method="POST" action="payroll.php" style="margin-left: auto;">
                         <input type="hidden" name="action" value="generate_payroll">
                         <input type="hidden" name="month" value="<?php echo $selected_month; ?>">
                         <input type="hidden" name="year" value="<?php echo $selected_year; ?>">
@@ -272,14 +275,14 @@ $pending_count = count(array_filter($payroll_records, fn($r) => $r['status'] ===
                                     </td>
                                     <td>
                                         <?php if ($record['status'] === 'pending'): ?>
-                                            <form method="POST" action="admin_payroll.php" style="display: inline;">
+                                            <form method="POST" action="payroll.php" style="display: inline;">
                                                 <input type="hidden" name="action" value="approve_payroll">
                                                 <input type="hidden" name="payroll_id" value="<?php echo $record['id']; ?>">
                                                 <button type="submit" class="btn-login" style="background: #28a745; padding: 5px 10px; font-size: 0.8rem;">Approve</button>
                                             </form>
                                         <?php endif; ?>
-                                        <a href="admin_pay_slip.php?id=<?php echo $record['id']; ?>" class="btn-login" style="background: #17a2b8; padding: 5px 10px; font-size: 0.8rem;">Slip</a>
-                                        <a href="admin_payroll.php?delete=<?php echo $record['id']; ?>" class="btn-login" style="background: #e74c3c; padding: 5px 10px; font-size: 0.8rem;" onclick="return confirm('Delete this payroll record?');">Delete</a>
+                                        <a href="pay_slip.php?id=<?php echo $record['id']; ?>" class="btn-login" style="background: #17a2b8; padding: 5px 10px; font-size: 0.8rem;">Slip</a>
+                                        <a href="payroll.php?delete=<?php echo $record['id']; ?>" class="btn-login" style="background: #e74c3c; padding: 5px 10px; font-size: 0.8rem;" onclick="return confirm('Delete this payroll record?');">Delete</a>
                                     </td>
                                 </tr>
                                 <?php endforeach; ?>

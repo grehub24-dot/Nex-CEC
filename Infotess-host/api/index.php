@@ -63,6 +63,14 @@ $file = str_replace(['../', '..\\'], '', $file);
 
 $targetPath = realpath(__DIR__ . '/' . $file);
 
+// Fallback: check parent directory for static assets (receipts, images, css, js)
+if (!$targetPath) {
+    $parentPath = realpath(__DIR__ . '/../' . $file);
+    if ($parentPath) {
+        $targetPath = $parentPath;
+    }
+}
+
 if ($targetPath && pathinfo($targetPath, PATHINFO_EXTENSION) === 'php') {
     require $targetPath;
     exit;

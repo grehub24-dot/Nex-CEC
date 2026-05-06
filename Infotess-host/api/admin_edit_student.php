@@ -157,11 +157,11 @@ if (!$student) {
 
                     <div class="form-group">
                         <label>Full Name</label>
-                        <input type="text" name="full_name" class="form-control" value="<?php echo htmlspecialchars($student['full_name']); ?>" required>
+                        <input type="text" name="full_name" class="form-control" value="<?php echo htmlspecialchars($student['full_name'] ?? ''); ?>" required>
                     </div>
                     <div class="form-group">
                         <label>Index Number</label>
-                        <input type="text" name="index_number" class="form-control" value="<?php echo htmlspecialchars($student['index_number']); ?>" required>
+                        <input type="text" name="index_number" class="form-control" value="<?php echo htmlspecialchars($student['index_number'] ?? ''); ?>" required>
                     </div>
                     <div class="form-group">
                         <label>Class</label>

@@ -84,12 +84,18 @@ class SupabaseClient {
     public function update($data) {
         if (!$this->table || empty($this->filters)) throw new Exception("Table and filters required for update.");
         $url = "$this->url/rest/v1/{$this->table}";
+        if (!empty($this->filters)) {
+            $url .= "?" . implode("&", $this->filters);
+        }
         return $this->request('PATCH', $url, $data);
     }
 
     public function delete() {
         if (!$this->table || empty($this->filters)) throw new Exception("Table and filters required for delete.");
         $url = "$this->url/rest/v1/{$this->table}";
+        if (!empty($this->filters)) {
+            $url .= "?" . implode("&", $this->filters);
+        }
         return $this->request('DELETE', $url);
     }
 

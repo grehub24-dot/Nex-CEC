@@ -5,6 +5,14 @@ if (!isLoggedIn() || !isAdmin()) {
     redirect('../login.php');
 }
 
+// Fetch Settings
+$settings = [];
+try {
+    $stmt = $pdo->query("SELECT setting_key, setting_value FROM system_settings");
+    while ($row = $stmt->fetch()) { $settings[$row['setting_key']] = $row['setting_value']; }
+} catch (Exception $e) {}
+$school_name = $settings['school_name'] ?? 'Nex CEC';
+
 $message = '';
 $error = '';
 
@@ -109,7 +117,7 @@ $total_pages = ceil($total_rows / $limit);
                                 <td><?php echo htmlspecialchars($user['email']); ?></td>
                                 <td>
                                     <span class="badge <?php echo $user['role'] === 'admin' ? 'badge-primary' : 'badge-secondary'; ?>">
-                                        <?php echo ucfirst($user['role']); ?>
+                                        <?php echo ucfirst($user['role'] ?? 'unknown'); ?>
                                     </span>
                                 </td>
                                 <td><?php echo $user['created_at']; ?></td>

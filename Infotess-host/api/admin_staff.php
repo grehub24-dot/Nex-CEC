@@ -172,21 +172,21 @@ $total_pages = ceil($total_rows / $limit);
             <!-- Staff Stats -->
             <div class="stat-cards" style="margin-bottom: 30px;">
                 <?php
-                $total_staff = $pdo->query("SELECT COUNT(*) FROM staff")->fetchColumn();
-                $active_staff = $pdo->query("SELECT COUNT(*) FROM staff WHERE status = 'active'")->fetchColumn();
-                $teachers = $pdo->query("SELECT COUNT(*) FROM staff WHERE position LIKE '%Teacher%' OR position LIKE '%Instructor%'")->fetchColumn();
+                $total_staff = (int)$pdo->query("SELECT COUNT(*) FROM staff")->fetchColumn();
+                $active_staff = (int)$pdo->query("SELECT COUNT(*) FROM staff WHERE status = 'active'")->fetchColumn();
+                $teachers = (int)$pdo->query("SELECT COUNT(*) FROM staff WHERE position LIKE '%Teacher%' OR position LIKE '%Instructor%'")->fetchColumn();
                 ?>
                 <div class="stat-card">
                     <div class="stat-icon"><i class="fas fa-users"></i></div>
-                    <div class="stat-details"><h3><?php echo number_format($total_staff); ?></h3><p>Total Staff</p></div>
+                    <div class="stat-details"><h3><?php echo $total_staff; ?></h3><p>Total Staff</p></div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon"><i class="fas fa-user-check" style="color: green;"></i></div>
-                    <div class="stat-details"><h3><?php echo number_format($active_staff); ?></h3><p>Active Staff</p></div>
+                    <div class="stat-details"><h3><?php echo $active_staff; ?></h3><p>Active Staff</p></div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon"><i class="fas fa-chalkboard" style="color: #f39c12;"></i></div>
-                    <div class="stat-details"><h3><?php echo number_format($teachers); ?></h3><p>Teachers</p></div>
+                    <div class="stat-details"><h3><?php echo $teachers; ?></h3><p>Teachers</p></div>
                 </div>
             </div>
 

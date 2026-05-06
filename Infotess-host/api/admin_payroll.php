@@ -105,15 +105,29 @@ if (isset($_GET['delete']) && is_numeric($_GET['delete'])) {
 $selected_month = (int)($_GET['month'] ?? date('n'));
 $selected_year = (int)($_GET['year'] ?? date('Y'));
 
-$stmt = $pdo->prepare("
-    SELECT p.*, s.full_name, s.staff_id, s.position, s.bank_name, s.account_number
-    FROM payroll p
-    JOIN staff s ON p.staff_id = s.id
-    WHERE p.month = ? AND p.year = ?
-    ORDER BY s.full_name ASC
-");
-$stmt->execute([$selected_month, $selected_year]);
-$payroll_records = $stmt->fetchAll();
+// Fetch payroll records (no JOIN — bridge compatibility)
+$payroll_records = [];
+try {
+    $stmt = $pdo->prepare("SELECT * FROM payroll WHERE month = ? AND year = ? ORDER BY id ASC");
+    $stmt->execute([$selected_month, $selected_year]);
+    $raw_records = $stmt->fetchAll();
+    
+    foreach ($raw_records as $p) {
+        $stmt = $pdo->prepare("SELECT full_name, staff_id, position, bank_name, account_number FROM staff WHERE id = ?");
+        $stmt->execute([$p['staff_id']]);
+        $s = $stmt->fetch();
+        if ($s) {
+            $p['full_name'] = $s['full_name'];
+            $p['staff_id'] = $s['staff_id'];
+            $p['position'] = $s['position'];
+            $p['bank_name'] = $s['bank_name'] ?? '';
+            $p['account_number'] = $s['account_number'] ?? '';
+            $payroll_records[] = $p;
+        }
+    }
+} catch (Exception $e) {
+    $payroll_records = [];
+}
 
 // Summary
 $total_gross = array_sum(array_map(fn($r) => (float)$r['gross_pay'], $payroll_records));

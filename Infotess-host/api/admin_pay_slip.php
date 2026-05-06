@@ -13,22 +13,37 @@ $school_address = $settings['school_address'] ?? 'Kumasi, Ghana';
 $school_phone = $settings['school_phone'] ?? '+233 123 456 789';
 
 if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
-    redirect('admin_payroll.php');
+    redirect('payroll.php');
 }
 
 $payroll_id = (int)$_GET['id'];
 
-$stmt = $pdo->prepare("
-    SELECT p.*, s.full_name, s.staff_id, s.position, s.department, s.bank_name, s.account_number, s.phone, s.email
-    FROM payroll p
-    JOIN staff s ON p.staff_id = s.id
-    WHERE p.id = ?
-");
-$stmt->execute([$payroll_id]);
-$payroll = $stmt->fetch();
+try {
+    $stmt = $pdo->prepare("SELECT * FROM payroll WHERE id = ?");
+    $stmt->execute([$payroll_id]);
+    $payroll = $stmt->fetch();
+    
+    if ($payroll && $payroll['staff_id']) {
+        $stmt = $pdo->prepare("SELECT full_name, staff_id, position, department, bank_name, account_number, phone, email FROM staff WHERE id = ?");
+        $stmt->execute([$payroll['staff_id']]);
+        $s = $stmt->fetch();
+        if ($s) {
+            $payroll['full_name'] = $s['full_name'];
+            $payroll['staff_id'] = $s['staff_id'];
+            $payroll['position'] = $s['position'];
+            $payroll['department'] = $s['department'] ?? '';
+            $payroll['bank_name'] = $s['bank_name'] ?? '';
+            $payroll['account_number'] = $s['account_number'] ?? '';
+            $payroll['phone'] = $s['phone'] ?? '';
+            $payroll['email'] = $s['email'] ?? '';
+        }
+    }
+} catch (Exception $e) {
+    $payroll = null;
+}
 
 if (!$payroll) {
-    redirect('admin_payroll.php');
+    redirect('payroll.php');
 }
 
 // Get deductions for this staff

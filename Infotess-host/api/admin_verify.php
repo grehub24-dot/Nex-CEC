@@ -5,6 +5,14 @@ if (!isLoggedIn() || !isAdmin()) {
     redirect('../login.php');
 }
 
+// Fetch Settings
+$settings = [];
+try {
+    $stmt = $pdo->query("SELECT setting_key, setting_value FROM system_settings");
+    while ($row = $stmt->fetch()) { $settings[$row['setting_key']] = $row['setting_value']; }
+} catch (Exception $e) {}
+$school_name = $settings['school_name'] ?? 'Nex CEC';
+
 $receipt_number = $_GET['receipt'] ?? '';
 $payment = null;
 $history = [];

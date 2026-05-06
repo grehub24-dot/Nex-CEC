@@ -120,8 +120,7 @@ class LegacyStatement {
                 // SELECT
                 $query = $this->client->table($this->table);
                 
-                // Handle WHERE clause with ? parameters
-                // This is a simplified parser. It assumes "WHERE col = ?"
+                // Handle WHERE clause with ? (positional) or :name (named) parameters
                 preg_match_all('/WHERE\s+(.+?)(\s+ORDER|\s+LIMIT|$)/i', $this->sql, $whereMatches);
                 
                 $currentParamIndex = 0;
@@ -131,13 +130,17 @@ class LegacyStatement {
                         $parts = preg_split('/\s*=\s*/', trim($cond));
                         if (count($parts) === 2) {
                             $col = $parts[0];
-                            // If the value is ?, use param. If it's a literal, use it (risky but works for legacy)
-                            if (trim($parts[1]) === '?') {
+                            $val = trim($parts[1]);
+                            if ($val === '?') {
+                                // Positional parameter
                                 $query = $query->where($col, $this->params[$currentParamIndex]);
                                 $currentParamIndex++;
-                            } else {
-                                // Handle literals if necessary
+                            } elseif (strpos($val, ':') === 0) {
+                                // Named parameter (e.g. :uid)
+                                $paramName = substr($val, 1);
+                                $query = $query->where($col, $this->params[$paramName] ?? null);
                             }
+                            // else: literal value in SQL
                         }
                     }
                 }

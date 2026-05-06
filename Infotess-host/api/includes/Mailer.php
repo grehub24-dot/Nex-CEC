@@ -16,6 +16,7 @@ class Mailer {
 
     public function sendHTML($to, $subject, $html, $fromEmail = null, $fromName = 'INFOTESS Admin') {
         // Save copy locally for reference (skip on read-only filesystem like Vercel)
+        $filename = null;
         $dir = __DIR__ . '/../emails';
         if (!is_dir($dir)) {
             @mkdir($dir, 0777, true);

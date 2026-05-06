@@ -82,19 +82,33 @@ class LegacyStatement {
 
         try {
             if ($this->isInsert) {
-                // Parse columns from SQL: INSERT INTO table (col1, col2) VALUES (?, ?)
+                // Parse columns from SQL: INSERT INTO table (col1, col2) VALUES (?, ?, 'literal')
                 preg_match('/INSERT INTO\s+\w+\s*\(([^)]+)\)/i', $this->sql, $colMatch);
                 $columns = [];
                 if ($colMatch) {
                     $columns = array_map('trim', explode(',', $colMatch[1]));
                 }
 
+                // Parse VALUES clause to detect literal values vs ? placeholders
+                preg_match('/VALUES\s*\(([^)]+)\)/i', $this->sql, $valMatch);
+                $rawValues = [];
+                if ($valMatch) {
+                    // Split by comma but respect quoted strings
+                    $rawValues = $this->parseValues($valMatch[1]);
+                }
+
                 $data = [];
-                $i = 0;
-                foreach ($columns as $col) {
-                    $val = $this->params[$i] ?? null;
-                    $data[$col] = $val;
-                    $i++;
+                $paramIndex = 0;
+                foreach ($columns as $i => $col) {
+                    $rawVal = $rawValues[$i] ?? '?';
+                    if ($rawVal === '?') {
+                        // Use positional parameter
+                        $data[$col] = $this->params[$paramIndex] ?? null;
+                        $paramIndex++;
+                    } else {
+                        // Use literal value from SQL (strip quotes for strings)
+                        $data[$col] = $this->parseLiteral($rawVal);
+                    }
                 }
 
                 $res = $this->client->table($this->table)->insert($data);
@@ -158,6 +172,63 @@ class LegacyStatement {
     public function fetchColumn() {
         $row = $this->fetch();
         return $row ? reset($row) : null;
+    }
+
+    /**
+     * Parse VALUES clause items, respecting quoted strings that may contain commas.
+     */
+    private function parseValues($valuesStr) {
+        $values = [];
+        $current = '';
+        $inQuote = false;
+        $quoteChar = null;
+        $len = strlen($valuesStr);
+        
+        for ($i = 0; $i < $len; $i++) {
+            $char = $valuesStr[$i];
+            if ($inQuote) {
+                $current .= $char;
+                if ($char === $quoteChar && ($i + 1 >= $len || $valuesStr[$i + 1] !== $quoteChar)) {
+                    $inQuote = false;
+                } elseif ($char === $quoteChar && $i + 1 < $len && $valuesStr[$i + 1] === $quoteChar) {
+                    $i++; // Skip escaped quote ''
+                    $current .= $valuesStr[$i];
+                }
+            } else {
+                if ($char === '"' || $char === "'") {
+                    $inQuote = true;
+                    $quoteChar = $char;
+                    $current .= $char;
+                } elseif ($char === ',') {
+                    $values[] = trim($current);
+                    $current = '';
+                } else {
+                    $current .= $char;
+                }
+            }
+        }
+        if ($current !== '') {
+            $values[] = trim($current);
+        }
+        return $values;
+    }
+
+    /**
+     * Parse a SQL literal value: strips quotes from strings, keeps numbers/NULL as-is.
+     */
+    private function parseLiteral($raw) {
+        $raw = trim($raw);
+        if ($raw === 'NULL' || $raw === 'null') return null;
+        if (($raw[0] === "'" && substr($raw, -1) === "'") || ($raw[0] === '"' && substr($raw, -1) === '"')) {
+            // Strip outer quotes and unescape doubled quotes
+            $inner = substr($raw, 1, -1);
+            return str_replace("''", "'", str_replace('""', '"', $inner));
+        }
+        // Numeric or boolean
+        if (is_numeric($raw)) return $raw + 0; // Convert to int/float
+        if (strtolower($raw) === 'true') return true;
+        if (strtolower($raw) === 'false') return false;
+        return $raw;
     }
 }
 

@@ -139,7 +139,8 @@ class LegacyStatement {
             return true;
         } catch (Exception $e) {
             error_log("Supabase Query Error: " . $e->getMessage());
-            return false;
+            // Re-throw as PDOException so application catch blocks work
+            throw new PDOException($e->getMessage());
         }
     }
 

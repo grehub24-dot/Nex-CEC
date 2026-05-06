@@ -40,19 +40,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     $user_id = $pdo->lastInsertId();
 
                     // 2. Create Student Record
-                    // Try to insert with class_name and stream. If it fails (column missing), catch and insert without it.
-                    try {
-                        $stmt = $pdo->prepare("INSERT INTO students (user_id, index_number, full_name, department, level, class_name, stream, phone_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-                        $stmt->execute([$user_id, $index_number, $full_name, $department, $level, $class, $stream, $phone]);
-                    } catch (PDOException $e) {
-                        if (strpos($e->getMessage(), "Unknown column 'class_name'") !== false || strpos($e->getMessage(), "Unknown column 'stream'") !== false) {
-                            // Column missing, fallback
-                            $stmt = $pdo->prepare("INSERT INTO students (user_id, index_number, full_name, department, level, phone_number) VALUES (?, ?, ?, ?, ?, ?)");
-                            $stmt->execute([$user_id, $index_number, $full_name, $department, $level, $phone]);
-                        } else {
-                            throw $e;
-                        }
-                    }
+                    // Supabase/PostgreSQL does not have class_name column — use fallback insert
+                    $stmt = $pdo->prepare("INSERT INTO students (user_id, index_number, full_name, department, level, stream, phone_number) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                    $stmt->execute([$user_id, $index_number, $full_name, $department, $level, $stream, $phone]);
 
                     $pdo->commit();
                     $message = "Registration successful! Please login.";

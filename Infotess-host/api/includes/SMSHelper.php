@@ -78,14 +78,16 @@ class SMSHelper {
         $error = curl_error($ch);
         curl_close($ch);
 
-        // Optional: Still log it locally to track API responses
+        // Optional: Still log it locally to track API responses (skip on read-only filesystem like Vercel)
         $dir = __DIR__ . '/../sms_logs';
         if (!is_dir($dir)) {
-            mkdir($dir, 0777, true);
+            @mkdir($dir, 0777, true);
         }
         
-        $logEntry = "[" . date('Y-m-d H:i:s') . "] To: $normalizedPhone | Message: $payloadMessage | API Response: $response | Curl Error: $error" . PHP_EOL;
-        file_put_contents($dir . '/sms.log', $logEntry, FILE_APPEND);
+        if (is_writable($dir)) {
+            $logEntry = "[" . date('Y-m-d H:i:s') . "] To: $normalizedPhone | Message: $payloadMessage | API Response: $response | Curl Error: $error" . PHP_EOL;
+            @file_put_contents($dir . '/sms.log', $logEntry, FILE_APPEND);
+        }
 
         if ($error) {
             return false;

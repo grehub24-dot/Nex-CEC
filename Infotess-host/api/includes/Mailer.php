@@ -15,14 +15,16 @@ class Mailer {
     private $smtpPassword = 'wahhorvrinmrcqjk';    // Replace with your 16-character Gmail App Password
 
     public function sendHTML($to, $subject, $html, $fromEmail = null, $fromName = 'INFOTESS Admin') {
-        // Save copy locally for reference
+        // Save copy locally for reference (skip on read-only filesystem like Vercel)
         $dir = __DIR__ . '/../emails';
         if (!is_dir($dir)) {
             @mkdir($dir, 0777, true);
         }
-        $safeTo = preg_replace('/[^a-zA-Z0-9_\-\.@]/', '_', (string)$to);
-        $filename = $dir . '/registration_' . date('Ymd_His') . '_' . $safeTo . '.html';
-        file_put_contents($filename, $html);
+        if (is_writable($dir)) {
+            $safeTo = preg_replace('/[^a-zA-Z0-9_\-\.@]/', '_', (string)$to);
+            $filename = $dir . '/registration_' . date('Ymd_His') . '_' . $safeTo . '.html';
+            @file_put_contents($filename, $html);
+        }
 
         $mail = new PHPMailer(true);
 

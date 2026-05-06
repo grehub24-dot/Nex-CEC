@@ -1,0 +1,160 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>INFOTESS - SDMS</title>
+    <!-- CSS -->
+        <link rel="stylesheet" href="/css/style.css">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="/index.php" class="logo">
+                <img src="/images/infotess.png" alt="INFOTESS Logo" height="40"> INFOTESS
+            </a>
+            <ul class="nav-links">
+                <li><a href="/index.php">Home</a></li>
+                <li class="dropdown">
+                    <a href="#" class="dropbtn">About <i class="fas fa-caret-down"></i></a>
+                    <div class="dropdown-content">
+                        <a href="/about.php">About INFOTESS</a>
+                        <a href="/department.php">Department</a>
+                        <a href="/executives.php">Executives</a>
+                        <a href="/alumni.php">Alumni</a>
+                    </div>
+                </li>
+                <li class="dropdown">
+                    <a href="#" class="dropbtn">Activities <i class="fas fa-caret-down"></i></a>
+                    <div class="dropdown-content">
+                        <a href="/activities.php">Activities</a>
+                        <a href="/events.php">Events</a>
+                        <a href="/projects.php">Projects</a>
+                        <a href="/gallery.php">Gallery</a>
+                    </div>
+                </li>
+                <li class="dropdown">
+                    <a href="#" class="dropbtn">Resources <i class="fas fa-caret-down"></i></a>
+                    <div class="dropdown-content">
+                        <a href="/fees.php">Fees & Payments</a>
+                        <a href="/resources.php">Student Resources</a>
+                        <a href="/membership.php">Membership</a>
+                    </div>
+                </li>
+                <li><a href="/news.php">News</a></li>
+                <li><a href="/contact.php">Contact</a></li>
+                                    <li><a href="/register.php" class="btn-login">Register Now</a></li>
+                    <li><a href="/login.php" class="btn-login">Login</a></li>
+                            </ul>
+            <div class="hamburger">
+                <i class="fas fa-bars"></i>
+            </div>
+        </div>
+    </nav>
+
+<style>
+    .password-field {
+        position: relative;
+    }
+    .password-field .form-control {
+        padding-right: 86px;
+    }
+    .password-toggle {
+        position: absolute;
+        top: 50%;
+        right: 10px;
+        transform: translateY(-50%);
+        border: 1px solid #d0d7de;
+        background: #f8fafc;
+        color: #1f2937;
+        border-radius: 6px;
+        padding: 5px 10px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
+        line-height: 1;
+    }
+</style>
+
+<div class="section">
+    <div class="form-container" style="text-align: center;">
+        <img src="images/infotess.png" alt="INFOTESS Logo" style="width: 100px; margin-bottom: 20px;">
+        <h2 class="section-title">Login to SDMS</h2>
+                
+        <form action="login.php" method="POST" style="text-align: left;">
+            <div class="form-group">
+                <label for="identifier">Email or Index Number</label>
+                <input type="text" name="identifier" id="identifier" class="form-control" required placeholder="Enter Email (Admin) or Index No. (Student)">
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <div class="password-field">
+                    <input type="password" name="password" id="password" class="form-control" required placeholder="Enter Password">
+                    <button type="button" class="password-toggle" data-target="password" aria-label="Toggle password visibility">View</button>
+                </div>
+            </div>
+            
+            <button type="submit" class="btn-submit">Login</button>
+            
+            <div style="margin-top: 15px; text-align: center;">
+                <a href="forgot-password.php" style="color: var(--primary-color);">Forgot Password?</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    document.querySelectorAll('.password-toggle').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const targetId = button.getAttribute('data-target');
+            const input = document.getElementById(targetId);
+            if (!input) {
+                return;
+            }
+            const show = input.type === 'password';
+            input.type = show ? 'text' : 'password';
+            button.textContent = show ? 'Hide' : 'View';
+            button.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+        });
+    });
+</script>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>About INFOTESS</h3>
+                    <p>The Information Technology Students’ Society (INFOTESS) of USTED is dedicated to promoting technology education and student welfare.</p>
+                </div>
+                <div class="footer-section">
+                                        <h3>Quick Links</h3>
+                    <ul>
+                        <li><a href="/index.php">Home</a></li>
+                        <li><a href="/about.php">About Us</a></li>
+                        <li><a href="/events.php">Events</a></li>
+                        <li><a href="/contact.php">Contact</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3>Contact Us</h3>
+                    <p><i class="fas fa-map-marker-alt"></i> USTED, Kumasi Campus</p>
+                    <p><i class="fas fa-envelope"></i> info@infotess.org</p>
+                    <p><i class="fas fa-phone"></i> +233 123 456 789</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 INFOTESS. All Rights Reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JS -->
+    <script src="/js/main.js"></script>
+</body>
+</html>
+

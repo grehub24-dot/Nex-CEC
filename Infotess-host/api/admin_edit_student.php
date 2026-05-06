@@ -22,14 +22,40 @@ $error = '';
 
 // Handle Update
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $full_name = sanitize($_POST['full_name']);
-    $index_number = sanitize($_POST['index_number']);
-    $class_name = sanitize($_POST['class_name']);
+    // Student info
+    $full_name = sanitize($_POST['full_name'] ?? '');
+    $index_number = sanitize($_POST['index_number'] ?? '');
+    $class_name = sanitize($_POST['class_name'] ?? '');
     $gender = sanitize($_POST['gender'] ?? '');
-    $phone = sanitize($_POST['phone_number'] ?? '');
+    $phone_number = sanitize($_POST['phone_number'] ?? '');
+    $date_of_birth = sanitize($_POST['date_of_birth'] ?? '');
+    $place_of_birth = sanitize($_POST['place_of_birth'] ?? '');
+    $nationality = sanitize($_POST['nationality'] ?? 'Ghanaian');
+    $hometown = sanitize($_POST['hometown'] ?? '');
+    $address = sanitize($_POST['address'] ?? '');
+    
+    // Guardian details
     $guardian_name = sanitize($_POST['guardian_name'] ?? '');
-    $guardian_phone = sanitize($_POST['guardian_phone'] ?? '');
-    $email = sanitize($_POST['email']);
+    $guardian_email = sanitize($_POST['guardian_email'] ?? '');
+    $guardian_relationship = sanitize($_POST['guardian_relationship'] ?? '');
+    $guardian_phone_primary = sanitize($_POST['guardian_phone_primary'] ?? '');
+    $guardian_phone_emergency = sanitize($_POST['guardian_phone_emergency'] ?? '');
+    $guardian_occupation = sanitize($_POST['guardian_occupation'] ?? '');
+    $guardian_address = sanitize($_POST['guardian_address'] ?? '');
+    
+    // Health info
+    $health_insurance_id = sanitize($_POST['health_insurance_id'] ?? '');
+    $blood_group = sanitize($_POST['blood_group'] ?? '');
+    $genotype = sanitize($_POST['genotype'] ?? '');
+    $medical_conditions = sanitize($_POST['medical_conditions'] ?? '');
+    $allergies = sanitize($_POST['allergies'] ?? '');
+    $special_needs = sanitize($_POST['special_needs'] ?? '');
+    
+    // Academic background
+    $previous_school = sanitize($_POST['previous_school'] ?? '');
+    $previous_class = sanitize($_POST['previous_class'] ?? '');
+    $admission_date = sanitize($_POST['admission_date'] ?? '');
+    $academic_year = sanitize($_POST['academic_year'] ?? '');
 
     // Handle Profile Picture
     $profile_picture = $_POST['current_picture'] ?? null;
@@ -46,22 +72,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         $pdo->beginTransaction();
 
-        // Update Student
-        $stmt = $pdo->prepare("UPDATE students SET full_name = ?, index_number = ?, class_name = ?, gender = ?, phone_number = ?, guardian_name = ?, guardian_phone = ?, profile_picture = ? WHERE id = ?");
-        $stmt->execute([$full_name, $index_number, $class_name, $gender, $phone, $guardian_name, $guardian_phone, $profile_picture, $id]);
+        // Update Student (all fields)
+        $stmt = $pdo->prepare("UPDATE students SET 
+            full_name = ?, index_number = ?, class_name = ?, gender = ?, 
+            date_of_birth = ?, place_of_birth = ?, nationality = ?, hometown = ?, 
+            address = ?, phone_number = ?, profile_picture = ?,
+            guardian_name = ?, guardian_email = ?, guardian_relationship = ?,
+            guardian_phone_primary = ?, guardian_phone_emergency = ?, guardian_occupation = ?, guardian_address = ?,
+            health_insurance_id = ?, blood_group = ?, genotype = ?, 
+            medical_conditions = ?, allergies = ?, special_needs = ?,
+            previous_school = ?, previous_class = ?, admission_date = ?, academic_year = ?
+            WHERE id = ?");
+        $stmt->execute([
+            $full_name, $index_number, $class_name, $gender,
+            $date_of_birth ?: null, $place_of_birth, $nationality, $hometown,
+            $address, $phone_number, $profile_picture,
+            $guardian_name, $guardian_email, $guardian_relationship,
+            $guardian_phone_primary, $guardian_phone_emergency, $guardian_occupation, $guardian_address,
+            $health_insurance_id, $blood_group, $genotype,
+            $medical_conditions, $allergies, $special_needs,
+            $previous_school, $previous_class, $admission_date ?: null, $academic_year,
+            $id
+        ]);
 
-        // Update User Email
+        // Update User Email (guardian email)
         $stmt = $pdo->prepare("SELECT user_id FROM students WHERE id = ?");
         $stmt->execute([$id]);
         $user_id = $stmt->fetchColumn();
 
-        if ($user_id) {
+        if ($user_id && $guardian_email) {
             $stmt = $pdo->prepare("UPDATE users SET email = ? WHERE id = ?");
-            $stmt->execute([$email, $user_id]);
+            $stmt->execute([$guardian_email, $user_id]);
         }
 
         $pdo->commit();
         $message = "Student details updated successfully.";
+        
+        // Refresh student data
+        $stmt = $pdo->prepare("SELECT * FROM students WHERE id = ?");
+        $stmt->execute([$id]);
+        $student = $stmt->fetch();
     } catch (Exception $e) {
         $pdo->rollBack();
         $error = "Error updating student: " . $e->getMessage();
@@ -147,12 +197,18 @@ if (!$student) {
                 <form action="" method="POST" enctype="multipart/form-data" style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
                     <input type="hidden" name="current_picture" value="<?php echo htmlspecialchars($student['profile_picture'] ?? ''); ?>">
                     
+                    <!-- Profile Picture -->
                     <div style="grid-column: span 2; text-align: center; margin-bottom: 10px;">
                         <img id="editStudentPreview" src="../<?php echo htmlspecialchars($student['profile_picture'] ?? 'images/aamusted.jpg'); ?>" alt="Current Profile" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 2px solid #ddd; margin-bottom: 10px;">
                         <br>
                         <label>Update Profile Picture</label><br>
                         <input type="file" name="profile_picture" id="editStudentUpload" class="form-control" accept="image/*">
                         <div id="editStudentUploadName" class="upload-file-name">No image selected</div>
+                    </div>
+
+                    <!-- Student Information -->
+                    <div class="section-divider" style="grid-column: span 2; border-top: 1px solid #eee; padding-top: 15px; margin-top: 10px;">
+                        <h4><i class="fas fa-user"></i> Student Information</h4>
                     </div>
 
                     <div class="form-group">
@@ -166,23 +222,10 @@ if (!$student) {
                     <div class="form-group">
                         <label>Class</label>
                         <select name="class_name" class="form-control" required>
-                            <option value="">-- Select Class --</option>
-                            <optgroup label="Early Childhood">
-                                <option value="Creche" <?php echo ($student['class_name'] ?? '') === 'Creche' ? 'selected' : ''; ?>>Creche</option>
-                                <option value="Nursery" <?php echo ($student['class_name'] ?? '') === 'Nursery' ? 'selected' : ''; ?>>Nursery</option>
-                                <option value="KG 1" <?php echo ($student['class_name'] ?? '') === 'KG 1' ? 'selected' : ''; ?>>KG 1</option>
-                                <option value="KG 2" <?php echo ($student['class_name'] ?? '') === 'KG 2' ? 'selected' : ''; ?>>KG 2</option>
-                            </optgroup>
-                            <optgroup label="Primary">
-                                <?php foreach (['Basic 1', 'Basic 2', 'Basic 3', 'Basic 4', 'Basic 5', 'Basic 6'] as $c): ?>
-                                    <option value="<?php echo $c; ?>" <?php echo ($student['class_name'] ?? '') === $c ? 'selected' : ''; ?>><?php echo $c; ?></option>
-                                <?php endforeach; ?>
-                            </optgroup>
-                            <optgroup label="Junior High School">
-                                <?php foreach (['JHS 1', 'JHS 2', 'JHS 3'] as $c): ?>
-                                    <option value="<?php echo $c; ?>" <?php echo ($student['class_name'] ?? '') === $c ? 'selected' : ''; ?>><?php echo $c; ?></option>
-                                <?php endforeach; ?>
-                            </optgroup>
+                            <option value="">-- Select --</option>
+                            <?php foreach (['Creche','Nursery','KG 1','KG 2','Basic 1','Basic 2','Basic 3','Basic 4','Basic 5','Basic 6','JHS 1','JHS 2','JHS 3'] as $c): ?>
+                                <option value="<?php echo $c; ?>" <?php echo ($student['class_name'] ?? '') === $c ? 'selected' : ''; ?>><?php echo $c; ?></option>
+                            <?php endforeach; ?>
                         </select>
                     </div>
                     <div class="form-group">
@@ -194,26 +237,124 @@ if (!$student) {
                         </select>
                     </div>
                     <div class="form-group">
+                        <label>Date of Birth</label>
+                        <input type="date" name="date_of_birth" class="form-control" value="<?php echo htmlspecialchars($student['date_of_birth'] ?? ''); ?>">
+                    </div>
+                    <div class="form-group">
+                        <label>Place of Birth</label>
+                        <input type="text" name="place_of_birth" class="form-control" value="<?php echo htmlspecialchars($student['place_of_birth'] ?? ''); ?>">
+                    </div>
+                    <div class="form-group">
+                        <label>Nationality</label>
+                        <input type="text" name="nationality" class="form-control" value="<?php echo htmlspecialchars($student['nationality'] ?? 'Ghanaian'); ?>">
+                    </div>
+                    <div class="form-group">
+                        <label>Hometown</label>
+                        <input type="text" name="hometown" class="form-control" value="<?php echo htmlspecialchars($student['hometown'] ?? ''); ?>">
+                    </div>
+                    <div class="form-group">
                         <label>Student Phone</label>
                         <input type="text" name="phone_number" class="form-control" value="<?php echo htmlspecialchars($student['phone_number'] ?? ''); ?>">
                     </div>
                     <div class="form-group">
-                        <label>Email</label>
-                        <input type="email" name="email" class="form-control" value="<?php echo htmlspecialchars($student['email'] ?? ''); ?>" required>
+                        <label>Home Address</label>
+                        <input type="text" name="address" class="form-control" value="<?php echo htmlspecialchars($student['address'] ?? ''); ?>">
                     </div>
 
                     <!-- Guardian Details -->
-                    <div class="section-divider">
+                    <div class="section-divider" style="grid-column: span 2; border-top: 1px solid #eee; padding-top: 15px; margin-top: 10px;">
                         <h4><i class="fas fa-user-shield"></i> Parent / Guardian Details</h4>
                     </div>
 
                     <div class="form-group">
-                        <label>Guardian Full Name</label>
+                        <label>Guardian Name</label>
                         <input type="text" name="guardian_name" class="form-control" value="<?php echo htmlspecialchars($student['guardian_name'] ?? ''); ?>">
                     </div>
                     <div class="form-group">
-                        <label>Guardian Phone Number</label>
-                        <input type="text" name="guardian_phone" class="form-control" value="<?php echo htmlspecialchars($student['guardian_phone'] ?? ''); ?>">
+                        <label>Relationship to Child</label>
+                        <select name="guardian_relationship" class="form-control">
+                            <option value="">-- Select --</option>
+                            <?php foreach (['Father','Mother','Guardian','Uncle','Aunt','Grandparent','Sibling','Other'] as $r): ?>
+                                <option value="<?php echo $r; ?>" <?php echo ($student['guardian_relationship'] ?? '') === $r ? 'selected' : ''; ?>><?php echo $r; ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Guardian Email <span style="color:red;">(for receipts)</span></label>
+                        <input type="email" name="guardian_email" class="form-control" value="<?php echo htmlspecialchars($student['guardian_email'] ?? $student['email'] ?? ''); ?>">
+                    </div>
+                    <div class="form-group">
+                        <label>Guardian Occupation</label>
+                        <input type="text" name="guardian_occupation" class="form-control" value="<?php echo htmlspecialchars($student['guardian_occupation'] ?? ''); ?>">
+                    </div>
+                    <div class="form-group">
+                        <label>Primary Phone <span style="color:red;">(for SMS)</span></label>
+                        <input type="text" name="guardian_phone_primary" class="form-control" value="<?php echo htmlspecialchars($student['guardian_phone_primary'] ?? ''); ?>">
+                    </div>
+                    <div class="form-group">
+                        <label>Emergency Phone</label>
+                        <input type="text" name="guardian_phone_emergency" class="form-control" value="<?php echo htmlspecialchars($student['guardian_phone_emergency'] ?? ''); ?>">
+                    </div>
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label>Guardian Address</label>
+                        <input type="text" name="guardian_address" class="form-control" value="<?php echo htmlspecialchars($student['guardian_address'] ?? ''); ?>">
+                    </div>
+
+                    <!-- Health Information -->
+                    <div class="section-divider" style="grid-column: span 2; border-top: 1px solid #eee; padding-top: 15px; margin-top: 10px;">
+                        <h4><i class="fas fa-heartbeat"></i> Health Information</h4>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Health Insurance ID</label>
+                        <input type="text" name="health_insurance_id" class="form-control" value="<?php echo htmlspecialchars($student['health_insurance_id'] ?? ''); ?>" placeholder="NHIS number">
+                    </div>
+                    <div class="form-group">
+                        <label>Blood Group</label>
+                        <select name="blood_group" class="form-control">
+                            <option value="">-- Select --</option>
+                            <?php foreach (['A+','A-','B+','B-','AB+','AB-','O+','O-'] as $bg): ?>
+                                <option value="<?php echo $bg; ?>" <?php echo ($student['blood_group'] ?? '') === $bg ? 'selected' : ''; ?>><?php echo $bg; ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Genotype</label>
+                        <input type="text" name="genotype" class="form-control" value="<?php echo htmlspecialchars($student['genotype'] ?? ''); ?>" placeholder="e.g. AA, AS, SS">
+                    </div>
+                    <div class="form-group">
+                        <label>Allergies</label>
+                        <input type="text" name="allergies" class="form-control" value="<?php echo htmlspecialchars($student['allergies'] ?? ''); ?>" placeholder="e.g. Peanuts, Penicillin">
+                    </div>
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label>Medical Conditions</label>
+                        <textarea name="medical_conditions" class="form-control" rows="2"><?php echo htmlspecialchars($student['medical_conditions'] ?? ''); ?></textarea>
+                    </div>
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label>Special Needs</label>
+                        <textarea name="special_needs" class="form-control" rows="2"><?php echo htmlspecialchars($student['special_needs'] ?? ''); ?></textarea>
+                    </div>
+
+                    <!-- Academic Background -->
+                    <div class="section-divider" style="grid-column: span 2; border-top: 1px solid #eee; padding-top: 15px; margin-top: 10px;">
+                        <h4><i class="fas fa-school"></i> Academic Background</h4>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Previous School</label>
+                        <input type="text" name="previous_school" class="form-control" value="<?php echo htmlspecialchars($student['previous_school'] ?? ''); ?>">
+                    </div>
+                    <div class="form-group">
+                        <label>Previous Class</label>
+                        <input type="text" name="previous_class" class="form-control" value="<?php echo htmlspecialchars($student['previous_class'] ?? ''); ?>">
+                    </div>
+                    <div class="form-group">
+                        <label>Admission Date</label>
+                        <input type="date" name="admission_date" class="form-control" value="<?php echo htmlspecialchars($student['admission_date'] ?? ''); ?>">
+                    </div>
+                    <div class="form-group">
+                        <label>Academic Year</label>
+                        <input type="text" name="academic_year" class="form-control" value="<?php echo htmlspecialchars($student['academic_year'] ?? ''); ?>">
                     </div>
                     
                     <div style="grid-column: span 2; margin-top: 20px;">

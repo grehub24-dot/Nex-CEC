@@ -65,26 +65,89 @@ BEGIN
     END IF;
 END $$;
 
--- Add guardian columns to students
+-- =====================================================
+-- Basic School Student Schema (Guardian + Health Info)
+-- =====================================================
 DO $$
 BEGIN
+    -- Guardian Details (replaces legacy guardian_name/guardian_phone)
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'students' AND column_name = 'guardian_name') THEN
         ALTER TABLE students ADD COLUMN guardian_name VARCHAR(255);
     END IF;
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'students' AND column_name = 'guardian_phone') THEN
-        ALTER TABLE students ADD COLUMN guardian_phone VARCHAR(20);
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'students' AND column_name = 'guardian_email') THEN
+        ALTER TABLE students ADD COLUMN guardian_email VARCHAR(255);
     END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'students' AND column_name = 'guardian_relationship') THEN
+        ALTER TABLE students ADD COLUMN guardian_relationship VARCHAR(50);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'students' AND column_name = 'guardian_phone_primary') THEN
+        ALTER TABLE students ADD COLUMN guardian_phone_primary VARCHAR(20);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'students' AND column_name = 'guardian_phone_emergency') THEN
+        ALTER TABLE students ADD COLUMN guardian_phone_emergency VARCHAR(20);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'students' AND column_name = 'guardian_occupation') THEN
+        ALTER TABLE students ADD COLUMN guardian_occupation VARCHAR(100);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'students' AND column_name = 'guardian_address') THEN
+        ALTER TABLE students ADD COLUMN guardian_address TEXT;
+    END IF;
+
+    -- Student Demographics
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'students' AND column_name = 'gender') THEN
         ALTER TABLE students ADD COLUMN gender VARCHAR(10);
     END IF;
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'students' AND column_name = 'date_of_birth') THEN
         ALTER TABLE students ADD COLUMN date_of_birth DATE;
     END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'students' AND column_name = 'place_of_birth') THEN
+        ALTER TABLE students ADD COLUMN place_of_birth VARCHAR(100);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'students' AND column_name = 'nationality') THEN
+        ALTER TABLE students ADD COLUMN nationality VARCHAR(50) DEFAULT 'Ghanaian';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'students' AND column_name = 'hometown') THEN
+        ALTER TABLE students ADD COLUMN hometown VARCHAR(100);
+    END IF;
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'students' AND column_name = 'address') THEN
         ALTER TABLE students ADD COLUMN address TEXT;
     END IF;
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'students' AND column_name = 'profile_picture') THEN
         ALTER TABLE students ADD COLUMN profile_picture TEXT;
+    END IF;
+
+    -- Health Information
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'students' AND column_name = 'health_insurance_id') THEN
+        ALTER TABLE students ADD COLUMN health_insurance_id VARCHAR(50);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'students' AND column_name = 'blood_group') THEN
+        ALTER TABLE students ADD COLUMN blood_group VARCHAR(5);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'students' AND column_name = 'genotype') THEN
+        ALTER TABLE students ADD COLUMN genotype VARCHAR(10);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'students' AND column_name = 'medical_conditions') THEN
+        ALTER TABLE students ADD COLUMN medical_conditions TEXT;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'students' AND column_name = 'allergies') THEN
+        ALTER TABLE students ADD COLUMN allergies TEXT;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'students' AND column_name = 'special_needs') THEN
+        ALTER TABLE students ADD COLUMN special_needs TEXT;
+    END IF;
+
+    -- Academic Background
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'students' AND column_name = 'previous_school') THEN
+        ALTER TABLE students ADD COLUMN previous_school VARCHAR(255);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'students' AND column_name = 'previous_class') THEN
+        ALTER TABLE students ADD COLUMN previous_class VARCHAR(50);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'students' AND column_name = 'admission_date') THEN
+        ALTER TABLE students ADD COLUMN admission_date DATE DEFAULT CURRENT_DATE;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'students' AND column_name = 'academic_year') THEN
+        ALTER TABLE students ADD COLUMN academic_year VARCHAR(20);
     END IF;
 END $$;
 

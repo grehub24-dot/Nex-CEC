@@ -22,10 +22,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $index_number = sanitize($_POST['index_number']);
     $class_name = sanitize($_POST['class_name']);
     $gender = sanitize($_POST['gender']);
-    $email = sanitize($_POST['email']);
-    $phone = sanitize($_POST['phone_number'] ?? '');
-    $guardian_name = sanitize($_POST['guardian_name']);
-    $guardian_phone = sanitize($_POST['guardian_phone']);
+    $guardian_email = sanitize($_POST['guardian_email']);
+    
+    // Guardian details
+    $guardian_name = sanitize($_POST['guardian_name'] ?? '');
+    $guardian_relationship = sanitize($_POST['guardian_relationship'] ?? '');
+    $guardian_phone_primary = sanitize($_POST['guardian_phone_primary'] ?? '');
+    $guardian_phone_emergency = sanitize($_POST['guardian_phone_emergency'] ?? '');
+    $guardian_occupation = sanitize($_POST['guardian_occupation'] ?? '');
+    $guardian_address = sanitize($_POST['guardian_address'] ?? '');
+    
+    // Student demographics
+    $date_of_birth = sanitize($_POST['date_of_birth'] ?? '');
+    $place_of_birth = sanitize($_POST['place_of_birth'] ?? '');
+    $nationality = sanitize($_POST['nationality'] ?? 'Ghanaian');
+    $hometown = sanitize($_POST['hometown'] ?? '');
+    $student_address = sanitize($_POST['address'] ?? '');
+    $phone_number = sanitize($_POST['phone_number'] ?? '');
+    
+    // Health information
+    $health_insurance_id = sanitize($_POST['health_insurance_id'] ?? '');
+    $blood_group = sanitize($_POST['blood_group'] ?? '');
+    $genotype = sanitize($_POST['genotype'] ?? '');
+    $medical_conditions = sanitize($_POST['medical_conditions'] ?? '');
+    $allergies = sanitize($_POST['allergies'] ?? '');
+    $special_needs = sanitize($_POST['special_needs'] ?? '');
+    
+    // Academic background
+    $previous_school = sanitize($_POST['previous_school'] ?? '');
+    $previous_class = sanitize($_POST['previous_class'] ?? '');
+    $admission_date = sanitize($_POST['admission_date'] ?? date('Y-m-d'));
+    $academic_year = sanitize($_POST['academic_year'] ?? date('Y') . '/' . (date('Y') + 1));
     
     // Handle Profile Picture
     $profile_picture = null;
@@ -50,24 +77,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             // Generate a random 6-character password
             $auto_password = substr(str_shuffle("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"), 0, 6);
             
-            // 1. Create User Account
+            // 1. Create User Account (email = guardian email for basic school)
             $password_hash = password_hash($auto_password, PASSWORD_DEFAULT);
             $stmt = $pdo->prepare("INSERT INTO users (email, password, role) VALUES (?, ?, 'student')");
-            $stmt->execute([$email, $password_hash]);
+            $stmt->execute([$guardian_email, $password_hash]);
             $user_id = $pdo->lastInsertId();
 
-            // 2. Create Student Record (Basic School fields)
-            $stmt = $pdo->prepare("INSERT INTO students (user_id, index_number, full_name, class_name, gender, phone_number, guardian_name, guardian_phone, profile_picture) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-            $stmt->execute([$user_id, $index_number, $full_name, $class_name, $gender, $phone, $guardian_name, $guardian_phone, $profile_picture]);
+            // 2. Create Student Record (Basic School schema)
+            $stmt = $pdo->prepare("INSERT INTO students (
+                user_id, index_number, full_name, class_name, gender, date_of_birth, place_of_birth,
+                nationality, hometown, address, phone_number, profile_picture,
+                guardian_name, guardian_email, guardian_relationship,
+                guardian_phone_primary, guardian_phone_emergency, guardian_occupation, guardian_address,
+                health_insurance_id, blood_group, genotype, medical_conditions, allergies, special_needs,
+                previous_school, previous_class, admission_date, academic_year
+            ) VALUES (
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                ?, ?, ?, ?, ?, ?, ?,
+                ?, ?, ?, ?, ?, ?,
+                ?, ?, ?, ?
+            )");
+            $stmt->execute([
+                $user_id, $index_number, $full_name, $class_name, $gender,
+                $date_of_birth ?: null, $place_of_birth, $nationality, $hometown, $student_address,
+                $phone_number, $profile_picture,
+                $guardian_name, $guardian_email, $guardian_relationship,
+                $guardian_phone_primary, $guardian_phone_emergency, $guardian_occupation, $guardian_address,
+                $health_insurance_id, $blood_group, $genotype, $medical_conditions, $allergies, $special_needs,
+                $previous_school, $previous_class, $admission_date, $academic_year
+            ]);
             
             $student_id = $pdo->lastInsertId();
 
             $pdo->commit();
             $message = "Student registered successfully! Temporary password: $auto_password";
 
-            if ($email) {
+            // Send email to guardian
+            if ($guardian_email) {
                 $mailer = new Mailer();
-                $subject = "Welcome — Student Registration Successful";
+                $subject = "Welcome — Student Registration at " . htmlspecialchars($school_name, ENT_QUOTES, 'UTF-8');
                 $dateStr = date('n/j/Y');
                 $html = "<div style=\"font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;\">
                     <div style=\"background: linear-gradient(90deg,#1a5276,#2e86c1); color:#fff; padding: 24px; text-align:center;\">
@@ -75,44 +123,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         <div style=\"margin-top:8px; font-size:14px; opacity:0.9;\">Student Registration Successful</div>
                     </div>
                     <div style=\"padding: 24px; color:#111827;\">
-                        <p>Dear <strong>" . htmlspecialchars($full_name, ENT_QUOTES, 'UTF-8') . "</strong>,</p>
-                        <p>Congratulations! You have been successfully registered. Below are your details:</p>
+                        <p>Dear <strong>" . htmlspecialchars($guardian_name ?: 'Parent/Guardian', ENT_QUOTES, 'UTF-8') . "</strong>,</p>
+                        <p><strong>" . htmlspecialchars($full_name, ENT_QUOTES, 'UTF-8') . "</strong> has been successfully registered. Details:</p>
                         <div style=\"border:1px solid #e5e7eb; border-radius:8px; padding:16px; background:#f9fafb; margin-top:12px;\">
                             <div style=\"display:grid; grid-template-columns: 180px 1fr; gap:8px; font-size:14px;\">
-                                <div><strong>Full Name:</strong></div><div>" . htmlspecialchars($full_name, ENT_QUOTES, 'UTF-8') . "</div>
+                                <div><strong>Student Name:</strong></div><div>" . htmlspecialchars($full_name, ENT_QUOTES, 'UTF-8') . "</div>
                                 <div><strong>Index Number:</strong></div><div>" . htmlspecialchars($index_number, ENT_QUOTES, 'UTF-8') . "</div>
                                 <div><strong>Class:</strong></div><div>" . htmlspecialchars($class_name, ENT_QUOTES, 'UTF-8') . "</div>
-                                <div><strong>Gender:</strong></div><div>" . htmlspecialchars($gender, ENT_QUOTES, 'UTF-8') . "</div>
-                                <div><strong>Guardian:</strong></div><div>" . htmlspecialchars($guardian_name, ENT_QUOTES, 'UTF-8') . "</div>
-                                <div><strong>Guardian Phone:</strong></div><div>" . htmlspecialchars($guardian_phone, ENT_QUOTES, 'UTF-8') . "</div>
-                                <div><strong>Email:</strong></div><div>" . htmlspecialchars($email, ENT_QUOTES, 'UTF-8') . "</div>
+                                <div><strong>Guardian Email:</strong></div><div>" . htmlspecialchars($guardian_email, ENT_QUOTES, 'UTF-8') . "</div>
                                 <div><strong>Temp Password:</strong></div><div>" . htmlspecialchars($auto_password, ENT_QUOTES, 'UTF-8') . "</div>
-                                <div><strong>Registration Date:</strong></div><div>" . $dateStr . "</div>
+                                <div><strong>Admission Date:</strong></div><div>" . $dateStr . "</div>
                             </div>
                         </div>
                         <div style=\"margin-top:16px;\">
-                            <div style=\"font-weight:600; margin-bottom:8px;\">Important Information:</div>
+                            <div style=\"font-weight:600; margin-bottom:8px;\">Important:</div>
                             <ul style=\"margin:0; padding-left:20px; color:#374151; font-size:14px;\">
-                                <li>Keep your index number safe — you'll need it for all fee payments</li>
-                                <li>Login and reset your password immediately</li>
-                                <li>All payment receipts will be sent to this email address</li>
+                                <li>Keep the index number safe — needed for all fee payments</li>
+                                <li>Login and reset the password immediately</li>
+                                <li>Payment receipts will be sent to this email</li>
+                                <li>SMS notifications will be sent to the primary phone: " . htmlspecialchars($guardian_phone_primary, ENT_QUOTES, 'UTF-8') . "</li>
                             </ul>
                         </div>
                         <hr style=\"border:none; border-top:1px solid #e5e7eb; margin:20px 0;\"/>
                         <div style=\"font-size:13px; color:#6b7280; text-align:center;\">
                             <div style=\"font-weight:600;\">" . htmlspecialchars($school_name, ENT_QUOTES, 'UTF-8') . "</div>
-                            <div style=\"margin-top:8px; font-size:12px;\">This is an automated email. Please do not reply to this message.</div>
+                            <div style=\"margin-top:8px; font-size:12px;\">This is an automated email. Please do not reply.</div>
                         </div>
                     </div>
                 </div>";
-                $mailer->sendHTML($email, $subject, $html);
+                $mailer->sendHTML($guardian_email, $subject, $html);
             }
 
-            // Send SMS to guardian
-            if ($guardian_phone) {
+            // Send SMS to guardian primary phone (fallback to emergency)
+            $smsPhone = $guardian_phone_primary ?: $guardian_phone_emergency;
+            if ($smsPhone) {
                 $smsHelper = new SMSHelper();
-                $smsMsg = "Registration successful for $full_name. Index: $index_number. Class: $class_name. Temp password: $auto_password. Login and reset password.";
-                $smsHelper->send($guardian_phone, $smsMsg);
+                $smsMsg = "Registration successful: $full_name. Index: $index_number. Class: $class_name. Temp password: $auto_password. Login at " . htmlspecialchars($school_name, ENT_QUOTES, 'UTF-8') . " portal.";
+                $smsHelper->send($smsPhone, $smsMsg);
             }
         } catch (Exception $e) {
             $pdo->rollBack();
@@ -216,12 +263,13 @@ $total_pages = ceil($total_rows / $limit);
 
             <!-- Add Student Modal -->
             <div id="studentModal" class="modal">
-                <div class="modal-content">
+                <div class="modal-content" style="max-width: 800px;">
                     <span class="close-btn">&times;</span>
                     <h3>Register New Student</h3>
                     <form action="students.php" method="POST" enctype="multipart/form-data" style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-top: 15px;">
                         <input type="hidden" name="action" value="add_student">
                         
+                        <!-- Profile Picture -->
                         <div style="grid-column: span 2; text-align: center; margin-bottom: 10px;">
                             <label>Profile Picture</label><br>
                             <img id="studentUploadPreview" src="../images/aamusted.jpg" alt="Profile Preview" class="upload-preview">
@@ -229,16 +277,21 @@ $total_pages = ceil($total_rows / $limit);
                             <div id="studentUploadFileName" class="upload-file-name">No image selected</div>
                         </div>
 
+                        <!-- Basic Info Section -->
+                        <div class="section-divider" style="grid-column: span 2; border-top: 1px solid #eee; padding-top: 15px; margin-top: 10px;">
+                            <h4><i class="fas fa-user"></i> Student Information</h4>
+                        </div>
+
                         <div>
-                            <label>Student Full Name</label>
+                            <label>Full Name *</label>
                             <input type="text" name="full_name" class="form-control" required placeholder="e.g. Kwame Asante">
                         </div>
                         <div>
-                            <label>Index / Admission Number</label>
+                            <label>Index / Admission Number *</label>
                             <input type="text" name="index_number" class="form-control" required placeholder="e.g. NXC/2026/001">
                         </div>
                         <div>
-                            <label>Class</label>
+                            <label>Class *</label>
                             <select name="class_name" class="form-control" required>
                                 <option value="">-- Select Class --</option>
                                 <optgroup label="Early Childhood">
@@ -263,7 +316,7 @@ $total_pages = ceil($total_rows / $limit);
                             </select>
                         </div>
                         <div>
-                            <label>Gender</label>
+                            <label>Gender *</label>
                             <select name="gender" class="form-control" required>
                                 <option value="">-- Select --</option>
                                 <option value="Male">Male</option>
@@ -271,26 +324,134 @@ $total_pages = ceil($total_rows / $limit);
                             </select>
                         </div>
                         <div>
-                            <label>Student Phone (if applicable)</label>
-                            <input type="text" name="phone_number" class="form-control" placeholder="Optional for older students">
+                            <label>Date of Birth</label>
+                            <input type="date" name="date_of_birth" class="form-control">
                         </div>
                         <div>
-                            <label>Email (for fee receipts)</label>
-                            <input type="email" name="email" class="form-control" required placeholder="parent@email.com">
+                            <label>Place of Birth</label>
+                            <input type="text" name="place_of_birth" class="form-control" placeholder="e.g. Kumasi">
+                        </div>
+                        <div>
+                            <label>Nationality</label>
+                            <input type="text" name="nationality" class="form-control" value="Ghanaian">
+                        </div>
+                        <div>
+                            <label>Hometown</label>
+                            <input type="text" name="hometown" class="form-control" placeholder="e.g. Kumasi">
+                        </div>
+                        <div>
+                            <label>Student Phone (optional)</label>
+                            <input type="text" name="phone_number" class="form-control" placeholder="For older students only">
+                        </div>
+                        <div>
+                            <label>Home Address</label>
+                            <input type="text" name="address" class="form-control" placeholder="Residential address">
                         </div>
 
-                        <!-- Guardian Details Section -->
-                        <div class="section-divider">
-                            <h4><i class="fas fa-user-shield"></i> Parent / Guardian Details</h4>
+                        <!-- Guardian Section -->
+                        <div class="section-divider" style="grid-column: span 2; border-top: 1px solid #eee; padding-top: 15px; margin-top: 10px;">
+                            <h4><i class="fas fa-user-shield"></i> Parent / Guardian Details <span style="font-weight:400; font-size:0.85rem; color:#666;">(Email &amp; SMS will be sent here)</span></h4>
                         </div>
 
                         <div>
-                            <label>Guardian Full Name</label>
+                            <label>Guardian Full Name *</label>
                             <input type="text" name="guardian_name" class="form-control" required placeholder="e.g. Mr. Asante">
                         </div>
                         <div>
-                            <label>Guardian Phone Number</label>
-                            <input type="text" name="guardian_phone" class="form-control" required placeholder="e.g. 0241234567">
+                            <label>Relationship to Child *</label>
+                            <select name="guardian_relationship" class="form-control" required>
+                                <option value="">-- Select --</option>
+                                <option value="Father">Father</option>
+                                <option value="Mother">Mother</option>
+                                <option value="Guardian">Guardian</option>
+                                <option value="Uncle">Uncle</option>
+                                <option value="Aunt">Aunt</option>
+                                <option value="Grandparent">Grandparent</option>
+                                <option value="Sibling">Sibling</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>Guardian Email * <span style="color:red;">(for receipts)</span></label>
+                            <input type="email" name="guardian_email" class="form-control" required placeholder="parent@email.com">
+                        </div>
+                        <div>
+                            <label>Guardian Occupation</label>
+                            <input type="text" name="guardian_occupation" class="form-control" placeholder="e.g. Teacher">
+                        </div>
+                        <div>
+                            <label>Primary Phone * <span style="color:red;">(for SMS)</span></label>
+                            <input type="text" name="guardian_phone_primary" class="form-control" required placeholder="e.g. 0241234567">
+                        </div>
+                        <div>
+                            <label>Emergency Phone</label>
+                            <input type="text" name="guardian_phone_emergency" class="form-control" placeholder="Fallback contact">
+                        </div>
+                        <div style="grid-column: span 2;">
+                            <label>Guardian Address</label>
+                            <input type="text" name="guardian_address" class="form-control" placeholder="Guardian residential/work address">
+                        </div>
+
+                        <!-- Health Section -->
+                        <div class="section-divider" style="grid-column: span 2; border-top: 1px solid #eee; padding-top: 15px; margin-top: 10px;">
+                            <h4><i class="fas fa-heartbeat"></i> Health Information</h4>
+                        </div>
+
+                        <div>
+                            <label>Health Insurance ID</label>
+                            <input type="text" name="health_insurance_id" class="form-control" placeholder="NHIS number">
+                        </div>
+                        <div>
+                            <label>Blood Group</label>
+                            <select name="blood_group" class="form-control">
+                                <option value="">-- Select --</option>
+                                <option value="A+">A+</option>
+                                <option value="A-">A-</option>
+                                <option value="B+">B+</option>
+                                <option value="B-">B-</option>
+                                <option value="AB+">AB+</option>
+                                <option value="AB-">AB-</option>
+                                <option value="O+">O+</option>
+                                <option value="O-">O-</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>Genotype</label>
+                            <input type="text" name="genotype" class="form-control" placeholder="e.g. AA, AS, SS">
+                        </div>
+                        <div>
+                            <label>Allergies</label>
+                            <input type="text" name="allergies" class="form-control" placeholder="e.g. Peanuts, Penicillin">
+                        </div>
+                        <div style="grid-column: span 2;">
+                            <label>Medical Conditions</label>
+                            <textarea name="medical_conditions" class="form-control" rows="2" placeholder="e.g. Asthma, Diabetes, Epilepsy"></textarea>
+                        </div>
+                        <div style="grid-column: span 2;">
+                            <label>Special Needs</label>
+                            <textarea name="special_needs" class="form-control" rows="2" placeholder="Any learning or physical special needs"></textarea>
+                        </div>
+
+                        <!-- Academic Background -->
+                        <div class="section-divider" style="grid-column: span 2; border-top: 1px solid #eee; padding-top: 15px; margin-top: 10px;">
+                            <h4><i class="fas fa-school"></i> Academic Background</h4>
+                        </div>
+
+                        <div>
+                            <label>Previous School</label>
+                            <input type="text" name="previous_school" class="form-control" placeholder="e.g. ABC Kindergarten">
+                        </div>
+                        <div>
+                            <label>Previous Class</label>
+                            <input type="text" name="previous_class" class="form-control" placeholder="e.g. KG 2">
+                        </div>
+                        <div>
+                            <label>Admission Date</label>
+                            <input type="date" name="admission_date" class="form-control" value="<?php echo date('Y-m-d'); ?>">
+                        </div>
+                        <div>
+                            <label>Academic Year</label>
+                            <input type="text" name="academic_year" class="form-control" value="<?php echo date('Y') . '/' . (date('Y') + 1); ?>" placeholder="e.g. 2025/2026">
                         </div>
 
                         <div style="grid-column: span 2; margin-top: 10px;">
@@ -315,12 +476,13 @@ $total_pages = ceil($total_rows / $limit);
                         <thead>
                             <tr>
                                 <th>Photo</th>
-                                <th>Index Number</th>
+                                <th>Index</th>
                                 <th>Name</th>
                                 <th>Class</th>
                                 <th>Gender</th>
                                 <th>Guardian</th>
-                                <th>Contact</th>
+                                <th>Primary Phone</th>
+                                <th>Guardian Email</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -330,12 +492,23 @@ $total_pages = ceil($total_rows / $limit);
                                 <td>
                                     <img src="../<?php echo htmlspecialchars($student['profile_picture'] ?? 'images/aamusted.jpg'); ?>" alt="Profile" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 1px solid #ddd;">
                                 </td>
-                                <td><?php echo htmlspecialchars($student['index_number']); ?></td>
+                                <td><strong><?php echo htmlspecialchars($student['index_number']); ?></strong></td>
                                 <td><?php echo htmlspecialchars($student['full_name']); ?></td>
                                 <td><?php echo htmlspecialchars($student['class_name'] ?? '-'); ?></td>
                                 <td><?php echo htmlspecialchars($student['gender'] ?? '-'); ?></td>
-                                <td><?php echo htmlspecialchars($student['guardian_name'] ?? '-'); ?></td>
-                                <td><?php echo htmlspecialchars($student['phone_number'] ?? '-'); ?></td>
+                                <td>
+                                    <?php echo htmlspecialchars($student['guardian_name'] ?? '-'); ?>
+                                    <?php if (!empty($student['guardian_relationship'])): ?>
+                                        <br><small style="color:#666;">(<?php echo htmlspecialchars($student['guardian_relationship']); ?>)</small>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <?php echo htmlspecialchars($student['guardian_phone_primary'] ?? $student['phone_number'] ?? '-'); ?>
+                                    <?php if (!empty($student['guardian_phone_emergency'])): ?>
+                                        <br><small style="color:#e74c3c;">Emer: <?php echo htmlspecialchars($student['guardian_phone_emergency']); ?></small>
+                                    <?php endif; ?>
+                                </td>
+                                <td><small><?php echo htmlspecialchars($student['guardian_email'] ?? '-'); ?></small></td>
                                 <td>
                                     <a href="edit_student.php?id=<?php echo $student['id']; ?>" class="btn-login" style="background:#f0ad4e;">Edit</a>
                                 </td>

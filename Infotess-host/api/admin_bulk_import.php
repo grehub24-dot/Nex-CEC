@@ -29,7 +29,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $errors = [];
             
             while (($row = fgetcsv($handle)) !== false) {
-                // Expected columns: full_name, index_number, class_name, gender, email, phone, guardian_name, guardian_phone
+                // Expected columns: full_name, index_number, class_name, gender, date_of_birth,
+                // guardian_name, guardian_email, guardian_relationship, guardian_phone_primary,
+                // guardian_phone_emergency, health_insurance_id, previous_school, address
                 if (count($row) < 4) {
                     $skipped++;
                     continue;
@@ -39,15 +41,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $index_number = trim($row[1] ?? '');
                 $class_name = trim($row[2] ?? '');
                 $gender = trim($row[3] ?? '');
-                $email = trim($row[4] ?? '');
-                $phone = trim($row[5] ?? '');
-                $guardian_name = trim($row[6] ?? '');
-                $guardian_phone = trim($row[7] ?? '');
+                $date_of_birth = trim($row[4] ?? '');
+                $guardian_name = trim($row[5] ?? '');
+                $guardian_email = trim($row[6] ?? '');
+                $guardian_relationship = trim($row[7] ?? '');
+                $guardian_phone_primary = trim($row[8] ?? '');
+                $guardian_phone_emergency = trim($row[9] ?? '');
+                $health_insurance_id = trim($row[10] ?? '');
+                $previous_school = trim($row[11] ?? '');
+                $address = trim($row[12] ?? '');
                 
                 if (empty($full_name) || empty($index_number) || empty($class_name)) {
                     $skipped++;
                     continue;
                 }
+                
+                // Use guardian email as student account email
+                $email = $guardian_email ?: strtolower(str_replace(' ', '', $full_name)) . '@nexcec.edu';
                 
                 // Check for duplicate
                 $stmt = $pdo->prepare("SELECT id FROM students WHERE index_number = ?");
@@ -64,11 +74,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     $password_hash = password_hash($auto_password, PASSWORD_DEFAULT);
                     
                     $stmt = $pdo->prepare("INSERT INTO users (email, password, role) VALUES (?, ?, 'student')");
-                    $stmt->execute([$email ?: strtolower(str_replace(' ', '', $full_name)) . '@nexcec.edu', $password_hash]);
+                    $stmt->execute([$email, $password_hash]);
                     $user_id = $pdo->lastInsertId();
                     
-                    $stmt = $pdo->prepare("INSERT INTO students (user_id, index_number, full_name, class_name, gender, phone_number, guardian_name, guardian_phone) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-                    $stmt->execute([$user_id, $index_number, $full_name, $class_name, $gender, $phone, $guardian_name, $guardian_phone]);
+                    $stmt = $pdo->prepare("INSERT INTO students (
+                        user_id, index_number, full_name, class_name, gender, date_of_birth,
+                        guardian_name, guardian_email, guardian_relationship,
+                        guardian_phone_primary, guardian_phone_emergency,
+                        health_insurance_id, previous_school, address
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                    $stmt->execute([
+                        $user_id, $index_number, $full_name, $class_name, $gender,
+                        $date_of_birth ?: null,
+                        $guardian_name, $guardian_email, $guardian_relationship,
+                        $guardian_phone_primary, $guardian_phone_emergency,
+                        $health_insurance_id, $previous_school, $address
+                    ]);
                     
                     $pdo->commit();
                     $imported++;
@@ -167,12 +188,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                             <tbody>
                                 <tr><td>full_name</td><td>Yes</td><td>Kwame Asante</td></tr>
                                 <tr><td>index_number</td><td>Yes</td><td>NXC/2026/001</td></tr>
-                                <tr><td>class_name</td><td>Yes</td><td>Basic 1, JHS 2, KG 1, etc.</td></tr>
+                                <tr><td>class_name</td><td>Yes</td><td>Basic 1, JHS 2, KG 1</td></tr>
                                 <tr><td>gender</td><td>Yes</td><td>Male or Female</td></tr>
-                                <tr><td>email</td><td>No</td><td>parent@email.com</td></tr>
-                                <tr><td>phone</td><td>No</td><td>0241234567</td></tr>
+                                <tr><td>date_of_birth</td><td>No</td><td>2018-05-15</td></tr>
                                 <tr><td>guardian_name</td><td>No</td><td>Mr. Asante</td></tr>
-                                <tr><td>guardian_phone</td><td>No</td><td>0241234567</td></tr>
+                                <tr><td>guardian_email</td><td>Yes</td><td>parent@email.com <span style="color:red;">(for receipts)</span></td></tr>
+                                <tr><td>guardian_relationship</td><td>No</td><td>Father, Mother, Guardian</td></tr>
+                                <tr><td>guardian_phone_primary</td><td>Yes</td><td>0241234567 <span style="color:red;">(for SMS)</span></td></tr>
+                                <tr><td>guardian_phone_emergency</td><td>No</td><td>0241234568 (fallback)</td></tr>
+                                <tr><td>health_insurance_id</td><td>No</td><td>NHIS123456789</td></tr>
+                                <tr><td>previous_school</td><td>No</td><td>ABC Kindergarten</td></tr>
+                                <tr><td>address</td><td>No</td><td>Kumasi, Ghana</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -200,7 +226,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
     <script>
     function downloadSample() {
-        const csv = "full_name,index_number,class_name,gender,email,phone,guardian_name,guardian_phone\nKwame Asante,NXC/2026/001,Basic 1,Male,kwame@email.com,0241234567,Mr. Asante,0241234568\nAma Mensah,NXC/2026/002,Basic 2,Female,ama@email.com,0241234569,Mrs. Mensah,0241234570";
+        const csv = "full_name,index_number,class_name,gender,date_of_birth,guardian_name,guardian_email,guardian_relationship,guardian_phone_primary,guardian_phone_emergency,health_insurance_id,previous_school,address\nKwame Asante,NXC/2026/001,Basic 1,Male,2018-05-15,Mr. Asante,asante@email.com,Father,0241234567,0241234568,NHIS123456789,ABC Kindergarten,Kumasi\nAma Mensah,NXC/2026/002,Basic 2,Female,2017-03-20,Mrs. Mensah,mensah@email.com,Mother,0241234569,0241234570,NHIS987654321,XYZ School,Accra";
         const blob = new Blob([csv], { type: 'text/csv' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');

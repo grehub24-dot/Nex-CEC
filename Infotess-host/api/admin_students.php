@@ -18,8 +18,16 @@ $error = '';
 
 // Handle Student Registration
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'add_student') {
+    // Auto-generate admission number: CEC-YYMMDD-XXX
+    $today = date('ymd');
+    $prefix = "CEC-{$today}-%";
+    $stmt = $pdo->prepare('SELECT COUNT(*) FROM students WHERE index_number LIKE :prefix');
+    $stmt->execute([':prefix' => $prefix]);
+    $todayCount = (int) $stmt->fetchColumn();
+    $counter = str_pad($todayCount + 1, 3, '0', STR_PAD_LEFT);
+    $index_number = "CEC-{$today}-{$counter}";
+
     $full_name = sanitize($_POST['full_name']);
-    $index_number = sanitize($_POST['index_number']);
     $class_name = sanitize($_POST['class_name']);
     $gender = sanitize($_POST['gender']);
     $guardian_email = sanitize($_POST['guardian_email']);
@@ -86,12 +94,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 guardian_name, guardian_email, guardian_relationship,
                 guardian_phone_primary, guardian_phone_emergency, guardian_occupation, guardian_address,
                 health_insurance_id, medical_conditions, allergies, special_needs,
-                previous_school, previous_class, admission_date, academic_year
+                previous_school, previous_class, admission_date, academic_year, enrollment_type
             ) VALUES (
                 ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                 ?, ?, ?, ?, ?, ?, ?,
                 ?, ?, ?, ?,
-                ?, ?, ?, ?
+                ?, ?, ?, ?, ?
             )");
             $stmt->execute([
                 $user_id, $index_number, $full_name, $class_name, $gender,
@@ -99,7 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $guardian_name, $guardian_email, $guardian_relationship,
                 $guardian_phone_primary, $guardian_phone_emergency, $guardian_occupation, $guardian_address,
                 $health_insurance_id, $medical_conditions, $allergies, $special_needs,
-                $previous_school, $previous_class, $admission_date, $academic_year
+                $previous_school, $previous_class, $admission_date, $academic_year, 'admin'
             ]);
             
             $student_id = $pdo->lastInsertId();
@@ -284,8 +292,8 @@ $total_pages = ceil($total_rows / $limit);
                             <input type="text" name="full_name" class="form-control" required placeholder="e.g. Kwame Asante">
                         </div>
                         <div>
-                            <label>Index / Admission Number *</label>
-                            <input type="text" name="index_number" class="form-control" required placeholder="e.g. NXC/2026/001">
+                            <label>Admission Number (Auto-generated)</label>
+                            <input type="text" name="index_number" class="form-control" value="CEC-<?php echo date('ymd'); ?>-XXX" readonly style="background:#f0f0f0; cursor:not-allowed;" title="Auto-generated on submission">
                         </div>
                         <div>
                             <label>Class *</label>

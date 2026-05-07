@@ -91,6 +91,7 @@ function getAccessControl() {
         'dashboard' => ['admin', 'super_admin', 'bursar'],
         'students' => ['admin', 'super_admin', 'bursar'],
         'edit_student' => ['admin', 'super_admin', 'bursar'],
+        'enrollments' => ['admin', 'super_admin'],
         'payments' => ['admin', 'super_admin', 'bursar'],
         'fees' => ['admin', 'super_admin', 'bursar'],
         'reports' => ['admin', 'super_admin', 'bursar'],
@@ -144,6 +145,7 @@ function getSidebarMenu($currentPage = '') {
     ];
     
     if ($isFullAdmin) {
+        $menu[] = ['href' => 'admin_enrollments.php', 'icon' => 'fas fa-file-signature', 'label' => 'Enrollments'];
         $menu[] = ['href' => 'staff.php', 'icon' => 'fas fa-chalkboard-teacher', 'label' => 'Staff'];
     }
     

@@ -149,6 +149,12 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'students' AND column_name = 'academic_year') THEN
         ALTER TABLE students ADD COLUMN academic_year VARCHAR(20);
     END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'students' AND column_name = 'status') THEN
+        ALTER TABLE students ADD COLUMN status VARCHAR(20) DEFAULT 'active';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'students' AND column_name = 'enrollment_type') THEN
+        ALTER TABLE students ADD COLUMN enrollment_type VARCHAR(20) DEFAULT 'admin';
+    END IF;
 END $$;
 
 -- 3. Update fee_structures columns if needed

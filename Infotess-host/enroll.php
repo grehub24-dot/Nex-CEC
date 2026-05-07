@@ -1,6 +1,6 @@
 <?php
 // enroll.php — Student Enrollment Landing Page
-session_start();
+if (session_status() === PHP_SESSION_NONE) session_start();
 
 $settings = [];
 try {

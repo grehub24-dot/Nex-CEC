@@ -1,6 +1,6 @@
 <?php
-// enroll_form.php — Online Student Enrollment Form
-session_start();
+// enroll_form.php — Online Enrollment Form
+if (session_status() === PHP_SESSION_NONE) session_start();
 
 require_once __DIR__ . '/api/includes/db.php';
 

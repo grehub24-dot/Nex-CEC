@@ -1,126 +1,167 @@
 <?php
 if (session_status() === PHP_SESSION_NONE) session_start();
-
 require_once 'api/includes/db.php';
 
 $error = '';
-$success = '';
 $student = null;
-$enrollment = null;
+$pendingPayment = $_SESSION['payment_pending'] ?? null;
+$successData = isset($_SESSION['payment_success']) ? $_SESSION['payment_success'] : null;
 
-if (!isset($_GET['enrollment']) && !isset($_SESSION['enrollment'])) {
-    header('Location: enroll_process.php');
-    exit;
-}
-
-if (isset($_SESSION['enrollment'])) {
-    $enrollment = $_SESSION['enrollment'];
-}
-
-if (!$enrollment && isset($_GET['enrollment'])) {
-    if (!isset($_SESSION['enrollment']['student_id'])) {
-        $error = 'Enrollment session expired. Please start enrollment again.';
+// Step 0: Auto-load from enroll session if coming from enrollment form
+if (!isset($_POST['enrollment_id']) && !$student && isset($_SESSION['enrollment'])) {
+    $enr = $_SESSION['enrollment'];
+    if (isset($enr['student_id'])) {
+        $stmt = $pdo->prepare("SELECT * FROM students WHERE id = ?");
+        $stmt->execute([$enr['student_id']]);
+        $student = $stmt->fetch(PDO::FETCH_ASSOC);
     }
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['payment_method'])) {
-    $method = $_POST['payment_method'];
-    $phone = isset($_POST['phone']) ? trim($_POST['phone']) : '';
-    $amount = $enrollment['amount'] ?? 150.00;
-    $studentId = $enrollment['student_id'] ?? 0;
-
-    if ($method === 'momo' || $method === 'telecel') {
-        if (empty($phone)) {
-            $error = 'Please enter your phone number.';
-        } elseif (!preg_match('/^0[0-9]{9}$/', $phone)) {
-            $error = 'Please enter a valid 10-digit phone number starting with 0.';
+// Step 1: Enrollment ID lookup (GET from enroll_form or POST)
+if (isset($_GET['enrollment_id']) || isset($_POST['enrollment_id'])) {
+    $enrollmentId = strtoupper(trim($_GET['enrollment_id'] ?? $_POST['enrollment_id']));
+    if (!preg_match('/^ENR-\d{4}-[A-Z0-9]{6}$/', $enrollmentId)) {
+        $error = 'Invalid enrollment ID format. Use ENR-YYYY-XXXXXX (e.g., ENR-2026-A3K7B2)';
+    } else {
+        $stmt = $pdo->prepare("SELECT * FROM students WHERE enrollment_id = ?");
+        $stmt->execute([$enrollmentId]);
+        $student = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$student) {
+            $error = 'Invalid enrollment ID. No student found with this ID.';
+        } else {
+            $_SESSION['payment_student'] = $student;
+            unset($_SESSION['payment_pending']);
         }
+    }
+}
+
+// Load student from session if available
+if (isset($_SESSION['payment_student']) && !$student) {
+    $student = $_SESSION['payment_student'];
+}
+
+$amount = 150.00;
+
+// Step 2: Handle payment method submission
+if (isset($_POST['payment_method']) && $student) {
+    $method = $_POST['payment_method'];
+    $phone = trim($_POST['phone'] ?? '');
+    $studentId = $student['id'];
+
+    if (($method === 'momo' || $method === 'telecel') && (empty($phone) || !preg_match('/^0[0-9]{9}$/', $phone))) {
+        $error = 'Please enter a valid 10-digit phone number starting with 0.';
     }
 
     if (empty($error)) {
         $receiptNumber = 'NXC-' . time() . '-' . rand(1000, 9999);
-
         try {
-            $stmt = $pdo->prepare("INSERT INTO payments (student_id, amount, payment_method, receipt_number, status, payment_date) VALUES (?, ?, ?, ?, 'pending', NOW())");
-            $stmt->execute([$studentId, $amount, $method, $receiptNumber]);
+            $stmt = $pdo->prepare("INSERT INTO payments (student_id, amount, payment_method, payment_date, receipt_number, status, enrollment_id) VALUES (?, ?, ?, NOW(), ?, 'pending', ?)");
+            $stmt->execute([$studentId, $amount, $method, $receiptNumber, $student['enrollment_id']]);
             $paymentId = $pdo->lastInsertId();
 
-            if ($method === 'bank') {
-                $_SESSION['payment_pending'] = [
-                    'payment_id' => $paymentId,
-                    'student_id' => $studentId,
-                    'receipt_number' => $receiptNumber,
-                    'method' => $method
-                ];
-                header('Location: payment.php?confirm_bank=1');
-                exit;
-            } else {
-                $_SESSION['payment_pending'] = [
-                    'payment_id' => $paymentId,
-                    'student_id' => $studentId,
-                    'receipt_number' => $receiptNumber,
-                    'method' => $method,
-                    'phone' => $phone
-                ];
-                header('Location: payment.php?processing=1');
-                exit;
-            }
+            $_SESSION['payment_pending'] = [
+                'payment_id' => $paymentId,
+                'student_id' => $studentId,
+                'receipt_number' => $receiptNumber,
+                'method' => $method,
+                'phone' => $phone,
+                'amount' => $amount,
+                'enrollment_id' => $student['enrollment_id'],
+                'full_name' => $student['full_name'],
+                'class_name' => $student['class_name']
+            ];
+
+            header($method === 'bank' ? 'Location: payment.php?voucher=1' : 'Location: payment.php?processing=1');
+            exit;
         } catch (Exception $e) {
-            $error = 'Payment recording failed. Please try again.';
+            $error = 'Payment initiation failed. Please try again.';
         }
     }
 }
 
-if (isset($_GET['processing']) && isset($_SESSION['payment_pending'])) {
-    $pending = $_SESSION['payment_pending'];
-    $methodName = $pending['method'] === 'momo' ? 'MTN MoMo' : 'Telecel Cash';
-}
-
-if (isset($_GET['confirm_bank']) && isset($_SESSION['payment_pending'])) {
-    $pending = $_SESSION['payment_pending'];
-}
-
+// Step 3: Confirm MoMo/Telecel payment
 if (isset($_POST['confirm_payment']) && isset($_SESSION['payment_pending'])) {
     $pending = $_SESSION['payment_pending'];
-    $paymentId = $pending['payment_id'];
-    $studentId = $pending['student_id'] ?? 0;
-
-    // Re-fetch enrollment from session if needed
-    if (!$studentId && isset($_SESSION['enrollment'])) {
-        $studentId = $_SESSION['enrollment']['student_id'];
-    }
-
     try {
-        $stmt = $pdo->prepare("UPDATE payments SET status = 'completed' WHERE id = ?");
-        $stmt->execute([$paymentId]);
+        $pdo->prepare("UPDATE payments SET status = 'completed' WHERE id = ?")->execute([$pending['payment_id']]);
 
-        $stmt = $pdo->prepare("UPDATE students SET status = 'enrolled' WHERE id = ?");
-        $stmt->execute([$studentId]);
+        // Generate admission number
+        $today = date('ymd');
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM students WHERE index_number LIKE ?");
+        $stmt->execute(["CEC-{$today}-%"]);
+        $counter = str_pad($stmt->fetchColumn() + 1, 3, '0', STR_PAD_LEFT);
+        $admissionNumber = "CEC-{$today}-{$counter}";
 
-        unset($_SESSION['payment_pending']);
-        unset($_SESSION['enrollment']);
+        // Update student
+        $pdo->prepare("UPDATE students SET index_number = ?, payment_status = 'paid', status = 'enrolled' WHERE id = ?")
+            ->execute([$admissionNumber, $pending['student_id']]);
+
         $_SESSION['payment_success'] = [
+            'student_name' => $pending['full_name'],
+            'admission_number' => $admissionNumber,
             'receipt_number' => $pending['receipt_number'],
-            'amount' => $amount,
-            'full_name' => $enrollment['full_name'] ?? '',
-            'admission_number' => $enrollment['admission_number'] ?? '',
-            'class_name' => $enrollment['class_name'] ?? ''
+            'amount' => $pending['amount'],
+            'class_name' => $pending['class_name'],
+            'enrollment_id' => $pending['enrollment_id'],
+            'guardian_email' => $student['guardian_email'] ?? '',
+            'gender' => $student['gender'] ?? '',
+            'date_of_birth' => $student['date_of_birth'] ?? '',
+            'guardian_name' => $student['guardian_name'] ?? '',
+            'guardian_phone_primary' => $student['guardian_phone_primary'] ?? '',
+            'address' => $student['address'] ?? ''
         ];
+
+        // Re-fetch updated student for printable form
+        $stmt2 = $pdo->prepare("SELECT * FROM students WHERE id = ?");
+        $stmt2->execute([$pending['student_id']]);
+        $_SESSION['payment_success']['student_data'] = $stmt2->fetch(PDO::FETCH_ASSOC);
+
+        unset($_SESSION['payment_pending'], $_SESSION['payment_student'], $_SESSION['enrollment']);
         header('Location: payment.php?success=1');
         exit;
     } catch (Exception $e) {
-        $error = 'Confirmation failed. Please contact administration.';
+        $error = 'Payment confirmation failed. Please contact administration.';
     }
 }
 
+// Step 3b: Confirm Bank/Cash payment
+if (isset($_POST['confirm_bank_payment']) && isset($_SESSION['payment_pending'])) {
+    $pending = $_SESSION['payment_pending'];
+    try {
+        $pdo->prepare("UPDATE payments SET status = 'completed' WHERE id = ?")->execute([$pending['payment_id']]);
+
+        $today = date('ymd');
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM students WHERE index_number LIKE ?");
+        $stmt->execute(["CEC-{$today}-%"]);
+        $counter = str_pad($stmt->fetchColumn() + 1, 3, '0', STR_PAD_LEFT);
+        $admissionNumber = "CEC-{$today}-{$counter}";
+
+        $pdo->prepare("UPDATE students SET index_number = ?, payment_status = 'paid', status = 'enrolled' WHERE id = ?")
+            ->execute([$admissionNumber, $pending['student_id']]);
+
+        $_SESSION['payment_success'] = [
+            'student_name' => $pending['full_name'],
+            'admission_number' => $admissionNumber,
+            'receipt_number' => $pending['receipt_number'],
+            'amount' => $pending['amount'],
+            'class_name' => $pending['class_name'],
+            'enrollment_id' => $pending['enrollment_id']
+        ];
+
+        unset($_SESSION['payment_pending'], $_SESSION['payment_student'], $_SESSION['enrollment']);
+        header('Location: payment.php?success=1');
+        exit;
+    } catch (Exception $e) {
+        $error = 'Payment confirmation failed. Please contact administration.';
+    }
+}
+
+// Load success/pending data for display
 if (isset($_GET['success']) && isset($_SESSION['payment_success'])) {
     $successData = $_SESSION['payment_success'];
 }
-
-function getStudentInfo($pdo, $studentId) {
-    $stmt = $pdo->prepare("SELECT * FROM students WHERE id = ?");
-    $stmt->execute([$studentId]);
-    return $stmt->fetch(PDO::FETCH_ASSOC);
+if (isset($_GET['processing']) && isset($_SESSION['payment_pending'])) {
+    $pendingPayment = $_SESSION['payment_pending'];
 }
 ?>
 <!DOCTYPE html>
@@ -128,210 +169,314 @@ function getStudentInfo($pdo, $studentId) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Payment - Nex CEC Basic School</title>
+    <title>Payment — Nex CEC Basic School</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; line-height: 1.6; }
-        .header { background: #1a5276; color: white; padding: 20px 0; text-align: center; }
-        .header h1 { font-size: 24px; }
-        .header p { font-size: 14px; opacity: 0.9; }
-        .container { max-width: 900px; margin: 30px auto; padding: 0 20px; }
-        .enrollment-details { background: white; border-radius: 10px; padding: 25px; margin-bottom: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
-        .enrollment-details h2 { color: #1a5276; margin-bottom: 15px; font-size: 20px; }
-        .detail-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
-        .detail-row:last-child { border-bottom: none; }
-        .detail-label { font-weight: 600; color: #555; }
-        .detail-value { color: #1a5276; font-weight: 600; }
-        .amount { font-size: 28px; color: #1a5276; font-weight: 700; }
-        .payment-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px; }
-        @media (max-width: 768px) { .payment-cards { grid-template-columns: 1fr; } }
-        .payment-card { background: white; border-radius: 12px; padding: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); transition: transform 0.2s, box-shadow 0.2s; }
-        .payment-card:hover { transform: translateY(-3px); box-shadow: 0 4px 15px rgba(0,0,0,0.12); }
-        .payment-card.momo { border-top: 4px solid #ffcc00; }
-        .payment-card.telecel { border-top: 4px solid #e4002b; }
-        .payment-card.bank { border-top: 4px solid #0066cc; }
-        .card-header { display: flex; align-items: center; margin-bottom: 20px; }
-        .card-icon { width: 50px; height: 50px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 24px; margin-right: 15px; }
-        .momo .card-icon { background: #ffcc00; color: #333; }
-        .telecel .card-icon { background: #e4002b; color: white; }
-        .bank .card-icon { background: #0066cc; color: white; }
-        .card-title { font-size: 18px; font-weight: 600; color: #333; }
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 5px; font-size: 14px; color: #555; }
-        .form-group input { width: 100%; padding: 12px 15px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 15px; transition: border-color 0.2s; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; color: #333; line-height: 1.6; }
+        .header { background: linear-gradient(135deg, #1a5276, #2e86c1); color: white; padding: 24px 0; text-align: center; }
+        .header h1 { font-size: 22px; }
+        .header p { font-size: 14px; opacity: 0.85; margin-top: 4px; }
+        .container { max-width: 960px; margin: 30px auto; padding: 0 20px; }
+        .card { background: #fff; border-radius: 12px; padding: 28px; margin-bottom: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.07); }
+        .error { background: #fde8e8; color: #c0392b; padding: 14px 18px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #e74c3c; }
+        .success-msg { background: #e8f5e9; color: #27ae60; padding: 14px 18px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #27ae60; }
+
+        /* Step 1: Enrollment Entry */
+        .enrollment-entry { max-width: 480px; margin: 60px auto; text-align: center; }
+        .enrollment-entry i.enroll-icon { font-size: 48px; color: #1a5276; margin-bottom: 16px; }
+        .enrollment-entry h2 { color: #1a5276; margin-bottom: 8px; }
+        .enrollment-entry p { color: #666; margin-bottom: 24px; }
+        .form-group { margin-bottom: 18px; text-align: left; }
+        .form-group label { display: block; margin-bottom: 6px; font-weight: 600; color: #555; font-size: 14px; }
+        .form-group input { width: 100%; padding: 14px 16px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 16px; transition: border-color 0.2s; }
         .form-group input:focus { outline: none; border-color: #1a5276; }
-        .btn-pay { width: 100%; padding: 14px; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; }
-        .btn-pay:hover { opacity: 0.9; }
-        .momo .btn-pay { background: #ffcc00; color: #333; }
-        .telecel .btn-pay { background: #e4002b; color: white; }
-        .bank .btn-pay { background: #0066cc; color: white; }
-        .bank-details { background: #f8f9fa; border-radius: 8px; padding: 15px; margin-bottom: 15px; font-size: 14px; }
-        .bank-details p { margin-bottom: 8px; }
-        .bank-details strong { color: #1a5276; }
-        .error { background: #fee; color: #c33; padding: 12px 15px; border-radius: 8px; margin-bottom: 20px; }
-        .success { background: #efe; color: #2a7; padding: 12px 15px; border-radius: 8px; margin-bottom: 20px; }
-        .processing { text-align: center; padding: 50px 20px; }
-        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #1a5276; border-radius: 50%; width: 60px; height: 60px; animation: spin 1s linear infinite; margin: 0 auto 20px; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .success-page { text-align: center; padding: 40px 20px; }
-        .success-page .checkmark { font-size: 60px; color: #2a7; margin-bottom: 20px; }
-        .admission-card { background: white; border-radius: 12px; padding: 30px; margin: 30px auto; max-width: 500px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); text-align: left; }
-        .admission-card h3 { color: #1a5276; text-align: center; margin-bottom: 20px; }
-        .admission-card p { margin-bottom: 10px; }
-        .btn-print { display: inline-block; padding: 12px 30px; background: #1a5276; color: white; text-decoration: none; border-radius: 8px; margin-top: 20px; }
-        .btn-print:hover { opacity: 0.9; }
+        .btn-primary { background: #1a5276; color: #fff; border: none; padding: 14px 32px; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+        .btn-primary:hover { background: #154360; }
+        .btn-success { background: #27ae60; color: #fff; border: none; padding: 14px 32px; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+        .btn-success:hover { background: #219a52; }
+        .btn-secondary { background: #0066cc; color: #fff; border: none; padding: 14px 32px; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+        .btn-secondary:hover { background: #0052a3; }
+
+        /* Student info */
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .info-item { padding: 12px; background: #f8f9fa; border-radius: 8px; }
+        .info-label { font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
+        .info-value { font-weight: 700; color: #1a5276; font-size: 16px; }
+        .amount-big { font-size: 32px; color: #1a5276; font-weight: 800; text-align: center; margin: 12px 0; }
+
+        /* Payment cards */
+        .payment-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 24px; }
+        @media (max-width: 768px) { .payment-cards { grid-template-columns: 1fr; } .info-grid { grid-template-columns: 1fr; } }
+        .payment-card { border-radius: 12px; padding: 24px; background: #fff; box-shadow: 0 2px 10px rgba(0,0,0,0.06); border-top: 4px solid; }
+        .payment-card.momo { border-top-color: #f1c40f; }
+        .payment-card.telecel { border-top-color: #e74c3c; }
+        .payment-card.bank { border-top-color: #3498db; }
+        .card-header { display: flex; align-items: center; margin-bottom: 18px; }
+        .card-icon { width: 48px; height: 48px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 22px; margin-right: 14px; font-weight: 700; }
+        .momo .card-icon { background: #f1c40f; color: #333; }
+        .telecel .card-icon { background: #e74c3c; color: #fff; }
+        .bank .card-icon { background: #3498db; color: #fff; }
+        .card-title { font-size: 17px; font-weight: 600; }
+        .btn-pay { width: 100%; padding: 14px; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 12px; }
+        .momo .btn-pay { background: #f1c40f; color: #333; }
+        .telecel .btn-pay { background: #e74c3c; color: #fff; }
+        .bank .btn-pay { background: #3498db; color: #fff; }
+
+        /* Processing */
+        .processing-view { text-align: center; padding: 50px 20px; }
+        .spinner { border: 4px solid #e8e8e8; border-top: 4px solid #1a5276; border-radius: 50%; width: 56px; height: 56px; animation: spin 1s linear infinite; margin: 0 auto 20px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Voucher */
+        .voucher { max-width: 580px; margin: 24px auto; border: 2px solid #1a5276; border-radius: 10px; overflow: hidden; }
+        .voucher-head { background: #1a5276; color: #fff; padding: 20px; text-align: center; }
+        .voucher-body { padding: 24px; }
+        .voucher table { width: 100%; border-collapse: collapse; }
+        .voucher td { padding: 10px 0; border-bottom: 1px solid #eee; }
+        .voucher td:first-child { font-weight: 600; color: #555; width: 42%; }
+        .voucher-footer { padding: 16px 24px; background: #f8f9fa; text-align: center; font-size: 14px; color: #666; }
+
+        /* Success */
+        .success-view { text-align: center; padding: 40px 20px; }
+        .checkmark-circle { width: 80px; height: 80px; border-radius: 50%; background: #27ae60; color: #fff; font-size: 40px; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; }
+        .success-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 24px; }
+
+        /* Printable sections */
+        .printable { display: none; }
+        .printable-admission { max-width: 560px; margin: 24px auto; padding: 32px; border: 2px solid #1a5276; text-align: left; }
+        .printable-form { max-width: 700px; margin: 24px auto; padding: 32px; border: 2px solid #1a5276; text-align: left; }
+
+        @media print {
+            body * { visibility: hidden !important; }
+            .printable { visibility: visible !important; display: block !important; position: absolute; left: 0; top: 0; width: 100%; border: none !important; }
+            .printable * { visibility: visible !important; }
+            .voucher { visibility: visible !important; display: block !important; position: absolute; left: 0; top: 0; width: 100%; }
+            .voucher * { visibility: visible !important; }
+        }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>Nex CEC Basic School</h1>
-        <p>Student Enrollment Payment</p>
-    </div>
+<div class="header">
+    <h1>Nex CEC Basic School</h1>
+    <p>Student Enrollment Payment</p>
+</div>
 
-    <div class="container">
-        <?php if (isset($error) && $error): ?>
-            <div class="error"><?php echo htmlspecialchars($error); ?></div>
-        <?php endif; ?>
+<div class="container">
+    <?php if ($error): ?>
+        <div class="error"><i class="fas fa-exclamation-circle"></i> <?php echo htmlspecialchars($error); ?></div>
+    <?php endif; ?>
 
-        <?php if (isset($success) && $success): ?>
-            <div class="success"><?php echo htmlspecialchars($success); ?></div>
-        <?php endif; ?>
+    <!-- STEP 4: Payment Success -->
+    <?php if ($successData): ?>
+        <div class="success-view">
+            <div class="checkmark-circle"><i class="fas fa-check"></i></div>
+            <h2>Payment Successful!</h2>
+            <p style="color:#666;">Your enrollment is now complete.</p>
 
-        <?php if (isset($_GET['success']) && isset($successData)): ?>
-            <div class="success-page">
-                <div class="checkmark">&#10004;</div>
-                <h2>Payment Successful!</h2>
-                <p>Your enrollment is now complete.</p>
-
-                <div class="admission-card">
-                    <h3>Admission Card</h3>
-                    <p><strong>Student Name:</strong> <?php echo htmlspecialchars($successData['full_name']); ?></p>
-                    <p><strong>Admission Number:</strong> <?php echo htmlspecialchars($successData['admission_number']); ?></p>
-                    <p><strong>Class:</strong> <?php echo htmlspecialchars($successData['class_name']); ?></p>
-                    <p><strong>Amount Paid:</strong> GHS <?php echo number_format($successData['amount'], 2); ?></p>
-                    <p><strong>Receipt Number:</strong> <?php echo htmlspecialchars($successData['receipt_number']); ?></p>
-                    <p><strong>Status:</strong> <span style="color: #2a7; font-weight: 600;">ENROLLED</span></p>
+            <div class="card" style="text-align:left; max-width:500px; margin:24px auto;">
+                <h3 style="color:#1a5276; margin-bottom:16px;">Admission Details</h3>
+                <div class="info-grid">
+                    <div class="info-item"><div class="info-label">Student Name</div><div class="info-value"><?php echo htmlspecialchars($successData['student_name']); ?></div></div>
+                    <div class="info-item"><div class="info-label">Admission Number</div><div class="info-value"><?php echo htmlspecialchars($successData['admission_number']); ?></div></div>
+                    <div class="info-item"><div class="info-label">Class</div><div class="info-value"><?php echo htmlspecialchars($successData['class_name']); ?></div></div>
+                    <div class="info-item"><div class="info-label">Enrollment ID</div><div class="info-value"><?php echo htmlspecialchars($successData['enrollment_id']); ?></div></div>
+                    <div class="info-item"><div class="info-label">Amount Paid</div><div class="info-value">GHS <?php echo number_format($successData['amount'], 2); ?></div></div>
+                    <div class="info-item"><div class="info-label">Receipt Number</div><div class="info-value"><?php echo htmlspecialchars($successData['receipt_number']); ?></div></div>
                 </div>
-
-                <a href="#" class="btn-print" onclick="window.print(); return false;">Print Admission Card</a>
-                <br><br>
-                <a href="index.php" style="color: #1a5276;">Back to Home</a>
             </div>
 
-        <?php elseif (isset($_GET['processing']) && isset($pending)): ?>
-            <div class="processing">
-                <div class="spinner"></div>
-                <h2>Processing Payment...</h2>
-                <p>Check your phone <strong><?php echo htmlspecialchars($pending['phone']); ?></strong> to complete the <?php echo htmlspecialchars($methodName); ?> payment.</p>
-                <p>Please wait while we confirm your transaction...</p>
-                <form method="POST" action="payment.php?confirm_bank=1" style="margin-top: 30px;">
-                    <input type="hidden" name="confirm_payment" value="1">
-                    <button type="submit" class="btn-pay" style="max-width: 300px; background: #1a5276; color: white;">I've Completed the Payment</button>
+            <div class="success-actions">
+                <button onclick="togglePrint('printable-admission')" class="btn-primary"><i class="fas fa-id-card"></i> Print Admission Card</button>
+                <button onclick="togglePrint('printable-form')" class="btn-secondary"><i class="fas fa-file-alt"></i> Print Enrollment Form</button>
+            </div>
+            <div style="margin-top:20px;"><a href="index.php" style="color:#1a5276;"><i class="fas fa-home"></i> Back to Home</a></div>
+
+            <!-- Printable Admission Card -->
+            <div class="printable printable-admission" id="printable-admission">
+                <div style="text-align:center; margin-bottom:24px;">
+                    <h1 style="color:#1a5276;">Nex CEC Basic School</h1>
+                    <p style="font-size:18px; color:#666;">Admission Card</p>
+                    <p style="font-size:13px; color:#999;">Academic Year <?php echo date('Y') . '/' . (date('Y')+1); ?></p>
+                </div>
+                <table style="width:100%; font-size:14px;">
+                    <tr><td style="padding:8px; font-weight:700; width:40%; border-bottom:1px solid #eee;">Student Name:</td><td style="padding:8px; border-bottom:1px solid #eee;"><?php echo htmlspecialchars($successData['student_name']); ?></td></tr>
+                    <tr><td style="padding:8px; font-weight:700; border-bottom:1px solid #eee;">Admission Number:</td><td style="padding:8px; border-bottom:1px solid #eee;"><?php echo htmlspecialchars($successData['admission_number']); ?></td></tr>
+                    <tr><td style="padding:8px; font-weight:700; border-bottom:1px solid #eee;">Class:</td><td style="padding:8px; border-bottom:1px solid #eee;"><?php echo htmlspecialchars($successData['class_name']); ?></td></tr>
+                    <tr><td style="padding:8px; font-weight:700; border-bottom:1px solid #eee;">Gender:</td><td style="padding:8px; border-bottom:1px solid #eee;"><?php echo htmlspecialchars($successData['gender'] ?? ''); ?></td></tr>
+                    <tr><td style="padding:8px; font-weight:700; border-bottom:1px solid #eee;">Guardian:</td><td style="padding:8px; border-bottom:1px solid #eee;"><?php echo htmlspecialchars($successData['guardian_name'] ?? ''); ?></td></tr>
+                    <tr><td style="padding:8px; font-weight:700; border-bottom:1px solid #eee;">Amount Paid:</td><td style="padding:8px; border-bottom:1px solid #eee;">GHS <?php echo number_format($successData['amount'], 2); ?></td></tr>
+                    <tr><td style="padding:8px; font-weight:700; border-bottom:1px solid #eee;">Status:</td><td style="padding:8px; border-bottom:1px solid #eee; color:#27ae60; font-weight:700;">ENROLLED</td></tr>
+                </table>
+                <p style="text-align:center; margin-top:24px; font-size:12px; color:#999;">Date Issued: <?php echo date('F j, Y'); ?></p>
+            </div>
+
+            <!-- Printable Enrollment Form -->
+            <div class="printable printable-form" id="printable-form">
+                <div style="text-align:center; margin-bottom:24px;">
+                    <h1 style="color:#1a5276;">Nex CEC Basic School</h1>
+                    <p style="font-size:18px; color:#666;">Enrollment Confirmation Form</p>
+                </div>
+                <h4 style="color:#1a5276; margin-bottom:12px;">Student Information</h4>
+                <?php
+                $sd = $successData['student_data'] ?? [];
+                ?>
+                <table style="width:100%; font-size:13px; margin-bottom:20px;">
+                    <tr><td style="padding:6px; font-weight:700; width:35%; border-bottom:1px solid #eee;">Full Name:</td><td style="padding:6px; border-bottom:1px solid #eee;"><?php echo htmlspecialchars($sd['full_name'] ?? $successData['student_name']); ?></td></tr>
+                    <tr><td style="padding:6px; font-weight:700; border-bottom:1px solid #eee;">Admission Number:</td><td style="padding:6px; border-bottom:1px solid #eee;"><?php echo htmlspecialchars($successData['admission_number']); ?></td></tr>
+                    <tr><td style="padding:6px; font-weight:700; border-bottom:1px solid #eee;">Class:</td><td style="padding:6px; border-bottom:1px solid #eee;"><?php echo htmlspecialchars($sd['class_name'] ?? $successData['class_name']); ?></td></tr>
+                    <tr><td style="padding:6px; font-weight:700; border-bottom:1px solid #eee;">Gender:</td><td style="padding:6px; border-bottom:1px solid #eee;"><?php echo htmlspecialchars($sd['gender'] ?? ''); ?></td></tr>
+                    <tr><td style="padding:6px; font-weight:700; border-bottom:1px solid #eee;">Date of Birth:</td><td style="padding:6px; border-bottom:1px solid #eee;"><?php echo htmlspecialchars($sd['date_of_birth'] ?? ''); ?></td></tr>
+                    <tr><td style="padding:6px; font-weight:700; border-bottom:1px solid #eee;">Address:</td><td style="padding:6px; border-bottom:1px solid #eee;"><?php echo htmlspecialchars($sd['address'] ?? ''); ?></td></tr>
+                </table>
+                <h4 style="color:#1a5276; margin-bottom:12px;">Guardian Information</h4>
+                <table style="width:100%; font-size:13px; margin-bottom:20px;">
+                    <tr><td style="padding:6px; font-weight:700; width:35%; border-bottom:1px solid #eee;">Guardian Name:</td><td style="padding:6px; border-bottom:1px solid #eee;"><?php echo htmlspecialchars($sd['guardian_name'] ?? ''); ?></td></tr>
+                    <tr><td style="padding:6px; font-weight:700; border-bottom:1px solid #eee;">Relationship:</td><td style="padding:6px; border-bottom:1px solid #eee;"><?php echo htmlspecialchars($sd['guardian_relationship'] ?? ''); ?></td></tr>
+                    <tr><td style="padding:6px; font-weight:700; border-bottom:1px solid #eee;">Phone:</td><td style="padding:6px; border-bottom:1px solid #eee;"><?php echo htmlspecialchars($sd['guardian_phone_primary'] ?? ''); ?></td></tr>
+                    <tr><td style="padding:6px; font-weight:700; border-bottom:1px solid #eee;">Email:</td><td style="padding:6px; border-bottom:1px solid #eee;"><?php echo htmlspecialchars($sd['guardian_email'] ?? ''); ?></td></tr>
+                </table>
+                <div style="text-align:center; margin-top:16px;">
+                    <p style="font-weight:700; color:#27ae60;">PAYMENT STATUS: PAID</p>
+                    <p>Receipt: <?php echo htmlspecialchars($successData['receipt_number']); ?> | Date: <?php echo date('F j, Y'); ?></p>
+                </div>
+            </div>
+
+        </div>
+
+    <!-- STEP 3a: MoMo/Telecel Processing -->
+    <?php elseif (isset($_GET['processing']) && $pendingPayment): ?>
+        <div class="card processing-view">
+            <div class="spinner"></div>
+            <h2 style="color:#1a5276;">Processing Payment...</h2>
+            <p style="margin:12px 0; color:#666;">Check your phone <strong><?php echo htmlspecialchars($pendingPayment['phone']); ?></strong> to complete the <strong><?php echo $pendingPayment['method'] === 'momo' ? 'MTN MoMo' : 'Telecel Cash'; ?></strong> payment.</p>
+            <form method="POST" style="margin-top:24px;">
+                <input type="hidden" name="confirm_payment" value="1">
+                <button type="submit" class="btn-primary"><i class="fas fa-check-circle"></i> I've Completed the Payment</button>
+            </form>
+        </div>
+
+    <!-- STEP 3b: Bank/Cash Voucher -->
+    <?php elseif (isset($_GET['voucher']) && $pendingPayment): ?>
+        <div style="text-align:center; margin-bottom:20px;">
+            <button onclick="window.print()" class="btn-secondary" style="margin-right:10px;"><i class="fas fa-print"></i> Print Voucher</button>
+            <form method="POST" style="display:inline-block;">
+                <input type="hidden" name="confirm_bank_payment" value="1">
+                <button type="submit" class="btn-success"><i class="fas fa-check-circle"></i> I've Made the Payment</button>
+            </form>
+        </div>
+
+        <div class="voucher printable" id="printable-voucher">
+            <div class="voucher-head">
+                <div style="font-size:36px; margin-bottom:8px;">&#127970;</div>
+                <h2>Nex CEC Basic School</h2>
+                <p style="opacity:0.85;">Payment Voucher</p>
+            </div>
+            <div class="voucher-body">
+                <table>
+                    <tr><td>Voucher Number:</td><td><?php echo htmlspecialchars($pendingPayment['receipt_number']); ?></td></tr>
+                    <tr><td>Date:</td><td><?php echo date('F j, Y — g:i A'); ?></td></tr>
+                    <tr><td>Enrollment ID:</td><td><?php echo htmlspecialchars($pendingPayment['enrollment_id']); ?></td></tr>
+                    <tr><td>Student Name:</td><td><?php echo htmlspecialchars($pendingPayment['full_name']); ?></td></tr>
+                    <tr><td>Class:</td><td><?php echo htmlspecialchars($pendingPayment['class_name']); ?></td></tr>
+                    <tr><td style="font-size:16px; font-weight:700; color:#1a5276;">Amount:</td><td style="font-size:16px; font-weight:700; color:#1a5276;">GHS <?php echo number_format($pendingPayment['amount'], 2); ?></td></tr>
+                    <tr><td>Payment Method:</td><td>Bank / Cash</td></tr>
+                </table>
+            </div>
+            <div class="voucher-footer">
+                <p><strong>Instructions:</strong> Bring this voucher to the school office with your payment.</p>
+                <p style="font-size:12px; margin-top:6px;">Nex CEC Basic School &bull; Payment Confirmation Required</p>
+            </div>
+        </div>
+
+    <!-- STEP 2: Payment Method Selection -->
+    <?php elseif ($student): ?>
+        <div class="card">
+            <h3 style="color:#1a5276; margin-bottom:16px;">Student Information</h3>
+            <div class="info-grid">
+                <div class="info-item"><div class="info-label">Student Name</div><div class="info-value"><?php echo htmlspecialchars($student['full_name']); ?></div></div>
+                <div class="info-item"><div class="info-label">Class</div><div class="info-value"><?php echo htmlspecialchars($student['class_name']); ?></div></div>
+                <div class="info-item"><div class="info-label">Enrollment ID</div><div class="info-value" style="font-family:monospace; font-size:15px;"><?php echo htmlspecialchars($student['enrollment_id']); ?></div></div>
+                <div class="info-item"><div class="info-label">Guardian Email</div><div class="info-value" style="font-size:13px;"><?php echo htmlspecialchars($student['guardian_email']); ?></div></div>
+            </div>
+            <div class="amount-big">GHS <?php echo number_format($amount, 2); ?></div>
+            <p style="text-align:center; color:#888; font-size:14px;">Enrollment Fee</p>
+        </div>
+
+        <h3 style="color:#1a5276; text-align:center; margin:24px 0;">Select Payment Method</h3>
+
+        <div class="payment-cards">
+            <div class="payment-card momo">
+                <div class="card-header">
+                    <div class="card-icon">M</div>
+                    <div class="card-title">MTN MoMo</div>
+                </div>
+                <form method="POST">
+                    <input type="hidden" name="payment_method" value="momo">
+                    <div class="form-group">
+                        <label>Phone Number</label>
+                        <input type="tel" name="phone" placeholder="024 000 0000" value="<?php echo htmlspecialchars($student['guardian_phone_primary'] ?? ''); ?>" required>
+                    </div>
+                    <button type="submit" class="btn-pay"><i class="fas fa-mobile-alt"></i> Pay with MoMo</button>
                 </form>
             </div>
 
-        <?php elseif (isset($_GET['confirm_bank']) && isset($pending)): ?>
-            <div class="processing">
-                <h2>Bank Transfer Instructions</h2>
-                <div class="bank-details" style="max-width: 500px; margin: 20px auto; text-align: left;">
-                    <p><strong>Bank:</strong> GCB Bank</p>
-                    <p><strong>Account Name:</strong> Nex CEC Basic School</p>
-                    <p><strong>Account Number:</strong> 1234567890</p>
-                    <p><strong>Branch:</strong> Main Branch</p>
-                    <p><strong>Amount:</strong> GHS <?php echo number_format($enrollment['amount'] ?? 150.00, 2); ?></p>
-                    <p><strong>Reference:</strong> <?php echo htmlspecialchars($enrollment['admission_number'] ?? ''); ?></p>
+            <div class="payment-card telecel">
+                <div class="card-header">
+                    <div class="card-icon">T</div>
+                    <div class="card-title">Telecel Cash</div>
                 </div>
-                <p>Please make the transfer and click the button below once done.</p>
-                <form method="POST" style="margin-top: 30px;">
-                    <input type="hidden" name="confirm_payment" value="1">
-                    <button type="submit" class="btn-pay" style="max-width: 300px; background: #0066cc; color: white;">I've Made the Transfer</button>
+                <form method="POST">
+                    <input type="hidden" name="payment_method" value="telecel">
+                    <div class="form-group">
+                        <label>Phone Number</label>
+                        <input type="tel" name="phone" placeholder="020 000 0000" value="<?php echo htmlspecialchars($student['guardian_phone_primary'] ?? ''); ?>" required>
+                    </div>
+                    <button type="submit" class="btn-pay"><i class="fas fa-mobile-alt"></i> Pay with Telecel</button>
                 </form>
-                <p style="margin-top: 15px; font-size: 13px; color: #777;">Your payment will be verified by administration within 24 hours.</p>
             </div>
 
-        <?php elseif ($enrollment): ?>
-            <div class="enrollment-details">
-                <h2>Enrollment Summary</h2>
-                <div class="detail-row">
-                    <span class="detail-label">Student Name</span>
-                    <span class="detail-value"><?php echo htmlspecialchars($enrollment['full_name'] ?? 'N/A'); ?></span>
+            <div class="payment-card bank">
+                <div class="card-header">
+                    <div class="card-icon">B</div>
+                    <div class="card-title">Bank / Cash</div>
                 </div>
-                <div class="detail-row">
-                    <span class="detail-label">Admission Number</span>
-                    <span class="detail-value"><?php echo htmlspecialchars($enrollment['admission_number'] ?? 'N/A'); ?></span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Class</span>
-                    <span class="detail-value"><?php echo htmlspecialchars($enrollment['class_name'] ?? 'N/A'); ?></span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Guardian Email</span>
-                    <span class="detail-value"><?php echo htmlspecialchars($enrollment['guardian_email'] ?? 'N/A'); ?></span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Amount to Pay</span>
-                    <span class="detail-value amount">GHS <?php echo number_format($enrollment['amount'] ?? 150.00, 2); ?></span>
-                </div>
+                <p style="font-size:14px; color:#666; margin-bottom:12px;">Pay at the school office. Print a voucher to bring with you.</p>
+                <form method="POST">
+                    <input type="hidden" name="payment_method" value="bank">
+                    <button type="submit" class="btn-pay"><i class="fas fa-print"></i> Print Payment Voucher</button>
+                </form>
             </div>
+        </div>
 
-            <h2 style="color: #1a5276; margin-bottom: 20px; text-align: center;">Select Payment Method</h2>
-
-            <div class="payment-cards">
-                <div class="payment-card momo">
-                    <div class="card-header">
-                        <div class="card-icon">M</div>
-                        <div class="card-title">MTN MoMo</div>
-                    </div>
-                    <form method="POST">
-                        <input type="hidden" name="payment_method" value="momo">
-                        <div class="form-group">
-                            <label for="momo-phone">Phone Number</label>
-                            <input type="tel" id="momo-phone" name="phone" placeholder="024 000 0000" value="<?php echo htmlspecialchars($enrollment['guardian_phone'] ?? ''); ?>" required>
-                        </div>
-                        <button type="submit" class="btn-pay">Pay with MoMo</button>
-                    </form>
+    <!-- STEP 1: Enrollment ID Entry -->
+    <?php else: ?>
+        <div class="card enrollment-entry">
+            <i class="fas fa-ticket-alt enroll-icon"></i>
+            <h2>Enter Your Enrollment ID</h2>
+            <p>Enter the enrollment ID you received after submitting your form to proceed to payment.</p>
+            <form method="POST">
+                <div class="form-group">
+                    <label for="enrollment_id">Enrollment ID</label>
+                    <input type="text" id="enrollment_id" name="enrollment_id" placeholder="ENR-2026-A3K7B2" required style="text-transform:uppercase; letter-spacing:1px; font-family:monospace;">
                 </div>
+                <button type="submit" class="btn-primary" style="width:100%;"><i class="fas fa-arrow-right"></i> Proceed to Payment</button>
+            </form>
+        </div>
+    <?php endif; ?>
+</div>
 
-                <div class="payment-card telecel">
-                    <div class="card-header">
-                        <div class="card-icon">T</div>
-                        <div class="card-title">Telecel Cash</div>
-                    </div>
-                    <form method="POST">
-                        <input type="hidden" name="payment_method" value="telecel">
-                        <div class="form-group">
-                            <label for="telecel-phone">Phone Number</label>
-                            <input type="tel" id="telecel-phone" name="phone" placeholder="020 000 0000" value="<?php echo htmlspecialchars($enrollment['guardian_phone'] ?? ''); ?>" required>
-                        </div>
-                        <button type="submit" class="btn-pay">Pay with Telecel</button>
-                    </form>
-                </div>
-
-                <div class="payment-card bank">
-                    <div class="card-header">
-                        <div class="card-icon">B</div>
-                        <div class="card-title">Bank Transfer</div>
-                    </div>
-                    <div class="bank-details">
-                        <p><strong>GCB Bank</strong></p>
-                        <p>Acc: 1234567890</p>
-                        <p>Nex CEC Basic School</p>
-                    </div>
-                    <form method="POST">
-                        <input type="hidden" name="payment_method" value="bank">
-                        <button type="submit" class="btn-pay">Pay via Bank Transfer</button>
-                    </form>
-                </div>
-            </div>
-
-        <?php else: ?>
-            <div class="enrollment-details">
-                <p style="text-align: center; color: #777;">No enrollment data found. Please start the enrollment process.</p>
-                <div style="text-align: center; margin-top: 20px;">
-                    <a href="enroll_process.php" style="color: #1a5276; text-decoration: none;">Go to Enrollment</a>
-                </div>
-            </div>
-        <?php endif; ?>
-    </div>
+<script>
+function togglePrint(id) {
+    var el = document.getElementById(id);
+    if (el.style.display === 'block') {
+        el.style.display = 'none';
+    } else {
+        el.style.display = 'block';
+        window.print();
+        el.style.display = 'none';
+    }
+}
+</script>
 </body>
 </html>

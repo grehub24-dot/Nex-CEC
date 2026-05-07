@@ -63,14 +63,8 @@ $address = $sanitized['address'];
 try {
     $pdo->beginTransaction();
 
-    // Generate admission number: CEC-YYMMDD-XXX
-    $today = date('ymd');
-    $prefix = "CEC-{$today}-%";
-    $stmt = $pdo->prepare('SELECT COUNT(*) FROM students WHERE index_number LIKE :prefix');
-    $stmt->execute([':prefix' => $prefix]);
-    $todayCount = (int) $stmt->fetchColumn();
-    $counter = str_pad($todayCount + 1, 3, '0', STR_PAD_LEFT);
-    $admissionNumber = "CEC-{$today}-{$counter}";
+    // Generate enrollment ID: ENR-YYYY-XXXXXX
+    $enrollmentId = 'ENR-' . date('Y') . '-' . strtoupper(substr(bin2hex(random_bytes(3)), 0, 6));
 
     // Generate 6-character random password
     $plainPassword = bin2hex(random_bytes(3));
@@ -91,19 +85,18 @@ try {
 
     // Create student record
     $stmt = $pdo->prepare('INSERT INTO students (
-        user_id, index_number, full_name, class_name, gender, date_of_birth, place_of_birth, nationality, address,
+        user_id, full_name, class_name, gender, date_of_birth, place_of_birth, nationality, address,
         guardian_name, guardian_email, guardian_relationship, guardian_phone_primary, guardian_phone_emergency,
         guardian_occupation, health_insurance_id, allergies, previous_school, previous_class,
-        admission_date, academic_year, status, enrollment_type
+        admission_date, academic_year, status, enrollment_type, enrollment_id, payment_status
     ) VALUES (
-        :user_id, :index_number, :full_name, :class_name, :gender, :date_of_birth, :place_of_birth, :nationality, :address,
+        :user_id, :full_name, :class_name, :gender, :date_of_birth, :place_of_birth, :nationality, :address,
         :guardian_name, :guardian_email, :guardian_relationship, :guardian_phone_primary, :guardian_phone_emergency,
         :guardian_occupation, :health_insurance_id, :allergies, :previous_school, :previous_class,
-        :admission_date, :academic_year, :status, :enrollment_type
+        :admission_date, :academic_year, :status, :enrollment_type, :enrollment_id, :payment_status
     )');
     $stmt->execute([
         ':user_id' => $userId,
-        ':index_number' => $admissionNumber,
         ':full_name' => $full_name,
         ':class_name' => $class_name,
         ':gender' => $gender,
@@ -124,14 +117,16 @@ try {
         ':admission_date' => date('Y-m-d'),
         ':academic_year' => $academicYear,
         ':status' => 'pending',
-        ':enrollment_type' => 'self'
+        ':enrollment_type' => 'self',
+        ':enrollment_id' => $enrollmentId,
+        ':payment_status' => 'unpaid'
     ]);
     $studentId = $pdo->lastInsertId();
 
     // Store enrollment session data for payment page
     $_SESSION['enrollment'] = [
+        'enrollment_id' => $enrollmentId,
         'student_id' => $studentId,
-        'admission_number' => $admissionNumber,
         'full_name' => $full_name,
         'class_name' => $class_name,
         'guardian_email' => $guardian_email,
@@ -143,17 +138,17 @@ try {
     $pdo->commit();
 
     // Send confirmation email (non-blocking, errors ignored)
-    $emailSubject = "Enrollment Confirmation - {$admissionNumber}";
+    $emailSubject = "Enrollment Confirmation - {$enrollmentId}";
     $emailBody = "Dear {$guardian_name},\n\n" .
                  "Thank you for submitting the enrollment form.\n" .
-                 "Admission Number: {$admissionNumber}\n" .
+                 "Enrollment ID: {$enrollmentId}\n" .
                  "Student Portal Password: {$plainPassword}\n" .
                  "Please proceed to payment to complete enrollment.\n\n" .
                  "Regards,\nSchool Administration";
     @mail($guardian_email, $emailSubject, $emailBody);
 
-    // Redirect to payment page
-    header('Location: ../payment.php?enrollment=1');
+    // Redirect to enrollment confirmation page (shows Enrollment ID)
+    header('Location: ../enroll_form.php?enrolled=1&enrollment_id=' . urlencode($enrollmentId) . '&student_name=' . urlencode($full_name));
     exit;
 
 } catch (Exception $e) {

@@ -15,17 +15,13 @@ $school_name = $settings['school_name'] ?? 'Nex CEC';
 
 $message = '';
 $error = '';
+$registered_student = null;
 
 // Handle Student Registration
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'add_student') {
-    // Auto-generate admission number: CEC-YYMMDD-XXX
-    $today = date('ymd');
-    $prefix = "CEC-{$today}-%";
-    $stmt = $pdo->prepare('SELECT COUNT(*) FROM students WHERE index_number LIKE :prefix');
-    $stmt->execute([':prefix' => $prefix]);
-    $todayCount = (int) $stmt->fetchColumn();
-    $counter = str_pad($todayCount + 1, 3, '0', STR_PAD_LEFT);
-    $index_number = "CEC-{$today}-{$counter}";
+    // Generate enrollment ID: ENR-YYYY-XXXXXX
+    $enrollmentId = 'ENR-' . date('Y') . '-' . strtoupper(substr(bin2hex(random_bytes(3)), 0, 6));
+    $index_number = null; // Will be assigned after payment
 
     $full_name = sanitize($_POST['full_name']);
     $class_name = sanitize($_POST['class_name']);
@@ -64,23 +60,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $upload_dir = __DIR__ . '/../images/profiles/';
         if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
         $ext = pathinfo($_FILES['profile_picture']['name'], PATHINFO_EXTENSION);
-        $filename = $index_number . '_' . time() . '.' . $ext;
+        $filename = $enrollmentId . '_' . time() . '.' . $ext;
         if (move_uploaded_file($_FILES['profile_picture']['tmp_name'], $upload_dir . $filename)) {
             $profile_picture = 'images/profiles/' . $filename;
         }
     }
 
-    // Check duplicate
-    $stmt = $pdo->prepare("SELECT id FROM students WHERE index_number = ?");
-    $stmt->execute([$index_number]);
+    // Check duplicate enrollment ID
+    $stmt = $pdo->prepare("SELECT id FROM students WHERE enrollment_id = ?");
+    $stmt->execute([$enrollmentId]);
     if ($stmt->fetch()) {
-        $error = "Student with Index Number $index_number already exists.";
+        $error = "Student with Enrollment ID $enrollmentId already exists.";
     } else {
         $pdo->beginTransaction();
         try {
             // Generate a random 6-character password
             $auto_password = substr(str_shuffle("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"), 0, 6);
-            
+
             // 1. Create User Account (email = guardian email for basic school)
             $password_hash = password_hash($auto_password, PASSWORD_DEFAULT);
             $stmt = $pdo->prepare("INSERT INTO users (email, password, role) VALUES (?, ?, 'student')");
@@ -89,31 +85,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
             // 2. Create Student Record (Basic School schema)
             $stmt = $pdo->prepare("INSERT INTO students (
-                user_id, index_number, full_name, class_name, gender, date_of_birth, place_of_birth,
+                user_id, index_number, enrollment_id, full_name, class_name, gender, date_of_birth, place_of_birth,
                 nationality, address, profile_picture,
                 guardian_name, guardian_email, guardian_relationship,
                 guardian_phone_primary, guardian_phone_emergency, guardian_occupation, guardian_address,
                 health_insurance_id, medical_conditions, allergies, special_needs,
-                previous_school, previous_class, admission_date, academic_year, enrollment_type
+                previous_school, previous_class, admission_date, academic_year, enrollment_type,
+                payment_status, status
             ) VALUES (
                 ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                 ?, ?, ?, ?, ?, ?, ?,
                 ?, ?, ?, ?,
-                ?, ?, ?, ?, ?
+                ?, ?, ?, ?, ?, ?, ?
             )");
             $stmt->execute([
-                $user_id, $index_number, $full_name, $class_name, $gender,
+                $user_id, $index_number, $enrollmentId, $full_name, $class_name, $gender,
                 $date_of_birth ?: null, $place_of_birth, $nationality, $address, $profile_picture,
                 $guardian_name, $guardian_email, $guardian_relationship,
                 $guardian_phone_primary, $guardian_phone_emergency, $guardian_occupation, $guardian_address,
                 $health_insurance_id, $medical_conditions, $allergies, $special_needs,
-                $previous_school, $previous_class, $admission_date, $academic_year, 'admin'
+                $previous_school, $previous_class, $admission_date, $academic_year, 'admin',
+                'unpaid', 'pending'
             ]);
             
             $student_id = $pdo->lastInsertId();
 
             $pdo->commit();
-            $message = "Student registered successfully! Temporary password: $auto_password";
+            $message = "Student registered successfully! Enrollment ID: $enrollmentId. Temporary password: $auto_password";
+            $registered_student = [
+                'id' => $student_id,
+                'enrollment_id' => $enrollmentId,
+                'full_name' => $full_name,
+                'class_name' => $class_name
+            ];
 
             // Send email to guardian
             if ($guardian_email) {
@@ -131,7 +135,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         <div style=\"border:1px solid #e5e7eb; border-radius:8px; padding:16px; background:#f9fafb; margin-top:12px;\">
                             <div style=\"display:grid; grid-template-columns: 180px 1fr; gap:8px; font-size:14px;\">
                                 <div><strong>Student Name:</strong></div><div>" . htmlspecialchars($full_name, ENT_QUOTES, 'UTF-8') . "</div>
-                                <div><strong>Index Number:</strong></div><div>" . htmlspecialchars($index_number, ENT_QUOTES, 'UTF-8') . "</div>
+                                <div><strong>Enrollment ID:</strong></div><div>" . htmlspecialchars($enrollmentId, ENT_QUOTES, 'UTF-8') . "</div>
                                 <div><strong>Class:</strong></div><div>" . htmlspecialchars($class_name, ENT_QUOTES, 'UTF-8') . "</div>
                                 <div><strong>Guardian Email:</strong></div><div>" . htmlspecialchars($guardian_email, ENT_QUOTES, 'UTF-8') . "</div>
                                 <div><strong>Temp Password:</strong></div><div>" . htmlspecialchars($auto_password, ENT_QUOTES, 'UTF-8') . "</div>
@@ -141,7 +145,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         <div style=\"margin-top:16px;\">
                             <div style=\"font-weight:600; margin-bottom:8px;\">Important:</div>
                             <ul style=\"margin:0; padding-left:20px; color:#374151; font-size:14px;\">
-                                <li>Keep the index number safe — needed for all fee payments</li>
+                                <li>Keep the enrollment ID safe — needed for all fee payments</li>
                                 <li>Login and reset the password immediately</li>
                                 <li>Payment receipts will be sent to this email</li>
                                 <li>SMS notifications will be sent to the primary phone: " . htmlspecialchars($guardian_phone_primary, ENT_QUOTES, 'UTF-8') . "</li>
@@ -161,13 +165,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $smsPhone = $guardian_phone_primary ?: $guardian_phone_emergency;
             if ($smsPhone) {
                 $smsHelper = new SMSHelper();
-                $smsMsg = "Registration successful: $full_name. Index: $index_number. Class: $class_name. Temp password: $auto_password. Login at " . htmlspecialchars($school_name, ENT_QUOTES, 'UTF-8') . " portal.";
+                $smsMsg = "Registration successful: $full_name. Enrollment: $enrollmentId. Class: $class_name. Temp password: $auto_password. Login at " . htmlspecialchars($school_name, ENT_QUOTES, 'UTF-8') . " portal.";
                 $smsHelper->send($smsPhone, $smsMsg);
             }
         } catch (Exception $e) {
             $pdo->rollBack();
             $error = "Error: " . $e->getMessage();
         }
+    }
+}
+
+// Handle Payment Confirmation
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'confirm_payment') {
+    $studentId = (int)$_POST['student_id'];
+    $method = sanitize($_POST['payment_method']);
+    $enrollmentId = sanitize($_POST['enrollment_id']);
+
+    // Generate admission number after payment
+    $today = date('ymd');
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM students WHERE index_number LIKE ?");
+    $stmt->execute(["CEC-{$today}-%"]);
+    $counter = str_pad($stmt->fetchColumn() + 1, 3, '0', STR_PAD_LEFT);
+    $admissionNumber = "CEC-{$today}-{$counter}";
+
+    // Generate receipt number
+    $receiptNumber = 'NXC-' . time() . '-' . strtoupper(substr(bin2hex(random_bytes(2)), 0, 4));
+
+    $pdo->beginTransaction();
+    try {
+        // Update student with admission number and status
+        $pdo->prepare("UPDATE students SET index_number = ?, payment_status = 'paid', status = 'enrolled' WHERE id = ?")
+            ->execute([$admissionNumber, $studentId]);
+
+        // Record payment
+        $pdo->prepare("INSERT INTO payments (student_id, amount, payment_method, payment_date, receipt_number, status, enrollment_id) VALUES (?, ?, ?, NOW(), ?, 'completed', ?)")
+            ->execute([$studentId, 150.00, $method, $receiptNumber, $enrollmentId]);
+
+        $pdo->commit();
+        $message = "Payment confirmed! Admission Number: $admissionNumber. Receipt: $receiptNumber";
+        $registered_student = null;
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        $error = "Payment error: " . $e->getMessage();
     }
 }
 
@@ -266,6 +305,96 @@ $total_pages = ceil($total_rows / $limit);
                 <div class="alert alert-danger"><?php echo $error; ?></div>
             <?php endif; ?>
 
+            <!-- Payment Section (shown after student registration) -->
+            <?php if ($registered_student): ?>
+            <div class="section" style="border: 2px solid #2e86c1; background: #f0f8ff;">
+                <h3><i class="fas fa-credit-card"></i> Process Payment — <?php echo htmlspecialchars($registered_student['full_name']); ?></h3>
+                <p><strong>Enrollment ID:</strong> <?php echo htmlspecialchars($registered_student['enrollment_id']); ?> |
+                   <strong>Class:</strong> <?php echo htmlspecialchars($registered_student['class_name']); ?> |
+                   <strong>Amount:</strong> GHS 150.00</p>
+
+                <div style="display: flex; gap: 15px; margin-top: 15px; flex-wrap: wrap;">
+                    <!-- MTN MoMo -->
+                    <div style="flex: 1; min-width: 200px; border: 1px solid #ddd; padding: 15px; border-radius: 8px;">
+                        <h4><i class="fas fa-mobile-alt"></i> MTN MoMo</h4>
+                        <form method="POST" action="students.php">
+                            <input type="hidden" name="action" value="confirm_payment">
+                            <input type="hidden" name="student_id" value="<?php echo $registered_student['id']; ?>">
+                            <input type="hidden" name="payment_method" value="MTN MoMo">
+                            <input type="hidden" name="enrollment_id" value="<?php echo htmlspecialchars($registered_student['enrollment_id']); ?>">
+                            <input type="text" name="phone" placeholder="024XXXXXXX" class="form-control" style="margin-bottom: 10px;" required>
+                            <button type="submit" class="btn-primary" style="width:100%;">Process Payment</button>
+                        </form>
+                    </div>
+
+                    <!-- Telecel Cash -->
+                    <div style="flex: 1; min-width: 200px; border: 1px solid #ddd; padding: 15px; border-radius: 8px;">
+                        <h4><i class="fas fa-phone"></i> Telecel Cash</h4>
+                        <form method="POST" action="students.php">
+                            <input type="hidden" name="action" value="confirm_payment">
+                            <input type="hidden" name="student_id" value="<?php echo $registered_student['id']; ?>">
+                            <input type="hidden" name="payment_method" value="Telecel Cash">
+                            <input type="hidden" name="enrollment_id" value="<?php echo htmlspecialchars($registered_student['enrollment_id']); ?>">
+                            <input type="text" name="phone" placeholder="020XXXXXXX" class="form-control" style="margin-bottom: 10px;" required>
+                            <button type="submit" class="btn-primary" style="width:100%;">Process Payment</button>
+                        </form>
+                    </div>
+
+                    <!-- Bank/Cash -->
+                    <div style="flex: 1; min-width: 200px; border: 1px solid #ddd; padding: 15px; border-radius: 8px;">
+                        <h4><i class="fas fa-university"></i> Bank / Cash</h4>
+                        <button onclick="showVoucher()" class="btn-primary" style="width:100%;">Print Payment Voucher</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payment Voucher (Printable) -->
+            <div id="paymentVoucher" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:2000;">
+                <div style="background:white; width:600px; margin:50px auto; padding:30px; border-radius:8px; position:relative;">
+                    <button onclick="document.getElementById('paymentVoucher').style.display='none'" style="position:absolute; top:10px; right:15px; font-size:20px; background:none; border:none; cursor:pointer;">&times;</button>
+                    <div id="voucherContent">
+                        <div style="text-align:center; border-bottom:2px solid #2e86c1; padding-bottom:15px; margin-bottom:20px;">
+                            <h2 style="margin:0; color:#1a5276;">Nex CEC Basic School</h2>
+                            <p style="margin:5px 0; color:#666;">Payment Voucher</p>
+                        </div>
+                        <div style="display:grid; grid-template-columns: 180px 1fr; gap:10px; font-size:14px;">
+                            <div><strong>Voucher Number:</strong></div><div id="voucherNum"></div>
+                            <div><strong>Date:</strong></div><div><?php echo date('Y-m-d H:i:s'); ?></div>
+                            <div><strong>Enrollment ID:</strong></div><div><?php echo htmlspecialchars($registered_student['enrollment_id']); ?></div>
+                            <div><strong>Student Name:</strong></div><div><?php echo htmlspecialchars($registered_student['full_name']); ?></div>
+                            <div><strong>Class:</strong></div><div><?php echo htmlspecialchars($registered_student['class_name']); ?></div>
+                            <div><strong>Amount:</strong></div><div style="font-weight:700; color:#2e86c1;">GHS 150.00</div>
+                        </div>
+                        <div style="margin-top:25px; padding:15px; background:#fffde7; border:1px solid #f0c929; border-radius:6px; text-align:center;">
+                            <strong>Instructions:</strong> Bring this voucher to the school office with payment
+                        </div>
+                    </div>
+                    <div style="margin-top:20px; text-align:center;">
+                        <button onclick="window.print()" class="btn-primary" style="padding:10px 30px;"><i class="fas fa-print"></i> Print Voucher</button>
+                        <button onclick="confirmCashPayment()" class="btn-submit" style="padding:10px 30px; margin-left:10px;">Confirm Payment Received</button>
+                    </div>
+                </div>
+            </div>
+
+            <script>
+            function showVoucher() {
+                document.getElementById('voucherNum').textContent = 'NXC-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4).toUpperCase();
+                document.getElementById('paymentVoucher').style.display = 'block';
+            }
+            function confirmCashPayment() {
+                var form = document.createElement('form');
+                form.method = 'POST';
+                form.action = 'students.php';
+                form.innerHTML = '<input type="hidden" name="action" value="confirm_payment">' +
+                    '<input type="hidden" name="student_id" value="<?php echo $registered_student['id']; ?>">' +
+                    '<input type="hidden" name="payment_method" value="Bank/Cash">' +
+                    '<input type="hidden" name="enrollment_id" value="<?php echo htmlspecialchars($registered_student['enrollment_id']); ?>">';
+                document.body.appendChild(form);
+                form.submit();
+            }
+            </script>
+            <?php endif; ?>
+
             <!-- Add Student Modal -->
             <div id="studentModal" class="modal">
                 <div class="modal-content" style="max-width: 800px;">
@@ -292,8 +421,8 @@ $total_pages = ceil($total_rows / $limit);
                             <input type="text" name="full_name" class="form-control" required placeholder="e.g. Kwame Asante">
                         </div>
                         <div>
-                            <label>Admission Number (Auto-generated)</label>
-                            <input type="text" name="index_number" class="form-control" value="CEC-<?php echo date('ymd'); ?>-XXX" readonly style="background:#f0f0f0; cursor:not-allowed;" title="Auto-generated on submission">
+                            <label>Enrollment ID (Auto-generated)</label>
+                            <input type="text" name="enrollment_id_display" class="form-control" value="ENR-<?php echo date('Y'); ?>-XXXXXX" readonly style="background:#f0f0f0; cursor:not-allowed;" title="Auto-generated on submission">
                         </div>
                         <div>
                             <label>Class *</label>
@@ -419,10 +548,6 @@ $total_pages = ceil($total_rows / $limit);
                         <div>
                             <label>Previous Class</label>
                             <input type="text" name="previous_class" class="form-control" placeholder="e.g. KG 2">
-                        </div>
-                        <div>
-                            <label>Admission Date</label>
-                            <input type="date" name="admission_date" class="form-control" value="<?php echo date('Y-m-d'); ?>">
                         </div>
                         <div>
                             <label>Academic Year</label>

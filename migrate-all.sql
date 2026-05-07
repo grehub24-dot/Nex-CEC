@@ -155,6 +155,12 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'students' AND column_name = 'enrollment_type') THEN
         ALTER TABLE students ADD COLUMN enrollment_type VARCHAR(20) DEFAULT 'admin';
     END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'students' AND column_name = 'enrollment_id') THEN
+        ALTER TABLE students ADD COLUMN enrollment_id VARCHAR(20) UNIQUE;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'students' AND column_name = 'payment_status') THEN
+        ALTER TABLE students ADD COLUMN payment_status VARCHAR(20) DEFAULT 'unpaid';
+    END IF;
 END $$;
 
 -- 3. Update fee_structures columns if needed

@@ -207,6 +207,7 @@ $academic_year = date('Y') . '/' . (date('Y') + 1);
         </div>
         <h3 style="text-align:center; color:#1a5276; margin-bottom:20px;">Student Enrollment Form</h3>
         <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+            <tr><td style="padding:8px; border:1px solid #ddd; width:180px;"><strong>Enrollment ID (if applying online):</strong></td><td style="padding:8px; border:1px solid #ddd; height:25px;"></td></tr>
             <tr><td style="padding:8px; border:1px solid #ddd; width:180px;"><strong>Student Full Name:</strong></td><td style="padding:8px; border:1px solid #ddd; height:25px;"></td></tr>
             <tr><td style="padding:8px; border:1px solid #ddd;"><strong>Date of Birth:</strong></td><td style="padding:8px; border:1px solid #ddd; height:25px;"></td></tr>
             <tr><td style="padding:8px; border:1px solid #ddd;"><strong>Gender:</strong></td><td style="padding:8px; border:1px solid #ddd; height:25px;"></td></tr>

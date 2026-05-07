@@ -27,7 +27,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $index_number = sanitize($_POST['index_number'] ?? '');
     $class_name = sanitize($_POST['class_name'] ?? '');
     $gender = sanitize($_POST['gender'] ?? '');
-    $phone_number = sanitize($_POST['phone_number'] ?? '');
     $date_of_birth = sanitize($_POST['date_of_birth'] ?? '');
     $place_of_birth = sanitize($_POST['place_of_birth'] ?? '');
     $nationality = sanitize($_POST['nationality'] ?? 'Ghanaian');
@@ -72,22 +71,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Update Student (all fields)
         $stmt = $pdo->prepare("UPDATE students SET 
             full_name = ?, index_number = ?, class_name = ?, gender = ?, 
-            date_of_birth = ?, place_of_birth = ?, nationality = ?, hometown = ?, 
-            address = ?, phone_number = ?, profile_picture = ?,
+            date_of_birth = ?, place_of_birth = ?, nationality = ?, 
+            address = ?, profile_picture = ?,
             guardian_name = ?, guardian_email = ?, guardian_relationship = ?,
             guardian_phone_primary = ?, guardian_phone_emergency = ?, guardian_occupation = ?, guardian_address = ?,
-            health_insurance_id = ?, blood_group = ?, genotype = ?, 
-            medical_conditions = ?, allergies = ?, special_needs = ?,
+            health_insurance_id = ?, medical_conditions = ?, allergies = ?, special_needs = ?,
             previous_school = ?, previous_class = ?, admission_date = ?, academic_year = ?
             WHERE id = ?");
         $stmt->execute([
             $full_name, $index_number, $class_name, $gender,
-            $date_of_birth ?: null, $place_of_birth, $nationality, $hometown,
-            $address, $phone_number, $profile_picture,
+            $date_of_birth ?: null, $place_of_birth, $nationality,
+            $address, $profile_picture,
             $guardian_name, $guardian_email, $guardian_relationship,
             $guardian_phone_primary, $guardian_phone_emergency, $guardian_occupation, $guardian_address,
-            $health_insurance_id, $blood_group, $genotype,
-            $medical_conditions, $allergies, $special_needs,
+            $health_insurance_id, $medical_conditions, $allergies, $special_needs,
             $previous_school, $previous_class, $admission_date ?: null, $academic_year,
             $id
         ]);
@@ -249,11 +246,7 @@ if (!$student) {
                         <input type="text" name="hometown" class="form-control" value="<?php echo htmlspecialchars($student['hometown'] ?? ''); ?>">
                     </div>
                     <div class="form-group">
-                        <label>Student Phone</label>
-                        <input type="text" name="phone_number" class="form-control" value="<?php echo htmlspecialchars($student['phone_number'] ?? ''); ?>">
-                    </div>
-                    <div class="form-group">
-                        <label>Home Address</label>
+                        <label>Place of Residence</label>
                         <input type="text" name="address" class="form-control" value="<?php echo htmlspecialchars($student['address'] ?? ''); ?>">
                     </div>
 
@@ -304,19 +297,6 @@ if (!$student) {
                     <div class="form-group">
                         <label>Health Insurance ID</label>
                         <input type="text" name="health_insurance_id" class="form-control" value="<?php echo htmlspecialchars($student['health_insurance_id'] ?? ''); ?>" placeholder="NHIS number">
-                    </div>
-                    <div class="form-group">
-                        <label>Blood Group</label>
-                        <select name="blood_group" class="form-control">
-                            <option value="">-- Select --</option>
-                            <?php foreach (['A+','A-','B+','B-','AB+','AB-','O+','O-'] as $bg): ?>
-                                <option value="<?php echo $bg; ?>" <?php echo ($student['blood_group'] ?? '') === $bg ? 'selected' : ''; ?>><?php echo $bg; ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Genotype</label>
-                        <input type="text" name="genotype" class="form-control" value="<?php echo htmlspecialchars($student['genotype'] ?? ''); ?>" placeholder="e.g. AA, AS, SS">
                     </div>
                     <div class="form-group">
                         <label>Allergies</label>

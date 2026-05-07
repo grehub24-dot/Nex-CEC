@@ -325,8 +325,8 @@ $total_pages = ceil($total_rows / $limit);
                             <input type="date" name="date_of_birth" class="form-control">
                         </div>
                         <div>
-                            <label>Place of Birth</label>
-                            <input type="text" name="place_of_birth" class="form-control" placeholder="e.g. Kumasi">
+                            <label>Place of Residence</label>
+                            <input type="text" name="address" class="form-control" placeholder="e.g. Kumasi">
                         </div>
                         <div>
                             <label>Place of Residence</label>

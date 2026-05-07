@@ -373,7 +373,7 @@ $total_pages = ceil($total_rows / $limit);
                             <input type="text" name="guardian_phone_emergency" class="form-control" placeholder="Fallback contact">
                         </div>
                         <div style="grid-column: span 2;">
-                            <label>Guardian Address</label>
+                            <label>Residence</label>
                             <input type="text" name="guardian_address" class="form-control" placeholder="Guardian residential/work address">
                         </div>
 

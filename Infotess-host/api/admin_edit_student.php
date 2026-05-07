@@ -285,7 +285,7 @@ if (!$student) {
                         <input type="text" name="guardian_phone_emergency" class="form-control" value="<?php echo htmlspecialchars($student['guardian_phone_emergency'] ?? ''); ?>">
                     </div>
                     <div class="form-group" style="grid-column: span 2;">
-                        <label>Guardian Address</label>
+                        <label>Residence</label>
                         <input type="text" name="guardian_address" class="form-control" value="<?php echo htmlspecialchars($student['guardian_address'] ?? ''); ?>">
                     </div>
 

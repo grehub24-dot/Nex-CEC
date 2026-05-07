@@ -110,7 +110,7 @@ foreach ($fees as $f) {
         </div>
         
         <div style="text-align: center; margin-top: 40px;">
-            <a href="register.php" class="btn-primary" style="display: inline-block; margin-right: 10px;">Enroll Now</a>
+            <a href="enroll.php" class="btn-primary" style="display: inline-block; margin-right: 10px;">Enroll Now</a>
             <a href="contact.php" class="btn-primary" style="display: inline-block; background: transparent; color: var(--primary-color); border: 2px solid var(--primary-color);">Contact Us</a>
         </div>
 

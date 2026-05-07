@@ -45,7 +45,7 @@
                     <?php endif; ?>
                     <li><a href="<?php echo $base_url; ?>logout.php">Logout</a></li>
                 <?php else: ?>
-                    <li><a href="<?php echo $base_url; ?>register.php" class="btn-login">Enroll Now</a></li>
+                    <li><a href="<?php echo $base_url; ?>enroll.php" class="btn-login">Enroll Now</a></li>
                     <li><a href="<?php echo $base_url; ?>login.php" class="btn-login">Login</a></li>
                 <?php endif; ?>
             </ul>

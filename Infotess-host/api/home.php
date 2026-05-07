@@ -18,7 +18,7 @@ $school_motto = $settings['school_motto'] ?? 'Excellence in Education';
 <section class="hero">
     <h1>Welcome to <?php echo htmlspecialchars($school_name); ?></h1>
     <p><?php echo htmlspecialchars($school_motto); ?> — Providing quality education from Creche through Junior High School.</p>
-    <a href="register.php" class="btn-cta">Enroll Now</a>
+    <a href="enroll.php" class="btn-cta">Enroll Now</a>
 </section>
 
 <!-- About Preview -->
@@ -72,7 +72,7 @@ $school_motto = $settings['school_motto'] ?? 'Excellence in Education';
     <div class="container">
         <h2>Enroll Your Child Today</h2>
         <p style="margin: 20px 0;">Give your child the best foundation for a bright future. Registration is now open.</p>
-        <a href="register.php" class="btn-cta">Enroll Now</a>
+        <a href="enroll.php" class="btn-cta">Enroll Now</a>
         <a href="contact.php" class="btn-cta" style="background: transparent; color: var(--primary-color); border: 2px solid var(--primary-color); margin-left: 10px;">Contact Us</a>
     </div>
 </section>

@@ -382,17 +382,33 @@ $total_pages = ceil($total_rows / $limit);
     </div>
 
     <script>
+        // Force close any stuck modal on load
+        document.addEventListener('DOMContentLoaded', function() {
+            const modal = document.getElementById("staffModal");
+            if (modal) modal.style.display = "none";
+        });
+
         const modal = document.getElementById("staffModal");
         const btn = document.getElementById("openModalBtn");
         const span = document.getElementsByClassName("close-btn")[0];
-        btn.onclick = function() { modal.style.display = "block"; }
-        span.onclick = function() { modal.style.display = "none"; }
-        window.onclick = function(event) { if (event.target == modal) { modal.style.display = "none"; } }
+        
+        if (btn) btn.onclick = function() { modal.style.display = "block"; }
+        if (span) span.onclick = function() { modal.style.display = "none"; }
+        if (modal) {
+            window.onclick = function(event) { if (event.target == modal) { modal.style.display = "none"; } }
+        }
+        // Close on Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && modal && modal.style.display === 'block') {
+                modal.style.display = 'none';
+            }
+        });
 
         // Auto-generate Staff ID preview
         function updateStaffIdPreview() {
             const count = <?php echo (int)$pdo->query("SELECT COUNT(*) FROM staff")->fetchColumn(); ?>;
-            document.getElementById('autoStaffId').value = 'NXC-STF-' + String(count + 1).padStart(4, '0');
+            const el = document.getElementById('autoStaffId');
+            if (el) el.value = 'NXC-STF-' + String(count + 1).padStart(4, '0');
         }
         updateStaffIdPreview();
 

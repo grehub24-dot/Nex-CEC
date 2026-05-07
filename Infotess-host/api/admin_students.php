@@ -515,13 +515,27 @@ $total_pages = ceil($total_rows / $limit);
     </div>
 
     <script>
+        // Force close any stuck modal on load
+        document.addEventListener('DOMContentLoaded', function() {
+            const modal = document.getElementById("studentModal");
+            if (modal) modal.style.display = "none";
+        });
+
         const modal = document.getElementById("studentModal");
         const btn = document.getElementById("openModalBtn");
-        const span = document.getElementsByClassName("close-btn")[0];
+        const closeBtn = document.querySelector(".modal .close-btn");
 
-        btn.onclick = function() { modal.style.display = "block"; }
-        span.onclick = function() { modal.style.display = "none"; }
-        window.onclick = function(event) { if (event.target == modal) { modal.style.display = "none"; } }
+        if (btn && modal) btn.onclick = function() { modal.style.display = "block"; }
+        if (closeBtn && modal) closeBtn.onclick = function() { modal.style.display = "none"; }
+        if (modal) {
+            window.onclick = function(event) { if (event.target == modal) { modal.style.display = "none"; } }
+        }
+        // Close on Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && modal && modal.style.display === 'block') {
+                modal.style.display = 'none';
+            }
+        });
 
         const studentProfileUpload = document.getElementById('studentProfileUpload');
         const studentUploadPreview = document.getElementById('studentUploadPreview');

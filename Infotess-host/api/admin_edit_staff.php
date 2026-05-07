@@ -153,8 +153,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                             </select>
                         </div>
                         <div>
-                            <label>Phone</label>
-                            <input type="text" name="phone" class="form-control" required value="<?php echo htmlspecialchars($staff['phone'] ?? ''); ?>">
+                            <label>Phone <span style="color:red;">(MoMo/Ghana Pay)</span></label>
+                            <input type="text" name="phone" id="editStaffPhone" class="form-control" required placeholder="e.g. 0241234567" maxlength="10" pattern="[0-9]{10}" value="<?php echo htmlspecialchars($staff['phone'] ?? ''); ?>" oninput="validatePhone(this)">
+                            <div id="phoneBadge" style="margin-top:5px; display:none;">
+                                <span id="phoneBadgeSpan" style="display:inline-block; padding:3px 10px; border-radius:12px; font-size:0.75rem; font-weight:bold;"></span>
+                            </div>
                         </div>
                         <div>
                             <label>Email</label>
@@ -202,5 +205,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             </div>
         </main>
     </div>
+    <script>
+        // Ghana MoMo/Ghana Pay phone validation
+        function validatePhone(input) {
+            let phone = input.value.replace(/[^0-9]/g, '');
+            input.value = phone;
+            const badge = document.getElementById('phoneBadge');
+            const badgeSpan = document.getElementById('phoneBadgeSpan');
+            
+            if (phone.length !== 10) {
+                badge.style.display = 'none';
+                return;
+            }
+            
+            const prefix = phone.substring(0, 3);
+            const networks = {
+                '024': { name: 'MTN MoMo', color: '#ffcc00', bg: '#fff8e1', text: '#333' },
+                '025': { name: 'MTN MoMo', color: '#ffcc00', bg: '#fff8e1', text: '#333' },
+                '054': { name: 'MTN MoMo', color: '#ffcc00', bg: '#fff8e1', text: '#333' },
+                '055': { name: 'MTN MoMo', color: '#ffcc00', bg: '#fff8e1', text: '#333' },
+                '059': { name: 'MTN MoMo', color: '#ffcc00', bg: '#fff8e1', text: '#333' },
+                '056': { name: 'MTN MoMo', color: '#ffcc00', bg: '#fff8e1', text: '#333' },
+                '020': { name: 'Telecel Cash', color: '#e4002b', bg: '#fde8ec', text: '#fff' },
+                '050': { name: 'Telecel Cash', color: '#e4002b', bg: '#fde8ec', text: '#fff' },
+                '026': { name: 'AirtelTigo Money', color: '#0066cc', bg: '#e6f0ff', text: '#fff' },
+                '057': { name: 'AirtelTigo Money', color: '#0066cc', bg: '#e6f0ff', text: '#fff' },
+                '027': { name: 'Glo/Ghana Pay', color: '#ff6600', bg: '#fff3e0', text: '#333' },
+                '053': { name: 'Glo/Ghana Pay', color: '#ff6600', bg: '#fff3e0', text: '#333' }
+            };
+            
+            if (networks[prefix]) {
+                const net = networks[prefix];
+                badge.style.display = 'block';
+                badgeSpan.textContent = '✅ ' + net.name;
+                badgeSpan.style.color = net.text;
+                badgeSpan.style.background = net.bg;
+                badgeSpan.style.border = '2px solid ' + net.color;
+                input.style.borderColor = net.color;
+            } else {
+                badge.style.display = 'block';
+                badgeSpan.textContent = '❌ Invalid network prefix';
+                badgeSpan.style.color = '#fff';
+                badgeSpan.style.background = '#f8d7da';
+                badgeSpan.style.border = '2px solid #e74c3c';
+                input.style.borderColor = '#e74c3c';
+            }
+        }
+        // Trigger on load for existing value
+        const existingPhone = document.getElementById('editStaffPhone');
+        if (existingPhone && existingPhone.value) validatePhone(existingPhone);
+    </script>
 </body>
 </html>

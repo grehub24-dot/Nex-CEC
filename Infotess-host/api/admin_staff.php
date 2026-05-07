@@ -15,7 +15,6 @@ $error = '';
 // Handle Add Staff
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'add_staff') {
     $full_name = sanitize($_POST['full_name']);
-    $staff_id = sanitize($_POST['staff_id']);
     $position = sanitize($_POST['position']);
     $department = sanitize($_POST['department'] ?? '');
     $qualification = sanitize($_POST['qualification'] ?? '');
@@ -28,28 +27,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $bank_name = sanitize($_POST['bank_name'] ?? '');
     $account_number = sanitize($_POST['account_number'] ?? '');
 
-    $stmt = $pdo->prepare("SELECT id FROM staff WHERE staff_id = ?");
-    $stmt->execute([$staff_id]);
-    if ($stmt->fetch()) {
-        $error = "Staff ID $staff_id already exists.";
+    // Validate Ghana phone number (MoMo/Ghana Pay compatible)
+    // Accepts: 024, 025, 026, 027, 054, 055, 056, 057, 050, 059 (MTN), 020, 050 (Vodafone/Telecel), 026, 056 (AirtelTigo)
+    $phone_digits = preg_replace('/[^0-9]/', '', $phone);
+    if (strlen($phone_digits) === 10 && in_array(substr($phone_digits, 0, 3), [
+        '024','025','054','055','056','059', // MTN
+        '020','050',                          // Telecel (formerly Vodafone)
+        '026','057',                          // AirtelTigo
+        '027','053'                           // AT/Glo
+    ])) {
+        $network = '';
+        if (in_array(substr($phone_digits, 0, 3), ['024','025','054','055','059'])) $network = 'MTN';
+        elseif (in_array(substr($phone_digits, 0, 3), ['020','050'])) $network = 'Telecel';
+        elseif (in_array(substr($phone_digits, 0, 3), ['026','057'])) $network = 'AirtelTigo';
+        elseif (in_array(substr($phone_digits, 0, 3), ['027','053'])) $network = 'AT/Glo';
+        else $network = 'Unknown';
     } else {
-        $pdo->beginTransaction();
-        try {
-            $auto_password = substr(str_shuffle("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"), 0, 8);
-            $password_hash = password_hash($auto_password, PASSWORD_DEFAULT);
-            
-            $stmt = $pdo->prepare("INSERT INTO users (email, password, role) VALUES (?, ?, 'staff')");
-            $stmt->execute([$email, $password_hash]);
-            $user_id = $pdo->lastInsertId();
+        $error = "Invalid phone number. Must be a valid Ghana mobile number (e.g. 024XXXXXXX, 050XXXXXXX, 054XXXXXXX).";
+        $network = null;
+    }
 
-            $stmt = $pdo->prepare("INSERT INTO staff (user_id, staff_id, full_name, position, department, qualification, phone, email, gender, date_of_birth, address, hire_date, bank_name, account_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-            $stmt->execute([$user_id, $staff_id, $full_name, $position, $department, $qualification, $phone, $email, $gender, $date_of_birth, $address, $hire_date, $bank_name, $account_number]);
-            
-            $pdo->commit();
-            $message = "Staff member added successfully! Temporary password: $auto_password";
-        } catch (Exception $e) {
-            $pdo->rollBack();
-            $error = "Error: " . $e->getMessage();
+    if (!isset($error)) {
+        // Auto-generate staff ID
+        $stmt = $pdo->prepare("SELECT COUNT(*) as cnt FROM staff");
+        $stmt->execute();
+        $count = (int)$stmt->fetchColumn();
+        $staff_id = 'NXC-STF-' . str_pad($count + 1, 4, '0', STR_PAD_LEFT);
+
+        $stmt = $pdo->prepare("SELECT id FROM staff WHERE staff_id = ?");
+        $stmt->execute([$staff_id]);
+        if ($stmt->fetch()) {
+            $error = "Staff ID $staff_id already exists.";
+        } else {
+            $pdo->beginTransaction();
+            try {
+                $auto_password = substr(str_shuffle("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"), 0, 8);
+                $password_hash = password_hash($auto_password, PASSWORD_DEFAULT);
+                
+                $stmt = $pdo->prepare("INSERT INTO users (email, password, role) VALUES (?, ?, 'staff')");
+                $stmt->execute([$email, $password_hash]);
+                $user_id = $pdo->lastInsertId();
+
+                $stmt = $pdo->prepare("INSERT INTO staff (user_id, staff_id, full_name, position, department, qualification, phone, email, gender, date_of_birth, address, hire_date, bank_name, account_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$user_id, $staff_id, $full_name, $position, $department, $qualification, $phone, $email, $gender, $date_of_birth, $address, $hire_date, $bank_name, $account_number]);
+                
+                $pdo->commit();
+                $message = "Staff member added successfully! ID: $staff_id | Temp password: $auto_password";
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                $error = "Error: " . $e->getMessage();
+            }
         }
     }
 }
@@ -203,7 +230,8 @@ $total_pages = ceil($total_rows / $limit);
                         </div>
                         <div>
                             <label>Staff ID</label>
-                            <input type="text" name="staff_id" class="form-control" required placeholder="e.g. NXC-STF-001">
+                            <input type="text" id="autoStaffId" class="form-control" readonly placeholder="Auto-generated" style="background: #f0f2f5; cursor: not-allowed;">
+                            <small style="color: #666; font-size: 0.8rem;">Auto-generated on submit</small>
                         </div>
                         <div>
                             <label>Position</label>
@@ -240,8 +268,11 @@ $total_pages = ceil($total_rows / $limit);
                             </select>
                         </div>
                         <div>
-                            <label>Phone</label>
-                            <input type="text" name="phone" class="form-control" required placeholder="e.g. 0241234567">
+                            <label>Phone <span style="color:red;">(MoMo/Ghana Pay)</span></label>
+                            <input type="text" name="phone" id="staffPhone" class="form-control" required placeholder="e.g. 0241234567" maxlength="10" pattern="[0-9]{10}" oninput="validatePhone(this)">
+                            <div id="phoneBadge" style="margin-top:5px; display:none;">
+                                <span id="phoneBadgeSpan" style="display:inline-block; padding:3px 10px; border-radius:12px; font-size:0.75rem; font-weight:bold;"></span>
+                            </div>
                         </div>
                         <div>
                             <label>Email</label>
@@ -357,6 +388,59 @@ $total_pages = ceil($total_rows / $limit);
         btn.onclick = function() { modal.style.display = "block"; }
         span.onclick = function() { modal.style.display = "none"; }
         window.onclick = function(event) { if (event.target == modal) { modal.style.display = "none"; } }
+
+        // Auto-generate Staff ID preview
+        function updateStaffIdPreview() {
+            const count = <?php echo (int)$pdo->query("SELECT COUNT(*) FROM staff")->fetchColumn(); ?>;
+            document.getElementById('autoStaffId').value = 'NXC-STF-' + String(count + 1).padStart(4, '0');
+        }
+        updateStaffIdPreview();
+
+        // Ghana MoMo/Ghana Pay phone validation
+        function validatePhone(input) {
+            let phone = input.value.replace(/[^0-9]/g, '');
+            input.value = phone;
+            const badge = document.getElementById('phoneBadge');
+            const badgeSpan = document.getElementById('phoneBadgeSpan');
+            
+            if (phone.length !== 10) {
+                badge.style.display = 'none';
+                return;
+            }
+            
+            const prefix = phone.substring(0, 3);
+            const networks = {
+                '024': { name: 'MTN MoMo', color: '#ffcc00', bg: '#fff8e1', text: '#333' },
+                '025': { name: 'MTN MoMo', color: '#ffcc00', bg: '#fff8e1', text: '#333' },
+                '054': { name: 'MTN MoMo', color: '#ffcc00', bg: '#fff8e1', text: '#333' },
+                '055': { name: 'MTN MoMo', color: '#ffcc00', bg: '#fff8e1', text: '#333' },
+                '059': { name: 'MTN MoMo', color: '#ffcc00', bg: '#fff8e1', text: '#333' },
+                '056': { name: 'MTN MoMo', color: '#ffcc00', bg: '#fff8e1', text: '#333' },
+                '020': { name: 'Telecel Cash', color: '#e4002b', bg: '#fde8ec', text: '#fff' },
+                '050': { name: 'Telecel Cash', color: '#e4002b', bg: '#fde8ec', text: '#fff' },
+                '026': { name: 'AirtelTigo Money', color: '#0066cc', bg: '#e6f0ff', text: '#fff' },
+                '057': { name: 'AirtelTigo Money', color: '#0066cc', bg: '#e6f0ff', text: '#fff' },
+                '027': { name: 'Glo/Ghana Pay', color: '#ff6600', bg: '#fff3e0', text: '#333' },
+                '053': { name: 'Glo/Ghana Pay', color: '#ff6600', bg: '#fff3e0', text: '#333' }
+            };
+            
+            if (networks[prefix]) {
+                const net = networks[prefix];
+                badge.style.display = 'block';
+                badgeSpan.textContent = '✅ ' + net.name;
+                badgeSpan.style.color = net.text;
+                badgeSpan.style.background = net.bg;
+                badgeSpan.style.border = '2px solid ' + net.color;
+                input.style.borderColor = net.color;
+            } else {
+                badge.style.display = 'block';
+                badgeSpan.textContent = '❌ Invalid network prefix';
+                badgeSpan.style.color = '#fff';
+                badgeSpan.style.background = '#f8d7da';
+                badgeSpan.style.border = '2px solid #e74c3c';
+                input.style.borderColor = '#e74c3c';
+            }
+        }
     </script>
 </body>
 </html>

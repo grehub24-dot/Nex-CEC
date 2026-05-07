@@ -36,14 +36,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $date_of_birth = sanitize($_POST['date_of_birth'] ?? '');
     $place_of_birth = sanitize($_POST['place_of_birth'] ?? '');
     $nationality = sanitize($_POST['nationality'] ?? 'Ghanaian');
-    $hometown = sanitize($_POST['hometown'] ?? '');
-    $student_address = sanitize($_POST['address'] ?? '');
-    $phone_number = sanitize($_POST['phone_number'] ?? '');
+    $address = sanitize($_POST['address'] ?? '');
     
     // Health information
     $health_insurance_id = sanitize($_POST['health_insurance_id'] ?? '');
-    $blood_group = sanitize($_POST['blood_group'] ?? '');
-    $genotype = sanitize($_POST['genotype'] ?? '');
     $medical_conditions = sanitize($_POST['medical_conditions'] ?? '');
     $allergies = sanitize($_POST['allergies'] ?? '');
     $special_needs = sanitize($_POST['special_needs'] ?? '');
@@ -86,24 +82,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             // 2. Create Student Record (Basic School schema)
             $stmt = $pdo->prepare("INSERT INTO students (
                 user_id, index_number, full_name, class_name, gender, date_of_birth, place_of_birth,
-                nationality, hometown, address, phone_number, profile_picture,
+                nationality, address, profile_picture,
                 guardian_name, guardian_email, guardian_relationship,
                 guardian_phone_primary, guardian_phone_emergency, guardian_occupation, guardian_address,
-                health_insurance_id, blood_group, genotype, medical_conditions, allergies, special_needs,
+                health_insurance_id, medical_conditions, allergies, special_needs,
                 previous_school, previous_class, admission_date, academic_year
             ) VALUES (
-                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                 ?, ?, ?, ?, ?, ?, ?,
-                ?, ?, ?, ?, ?, ?,
+                ?, ?, ?, ?,
                 ?, ?, ?, ?
             )");
             $stmt->execute([
                 $user_id, $index_number, $full_name, $class_name, $gender,
-                $date_of_birth ?: null, $place_of_birth, $nationality, $hometown, $student_address,
-                $phone_number, $profile_picture,
+                $date_of_birth ?: null, $place_of_birth, $nationality, $address, $profile_picture,
                 $guardian_name, $guardian_email, $guardian_relationship,
                 $guardian_phone_primary, $guardian_phone_emergency, $guardian_occupation, $guardian_address,
-                $health_insurance_id, $blood_group, $genotype, $medical_conditions, $allergies, $special_needs,
+                $health_insurance_id, $medical_conditions, $allergies, $special_needs,
                 $previous_school, $previous_class, $admission_date, $academic_year
             ]);
             
@@ -229,7 +224,6 @@ $total_pages = ceil($total_rows / $limit);
                         <ul class="sidebar-menu">
                 <li><a href="dashboard.php"><i class="fas fa-home"></i> Dashboard</a></li>
                 <li><a href="students.php"><i class="fas fa-user-graduate"></i> Students</a></li>
-                <li><a href="bulk_import.php"><i class="fas fa-file-csv"></i> Bulk Import</a></li>
                 <li><a href="staff.php"><i class="fas fa-chalkboard-teacher"></i> Staff</a></li>
                 <li><a href="payments.php"><i class="fas fa-money-bill-wave"></i> Payments</a></li>
                 <li><a href="fees.php"><i class="fas fa-list-alt"></i> Fee Structure</a></li>
@@ -251,7 +245,10 @@ $total_pages = ceil($total_rows / $limit);
         <main class="main-content">
             <div class="top-bar">
                 <h2>Student Management</h2>
-                <button id="openModalBtn" class="btn-primary" style="padding: 10px 20px;"><i class="fas fa-plus"></i> Add New Student</button>
+                <div style="display:flex; gap:10px;">
+                    <a href="bulk_import.php" class="btn-login" style="padding:10px 20px;"><i class="fas fa-file-csv"></i> Bulk Import</a>
+                    <button id="openModalBtn" class="btn-primary" style="padding:10px 20px;"><i class="fas fa-plus"></i> Add New Student</button>
+                </div>
             </div>
 
             <?php if ($message): ?>
@@ -332,20 +329,8 @@ $total_pages = ceil($total_rows / $limit);
                             <input type="text" name="place_of_birth" class="form-control" placeholder="e.g. Kumasi">
                         </div>
                         <div>
-                            <label>Nationality</label>
-                            <input type="text" name="nationality" class="form-control" value="Ghanaian">
-                        </div>
-                        <div>
-                            <label>Hometown</label>
-                            <input type="text" name="hometown" class="form-control" placeholder="e.g. Kumasi">
-                        </div>
-                        <div>
-                            <label>Student Phone (optional)</label>
-                            <input type="text" name="phone_number" class="form-control" placeholder="For older students only">
-                        </div>
-                        <div>
-                            <label>Home Address</label>
-                            <input type="text" name="address" class="form-control" placeholder="Residential address">
+                            <label>Place of Residence</label>
+                            <input type="text" name="address" class="form-control" placeholder="e.g. Kumasi">
                         </div>
 
                         <!-- Guardian Section -->
@@ -401,25 +386,7 @@ $total_pages = ceil($total_rows / $limit);
                             <label>Health Insurance ID</label>
                             <input type="text" name="health_insurance_id" class="form-control" placeholder="NHIS number">
                         </div>
-                        <div>
-                            <label>Blood Group</label>
-                            <select name="blood_group" class="form-control">
-                                <option value="">-- Select --</option>
-                                <option value="A+">A+</option>
-                                <option value="A-">A-</option>
-                                <option value="B+">B+</option>
-                                <option value="B-">B-</option>
-                                <option value="AB+">AB+</option>
-                                <option value="AB-">AB-</option>
-                                <option value="O+">O+</option>
-                                <option value="O-">O-</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label>Genotype</label>
-                            <input type="text" name="genotype" class="form-control" placeholder="e.g. AA, AS, SS">
-                        </div>
-                        <div>
+                        <div style="grid-column: span 2;">
                             <label>Allergies</label>
                             <input type="text" name="allergies" class="form-control" placeholder="e.g. Peanuts, Penicillin">
                         </div>
@@ -451,7 +418,16 @@ $total_pages = ceil($total_rows / $limit);
                         </div>
                         <div>
                             <label>Academic Year</label>
-                            <input type="text" name="academic_year" class="form-control" value="<?php echo date('Y') . '/' . (date('Y') + 1); ?>" placeholder="e.g. 2025/2026">
+                            <select name="academic_year" class="form-control">
+                                <?php
+                                $curr = (int)date('Y');
+                                for ($i = -1; $i <= 5; $i++) {
+                                    $yr = ($curr + $i) . '/' . ($curr + $i + 1);
+                                    $sel = ($i === 0) ? 'selected' : '';
+                                    echo "<option value=\"$yr\" $sel>$yr</option>";
+                                }
+                                ?>
+                            </select>
                         </div>
 
                         <div style="grid-column: span 2; margin-top: 10px;">
@@ -482,7 +458,7 @@ $total_pages = ceil($total_rows / $limit);
                                 <th>Gender</th>
                                 <th>Guardian</th>
                                 <th>Primary Phone</th>
-                                <th>Guardian Email</th>
+                                <th>Academic Year</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -503,12 +479,12 @@ $total_pages = ceil($total_rows / $limit);
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <?php echo htmlspecialchars($student['guardian_phone_primary'] ?? $student['phone_number'] ?? '-'); ?>
+                                    <?php echo htmlspecialchars($student['guardian_phone_primary'] ?? '-'); ?>
                                     <?php if (!empty($student['guardian_phone_emergency'])): ?>
                                         <br><small style="color:#e74c3c;">Emer: <?php echo htmlspecialchars($student['guardian_phone_emergency']); ?></small>
                                     <?php endif; ?>
                                 </td>
-                                <td><small><?php echo htmlspecialchars($student['guardian_email'] ?? '-'); ?></small></td>
+                                <td><small><?php echo htmlspecialchars($student['academic_year'] ?? '-'); ?></small></td>
                                 <td>
                                     <a href="edit_student.php?id=<?php echo $student['id']; ?>" class="btn-login" style="background:#f0ad4e;">Edit</a>
                                 </td>

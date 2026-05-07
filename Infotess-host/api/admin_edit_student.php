@@ -31,7 +31,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $date_of_birth = sanitize($_POST['date_of_birth'] ?? '');
     $place_of_birth = sanitize($_POST['place_of_birth'] ?? '');
     $nationality = sanitize($_POST['nationality'] ?? 'Ghanaian');
-    $hometown = sanitize($_POST['hometown'] ?? '');
     $address = sanitize($_POST['address'] ?? '');
     
     // Guardian details
@@ -45,8 +44,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     // Health info
     $health_insurance_id = sanitize($_POST['health_insurance_id'] ?? '');
-    $blood_group = sanitize($_POST['blood_group'] ?? '');
-    $genotype = sanitize($_POST['genotype'] ?? '');
     $medical_conditions = sanitize($_POST['medical_conditions'] ?? '');
     $allergies = sanitize($_POST['allergies'] ?? '');
     $special_needs = sanitize($_POST['special_needs'] ?? '');
@@ -161,7 +158,6 @@ if (!$student) {
                                     <ul class="sidebar-menu">
                 <li><a href="dashboard.php"><i class="fas fa-home"></i> Dashboard</a></li>
                 <li><a href="students.php"><i class="fas fa-user-graduate"></i> Students</a></li>
-                <li><a href="bulk_import.php"><i class="fas fa-file-csv"></i> Bulk Import</a></li>
                 <li><a href="staff.php"><i class="fas fa-chalkboard-teacher"></i> Staff</a></li>
                 <li><a href="payments.php"><i class="fas fa-money-bill-wave"></i> Payments</a></li>
                 <li><a href="fees.php"><i class="fas fa-list-alt"></i> Fee Structure</a></li>

@@ -17,67 +17,72 @@ $current_role = $_SESSION['role'] ?? 'admin';
 $display_name = $_SESSION['full_name'] ?? $_SESSION['username'] ?? 'User';
 
 // ==========================================
-// Fetch Stats (without complex views)
+// Fetch Stats — Supabase REST bridge drops WHERE clauses (IS NULL, AND, date functions).
+// Workaround: fetch all rows, count/filter in PHP.
 // ==========================================
-try { $total_students = (int)$pdo->query("SELECT COUNT(*) FROM students")->fetchColumn(); } catch (Exception $e) { $total_students = 0; }
-try { $total_staff = (int)$pdo->query("SELECT COUNT(*) FROM staff WHERE status = 'active'")->fetchColumn(); } catch (Exception $e) { $total_staff = 0; }
-try { $total_revenue = (float)$pdo->query("SELECT COALESCE(SUM(amount), 0) FROM payments")->fetchColumn(); } catch (Exception $e) { $total_revenue = 0; }
-try { $payments_today = (int)$pdo->query("SELECT COUNT(*) FROM payments WHERE payment_date = CURRENT_DATE")->fetchColumn(); } catch (Exception $e) { $payments_today = 0; }
-try { $total_payments = (int)$pdo->query("SELECT COUNT(*) FROM payments")->fetchColumn(); } catch (Exception $e) { $total_payments = 0; }
-try { $students_paid = (int)$pdo->query("SELECT COUNT(DISTINCT student_id) FROM payments")->fetchColumn(); } catch (Exception $e) { $students_paid = 0; }
-try { $pending_messages = (int)$pdo->query("SELECT COUNT(*) FROM messages WHERE is_read = false OR is_read IS NULL")->fetchColumn(); } catch (Exception $e) { $pending_messages = 0; }
-try { $absent_today = (int)$pdo->query("SELECT COUNT(*) FROM student_attendance WHERE attendance_date = CURRENT_DATE AND status = 'absent'")->fetchColumn(); } catch (Exception $e) { $absent_today = 0; }
-
-$compliance_rate = $total_students > 0 ? round(($students_paid / (int)$total_students) * 100, 1) : 0;
-$outstanding_students = max(0, (int)$total_students - $students_paid);
-
-// Recent Payments (direct query)
 try {
-    $stmt = $pdo->query("SELECT * FROM payments ORDER BY created_at DESC LIMIT 10");
-    $recent_payments = $stmt->fetchAll();
-    
-    // Enrich with student names
+    // --- Students ---
+    $all_students = $pdo->query("SELECT * FROM students")->fetchAll();
+    $total_students = count(array_filter($all_students, fn($s) => !empty($s['admission_number']) && ($s['status'] ?? '') !== 'rejected'));
+    $pending_students = count(array_filter($all_students, fn($s) => empty($s['admission_number']) && ($s['status'] ?? '') !== 'rejected'));
+
+    // --- Staff ---
+    $all_staff = $pdo->query("SELECT * FROM staff")->fetchAll();
+    $total_staff = count(array_filter($all_staff, fn($s) => ($s['status'] ?? '') === 'active'));
+
+    // --- Payments ---
+    $all_payments = $pdo->query("SELECT * FROM payments ORDER BY payment_date DESC")->fetchAll();
+    $today = date('Y-m-d');
+    $today_payments = array_filter($all_payments, fn($p) => substr($p['payment_date'] ?? '', 0, 10) === $today);
+    $payments_today = count($today_payments);
+    $total_payments = count($all_payments);
+    $total_revenue = 0;
+    foreach ($all_payments as $p) { $total_revenue += (float)($p['amount'] ?? 0); }
+    $students_paid = count(array_filter($all_payments, fn($p) => !empty($p['student_id'])));
+    $students_paid = count(array_unique(array_filter(array_column($all_payments, 'student_id'), fn($id) => !empty($id))));
+
+    // --- Messages ---
+    $all_messages = $pdo->query("SELECT * FROM messages")->fetchAll();
+    $pending_messages = count(array_filter($all_messages, fn($m) => empty($m['is_read'])));
+
+    // --- Attendance (today) ---
+    $all_attendance = $pdo->query("SELECT * FROM student_attendance")->fetchAll();
+    $absent_today = count(array_filter($all_attendance, fn($a) => substr($a['attendance_date'] ?? '', 0, 10) === $today && ($a['status'] ?? '') === 'absent'));
+
+    // --- Stats ---
+    $compliance_rate = $total_students > 0 ? round(($students_paid / $total_students) * 100, 1) : 0;
+    $outstanding_students = max(0, $total_students - $students_paid);
+
+    // --- Recent Payments (enrich with student names) ---
+    $recent_payments = $all_payments;
+    usort($recent_payments, fn($a, $b) => strcmp($b['created_at'] ?? '', $a['created_at'] ?? ''));
+    $recent_payments = array_slice($recent_payments, 0, 10);
+    $student_map = [];
+    foreach ($all_students as $s) { $student_map[$s['id']] = $s; }
     foreach ($recent_payments as &$payment) {
-        $s = $pdo->prepare("SELECT full_name, admission_number FROM students WHERE id = ?");
-        $s->execute([$payment['student_id']]);
-        $stu = $s->fetch();
-        if ($stu) {
-            $payment['full_name'] = $stu['full_name'];
-            $payment['admission_number'] = $stu['admission_number'];
-        } else {
-            $payment['full_name'] = 'Unknown';
-            $payment['admission_number'] = '-';
-        }
+        $stu = $student_map[$payment['student_id']] ?? null;
+        $payment['full_name'] = $stu['full_name'] ?? 'Unknown';
+        $payment['admission_number'] = $stu['admission_number'] ?? '-';
     }
-} catch (Exception $e) {
-    $recent_payments = [];
-}
 
-// ==========================================
-// UPDATED: Chart Data (Simplified)
-// ==========================================
-// We fetch raw payments and calculate chart data in PHP to avoid complex SQL issues
-try {
-    $stmt = $pdo->query("SELECT amount, payment_date FROM payments ORDER BY payment_date ASC");
-    $raw_payments = $stmt->fetchAll();
-    
+    // --- Chart: monthly revenue ---
     $monthly_totals = [];
-    foreach ($raw_payments as $row) {
-        $date = date('M Y', strtotime($row['payment_date']));
-        $monthly_totals[$date] = ($monthly_totals[$date] ?? 0) + (float)$row['amount'];
+    foreach ($all_payments as $row) {
+        $date = date('M Y', strtotime($row['payment_date'] ?? 'now'));
+        $monthly_totals[$date] = ($monthly_totals[$date] ?? 0) + (float)($row['amount'] ?? 0);
     }
-    
     $chart_labels = array_keys($monthly_totals);
     $chart_data = array_values($monthly_totals);
 } catch (Exception $e) {
+    error_log("Dashboard stats error: " . $e->getMessage());
+    $total_students = $total_staff = $payments_today = $total_payments = $students_paid = $pending_messages = $absent_today = 0;
+    $total_revenue = $compliance_rate = 0;
+    $recent_payments = [];
     $chart_labels = [date('M Y')];
     $chart_data = [0];
 }
 
-if (empty($chart_labels)) {
-    $chart_labels = [date('M Y')];
-    $chart_data = [0];
-}
+if (empty($chart_labels)) { $chart_labels = [date('M Y')]; $chart_data = [0]; }
 ?>
 
 <!DOCTYPE html>

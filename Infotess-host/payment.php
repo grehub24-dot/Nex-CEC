@@ -87,13 +87,13 @@ if (isset($_POST['confirm_payment']) && isset($_SESSION['payment_pending'])) {
 
         // Generate admission number
         $today = date('ymd');
-        $stmt = $pdo->prepare("SELECT COUNT(*) FROM students WHERE index_number LIKE ?");
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM students WHERE admission_number LIKE ?");
         $stmt->execute(["CEC-{$today}-%"]);
         $counter = str_pad($stmt->fetchColumn() + 1, 3, '0', STR_PAD_LEFT);
         $admissionNumber = "CEC-{$today}-{$counter}";
 
         // Update student
-        $pdo->prepare("UPDATE students SET index_number = ?, payment_status = 'paid', status = 'enrolled' WHERE id = ?")
+        $pdo->prepare("UPDATE students SET admission_number = ?, payment_status = 'paid', status = 'enrolled' WHERE id = ?")
             ->execute([$admissionNumber, $pending['student_id']]);
 
         $_SESSION['payment_success'] = [
@@ -131,12 +131,12 @@ if (isset($_POST['confirm_bank_payment']) && isset($_SESSION['payment_pending'])
         $pdo->prepare("UPDATE payments SET status = 'completed' WHERE id = ?")->execute([$pending['payment_id']]);
 
         $today = date('ymd');
-        $stmt = $pdo->prepare("SELECT COUNT(*) FROM students WHERE index_number LIKE ?");
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM students WHERE admission_number LIKE ?");
         $stmt->execute(["CEC-{$today}-%"]);
         $counter = str_pad($stmt->fetchColumn() + 1, 3, '0', STR_PAD_LEFT);
         $admissionNumber = "CEC-{$today}-{$counter}";
 
-        $pdo->prepare("UPDATE students SET index_number = ?, payment_status = 'paid', status = 'enrolled' WHERE id = ?")
+        $pdo->prepare("UPDATE students SET admission_number = ?, payment_status = 'paid', status = 'enrolled' WHERE id = ?")
             ->execute([$admissionNumber, $pending['student_id']]);
 
         $_SESSION['payment_success'] = [

@@ -31,7 +31,7 @@ if ($selected_class) {
 // Get students in selected class
 $students = [];
 if ($selected_class) {
-    $stmt = $pdo->prepare("SELECT id, full_name, index_number FROM students WHERE class_name = (SELECT name FROM classes WHERE id = ?) ORDER BY full_name ASC");
+    $stmt = $pdo->prepare("SELECT id, full_name, admission_number FROM students WHERE class_name = (SELECT name FROM classes WHERE id = ?) ORDER BY full_name ASC");
     $stmt->execute([$selected_class]);
     $students = $stmt->fetchAll();
 }
@@ -208,7 +208,7 @@ if ($selected_class) {
                                         $sba = $existing_scores[$student['id']] ?? null;
                                     ?>
                                     <tr>
-                                        <td><?php echo htmlspecialchars($student['index_number']); ?></td>
+                                        <td><?php echo htmlspecialchars($student['admission_number']); ?></td>
                                         <td><strong><?php echo htmlspecialchars($student['full_name']); ?></strong></td>
                                         <td><input type="number" step="0.5" min="0" max="30" name="scores[<?php echo $student['id']; ?>][class_test]" class="form-control score-input" value="<?php echo $sba ? htmlspecialchars($sba['class_test']) : ''; ?>" onchange="calcTotal(this)" style="width: 70px;"></td>
                                         <td><input type="number" step="0.5" min="0" max="20" name="scores[<?php echo $student['id']; ?>][mid_term]" class="form-control score-input" value="<?php echo $sba ? htmlspecialchars($sba['mid_term']) : ''; ?>" onchange="calcTotal(this)" style="width: 70px;"></td>

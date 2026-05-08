@@ -21,7 +21,7 @@ $registered_student = null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'add_student') {
     // Generate enrollment ID: ENR-YYYY-XXXXXX
     $enrollmentId = 'ENR-' . date('Y') . '-' . strtoupper(substr(bin2hex(random_bytes(3)), 0, 6));
-    $index_number = null; // Will be assigned after payment
+    $admission_number = null; // Will be assigned after payment
 
     $full_name = sanitize($_POST['full_name']);
     $class_name = sanitize($_POST['class_name']);
@@ -85,7 +85,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
             // 2. Create Student Record (Basic School schema)
             $stmt = $pdo->prepare("INSERT INTO students (
-                user_id, index_number, enrollment_id, full_name, class_name, gender, date_of_birth, place_of_birth,
+                user_id, admission_number, enrollment_id, full_name, class_name, gender, date_of_birth, place_of_birth,
                 nationality, address, profile_picture,
                 guardian_name, guardian_email, guardian_relationship,
                 guardian_phone_primary, guardian_phone_emergency, guardian_occupation, guardian_address,
@@ -99,7 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 ?, ?, ?, ?, ?, ?, ?
             )");
             $stmt->execute([
-                $user_id, $index_number, $enrollmentId, $full_name, $class_name, $gender,
+                $user_id, $admission_number, $enrollmentId, $full_name, $class_name, $gender,
                 $date_of_birth ?: null, $place_of_birth, $nationality, $address, $profile_picture,
                 $guardian_name, $guardian_email, $guardian_relationship,
                 $guardian_phone_primary, $guardian_phone_emergency, $guardian_occupation, $guardian_address,
@@ -183,7 +183,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
     // Generate admission number after payment
     $today = date('ymd');
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM students WHERE index_number LIKE ?");
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM students WHERE admission_number LIKE ?");
     $stmt->execute(["CEC-{$today}-%"]);
     $counter = str_pad($stmt->fetchColumn() + 1, 3, '0', STR_PAD_LEFT);
     $admissionNumber = "CEC-{$today}-{$counter}";
@@ -194,7 +194,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $pdo->beginTransaction();
     try {
         // Update student with admission number and status
-        $pdo->prepare("UPDATE students SET index_number = ?, payment_status = 'paid', status = 'enrolled' WHERE id = ?")
+        $pdo->prepare("UPDATE students SET admission_number = ?, payment_status = 'paid', status = 'enrolled' WHERE id = ?")
             ->execute([$admissionNumber, $studentId]);
 
         // Record payment
@@ -221,7 +221,7 @@ $search = $_GET['search'] ?? '';
 $query = "SELECT * FROM students";
 $params = [];
 if ($search) {
-    $query .= " WHERE full_name LIKE ? OR index_number LIKE ?";
+    $query .= " WHERE full_name LIKE ? OR admission_number LIKE ?";
     $params = ["%$search%", "%$search%"];
 }
 $query .= " ORDER BY created_at DESC LIMIT $limit OFFSET $offset";
@@ -233,7 +233,7 @@ $students = $stmt->fetchAll();
 $total_query = "SELECT COUNT(*) FROM students";
 $total_params = [];
 if ($search) {
-    $total_query .= " WHERE full_name LIKE ? OR index_number LIKE ?";
+    $total_query .= " WHERE full_name LIKE ? OR admission_number LIKE ?";
     $total_params = ["%$search%", "%$search%"];
 }
 $total_stmt = $pdo->prepare($total_query);
@@ -580,7 +580,7 @@ $total_pages = ceil($total_rows / $limit);
                                 <td>
                                     <img src="../<?php echo htmlspecialchars($student['profile_picture'] ?? 'images/aamusted.jpg'); ?>" alt="Profile" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 1px solid #ddd;">
                                 </td>
-                                <td><strong><?php echo htmlspecialchars($student['index_number']); ?></strong></td>
+                                <td><strong><?php echo htmlspecialchars($student['admission_number']); ?></strong></td>
                                 <td><?php echo htmlspecialchars($student['full_name']); ?></td>
                                 <td><?php echo htmlspecialchars($student['class_name'] ?? '-'); ?></td>
                                 <td><?php echo htmlspecialchars($student['gender'] ?? '-'); ?></td>

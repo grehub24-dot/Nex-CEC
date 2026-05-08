@@ -29,7 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $errors = [];
             
             while (($row = fgetcsv($handle)) !== false) {
-                // Expected columns: full_name, index_number, class_name, gender, date_of_birth,
+                // Expected columns: full_name, admission_number, class_name, gender, date_of_birth,
                 // guardian_name, guardian_email, guardian_relationship, guardian_phone_primary,
                 // guardian_phone_emergency, health_insurance_id, previous_school, address
                 if (count($row) < 4) {
@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 }
                 
                 $full_name = trim($row[0] ?? '');
-                $index_number = trim($row[1] ?? '');
+                $admission_number = trim($row[1] ?? '');
                 $class_name = trim($row[2] ?? '');
                 $gender = trim($row[3] ?? '');
                 $date_of_birth = trim($row[4] ?? '');
@@ -51,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $previous_school = trim($row[11] ?? '');
                 $address = trim($row[12] ?? '');
                 
-                if (empty($full_name) || empty($index_number) || empty($class_name)) {
+                if (empty($full_name) || empty($admission_number) || empty($class_name)) {
                     $skipped++;
                     continue;
                 }
@@ -60,8 +60,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $email = $guardian_email ?: strtolower(str_replace(' ', '', $full_name)) . '@nexcec.edu';
                 
                 // Check for duplicate
-                $stmt = $pdo->prepare("SELECT id FROM students WHERE index_number = ?");
-                $stmt->execute([$index_number]);
+                $stmt = $pdo->prepare("SELECT id FROM students WHERE admission_number = ?");
+                $stmt->execute([$admission_number]);
                 if ($stmt->fetch()) {
                     $skipped++;
                     continue;
@@ -78,13 +78,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     $user_id = $pdo->lastInsertId();
                     
                     $stmt = $pdo->prepare("INSERT INTO students (
-                        user_id, index_number, full_name, class_name, gender, date_of_birth,
+                        user_id, admission_number, full_name, class_name, gender, date_of_birth,
                         guardian_name, guardian_email, guardian_relationship,
                         guardian_phone_primary, guardian_phone_emergency,
                         health_insurance_id, previous_school, address
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                     $stmt->execute([
-                        $user_id, $index_number, $full_name, $class_name, $gender,
+                        $user_id, $admission_number, $full_name, $class_name, $gender,
                         $date_of_birth ?: null,
                         $guardian_name, $guardian_email, $guardian_relationship,
                         $guardian_phone_primary, $guardian_phone_emergency,
@@ -162,7 +162,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                             </thead>
                             <tbody>
                                 <tr><td>full_name</td><td>Yes</td><td>Kwame Asante</td></tr>
-                                <tr><td>index_number</td><td>Yes</td><td>NXC/2026/001</td></tr>
+                                <tr><td>admission_number</td><td>Yes</td><td>NXC/2026/001</td></tr>
                                 <tr><td>class_name</td><td>Yes</td><td>Basic 1, JHS 2, KG 1</td></tr>
                                 <tr><td>gender</td><td>Yes</td><td>Male or Female</td></tr>
                                 <tr><td>date_of_birth</td><td>No</td><td>2018-05-15</td></tr>
@@ -201,7 +201,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
     <script>
     function downloadSample() {
-        const csv = "full_name,index_number,class_name,gender,date_of_birth,guardian_name,guardian_email,guardian_relationship,guardian_phone_primary,guardian_phone_emergency,health_insurance_id,previous_school,address\nKwame Asante,NXC/2026/001,Basic 1,Male,2018-05-15,Mr. Asante,asante@email.com,Father,0241234567,0241234568,NHIS123456789,ABC Kindergarten,Kumasi\nAma Mensah,NXC/2026/002,Basic 2,Female,2017-03-20,Mrs. Mensah,mensah@email.com,Mother,0241234569,0241234570,NHIS987654321,XYZ School,Accra";
+        const csv = "full_name,admission_number,class_name,gender,date_of_birth,guardian_name,guardian_email,guardian_relationship,guardian_phone_primary,guardian_phone_emergency,health_insurance_id,previous_school,address\nKwame Asante,NXC/2026/001,Basic 1,Male,2018-05-15,Mr. Asante,asante@email.com,Father,0241234567,0241234568,NHIS123456789,ABC Kindergarten,Kumasi\nAma Mensah,NXC/2026/002,Basic 2,Female,2017-03-20,Mrs. Mensah,mensah@email.com,Mother,0241234569,0241234570,NHIS987654321,XYZ School,Accra";
         const blob = new Blob([csv], { type: 'text/csv' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');

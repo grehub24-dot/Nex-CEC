@@ -237,7 +237,7 @@ class ReceiptGenerator {
                     <div class='col text-end' style='text-align: right;'>
                         <div class='details-title' style='text-align: right;'>Student Details</div>
                         <div class='details-item'><strong>Name:</strong> {$student['full_name']}</div>
-                        <div class='details-item'><strong>Index No:</strong> {$student['index_number']}</div>
+                        <div class='details-item'><strong>Index No:</strong> {$student['admission_number']}</div>
                         <div class='details-item'><strong>Class:</strong> " . (!empty($class_name) ? htmlspecialchars($class_name, ENT_QUOTES, 'UTF-8') : 'N/A') . "</div>
                     </div>
                 </div>

@@ -126,7 +126,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Fetch all students for the dropdown
-$all_students = $pdo->query("SELECT id, full_name, index_number FROM students ORDER BY full_name ASC")->fetchAll();
+$all_students = $pdo->query("SELECT id, full_name, admission_number FROM students ORDER BY full_name ASC")->fetchAll();
 ?>
 
 <!DOCTYPE html>
@@ -201,11 +201,11 @@ $all_students = $pdo->query("SELECT id, full_name, index_number FROM students OR
                     
                     // Enrich with student names (two-step lookup for Supabase compatibility)
                     foreach ($student_msgs as &$msg) {
-                        $s = $pdo->prepare("SELECT full_name, index_number FROM students WHERE user_id = ?");
+                        $s = $pdo->prepare("SELECT full_name, admission_number FROM students WHERE user_id = ?");
                         $s->execute([$msg['sender_id']]);
                         $stu = $s->fetch();
                         $msg['sender_name'] = $stu ? $stu['full_name'] : 'Unknown';
-                        $msg['index_number'] = $stu ? $stu['index_number'] : '-';
+                        $msg['admission_number'] = $stu ? $stu['admission_number'] : '-';
                     }
                     
                     if (empty($student_msgs)):
@@ -228,7 +228,7 @@ $all_students = $pdo->query("SELECT id, full_name, index_number FROM students OR
                                         <td><?php echo date('M d, Y H:i', strtotime($msg['created_at'])); ?></td>
                                         <td>
                                             <strong><?php echo htmlspecialchars($msg['sender_name']); ?></strong><br>
-                                            <small><?php echo htmlspecialchars($msg['index_number']); ?></small>
+                                            <small><?php echo htmlspecialchars($msg['admission_number']); ?></small>
                                         </td>
                                         <td><?php echo htmlspecialchars($msg['title']); ?></td>
                                         <td><?php echo htmlspecialchars($msg['content']); ?></td>
@@ -359,7 +359,7 @@ $all_students = $pdo->query("SELECT id, full_name, index_number FROM students OR
                     <select name="student_id" class="form-control">
                         <option value="">-- Search and Select Student --</option>
                         <?php foreach ($all_students as $student): ?>
-                            <option value="<?php echo $student['id']; ?>"><?php echo htmlspecialchars($student['full_name']) . " (" . $student['index_number'] . ")"; ?></option>
+                            <option value="<?php echo $student['id']; ?>"><?php echo htmlspecialchars($student['full_name']) . " (" . $student['admission_number'] . ")"; ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>

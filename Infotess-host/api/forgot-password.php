@@ -35,15 +35,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         } else {
             // Student via Index Number (two-step lookup for Supabase compatibility)
-            $stmt_s = $pdo->prepare("SELECT user_id, index_number, full_name, phone_number FROM students WHERE index_number = :index_number");
-            $stmt_s->execute(['index_number' => $identifier]);
+            $stmt_s = $pdo->prepare("SELECT user_id, admission_number, full_name, phone_number FROM students WHERE admission_number = :admission_number");
+            $stmt_s->execute(['admission_number' => $identifier]);
             $student = $stmt_s->fetch();
             if ($student) {
                 $stmt = $pdo->prepare("SELECT * FROM users WHERE id = :uid");
                 $stmt->execute(['uid' => $student['user_id']]);
                 $user = $stmt->fetch();
                 if ($user) {
-                    $user['index_number'] = $student['index_number'];
+                    $user['admission_number'] = $student['admission_number'];
                     $user['full_name'] = $student['full_name'];
                     $user['phone_number'] = $student['phone_number'];
                 }

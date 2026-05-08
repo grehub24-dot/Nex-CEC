@@ -12,12 +12,12 @@ if ($receipt_number) {
     
     if ($data) {
         // Enrich with student data (two-step lookup for Supabase compatibility)
-        $s = $pdo->prepare("SELECT full_name, index_number, level, stream FROM students WHERE id = ?");
+        $s = $pdo->prepare("SELECT full_name, admission_number, level, stream FROM students WHERE id = ?");
         $s->execute([$data['student_id']]);
         $stu = $s->fetch();
         if ($stu) {
             $data['full_name'] = $stu['full_name'];
-            $data['index_number'] = $stu['index_number'];
+            $data['admission_number'] = $stu['admission_number'];
             $data['level'] = $stu['level'];
             $data['stream'] = $stu['stream'] ?? '-';
         }
@@ -57,7 +57,7 @@ if ($receipt_number) {
             <p>The receipt <strong><?php echo htmlspecialchars($receipt_number); ?></strong> is authentic.</p>
             <div style="text-align: left; margin-top: 20px; background: #f9f9f9; padding: 15px; border-radius: 5px;">
                 <p><strong>Student:</strong> <?php echo htmlspecialchars($data['full_name']); ?></p>
-                <p><strong>Index No:</strong> <?php echo htmlspecialchars($data['index_number']); ?></p>
+                <p><strong>Index No:</strong> <?php echo htmlspecialchars($data['admission_number']); ?></p>
                 <p><strong>Level:</strong> <?php echo htmlspecialchars($data['level'] ?? '-'); ?></p>
                 <p><strong>Class:</strong> <?php echo htmlspecialchars($data['class_name'] ?? '-'); ?></p>
                 <p><strong>Stream:</strong> <?php echo htmlspecialchars($data['stream'] ?? '-'); ?></p>

@@ -155,7 +155,7 @@ $average = $subject_count > 0 ? round($total_sba / $subject_count, 1) : 0;
 
         <div class="student-info">
             <div><strong>Name:</strong> <?php echo htmlspecialchars($student['full_name']); ?></div>
-            <div><strong>Index No:</strong> <?php echo htmlspecialchars($student['index_number']); ?></div>
+            <div><strong>Index No:</strong> <?php echo htmlspecialchars($student['admission_number']); ?></div>
             <div><strong>Class:</strong> <?php echo htmlspecialchars($class_name); ?></div>
             <div><strong>Term:</strong> <?php echo $selected_term ? htmlspecialchars($selected_term['name'] . ' ' . $selected_term['academic_year']) : 'N/A'; ?></div>
             <div><strong>Gender:</strong> <?php echo htmlspecialchars($student['gender'] ?? 'N/A'); ?></div>

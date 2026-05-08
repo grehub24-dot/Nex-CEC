@@ -25,7 +25,7 @@ $message = '';
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'record_payment') {
-    $index_number = sanitize($_POST['index_number']);
+    $admission_number = sanitize($_POST['admission_number']);
     $class_name = sanitize($_POST['class_name']);
     $amount = floatval($_POST['amount']);
     $year = sanitize($_POST['academic_year']);
@@ -35,8 +35,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $date = sanitize($_POST['payment_date']);
 
     // Find Student (two-step lookup for Supabase compatibility)
-    $stmt = $pdo->prepare("SELECT * FROM students WHERE index_number = ?");
-    $stmt->execute([$index_number]);
+    $stmt = $pdo->prepare("SELECT * FROM students WHERE admission_number = ?");
+    $stmt->execute([$admission_number]);
     $student = $stmt->fetch();
     if ($student) {
         $u = $pdo->prepare("SELECT email FROM users WHERE id = ?");
@@ -46,7 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 
     if (!$student) {
-        $error = "Student with Index Number $index_number not found.";
+        $error = "Student with Index Number $admission_number not found.";
     } else {
         try {
             $pdo->beginTransaction();
@@ -151,7 +151,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                                 </div>
                                 <div class='receipt-row'>
                                     <span style='color: #666;'>Index Number:</span>
-                                    <strong>" . htmlspecialchars($student['index_number'], ENT_QUOTES, 'UTF-8') . "</strong>
+                                    <strong>" . htmlspecialchars($student['admission_number'], ENT_QUOTES, 'UTF-8') . "</strong>
                                 </div>
                                 <div class='receipt-row'>
                                     <span style='color: #666;'>Class:</span>
@@ -270,15 +270,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $recent_payments = $stmt->fetchAll();
 
                 foreach ($recent_payments as &$payment) {
-                    $s = $pdo->prepare("SELECT full_name, index_number FROM students WHERE id = ?");
+                    $s = $pdo->prepare("SELECT full_name, admission_number FROM students WHERE id = ?");
                     $s->execute([$payment['student_id']]);
                     $stu = $s->fetch();
                     if ($stu) {
                         $payment['full_name'] = $stu['full_name'];
-                        $payment['index_number'] = $stu['index_number'];
+                        $payment['admission_number'] = $stu['admission_number'];
                     } else {
                         $payment['full_name'] = 'Unknown';
-                        $payment['index_number'] = '-';
+                        $payment['admission_number'] = '-';
                     }
                     $tp = $pdo->prepare("SELECT SUM(amount) FROM payments WHERE student_id = ? AND academic_year = ?");
                     $tp->execute([$payment['student_id'], $current_academic_year]);
@@ -311,7 +311,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                                 <td><?php echo htmlspecialchars($payment['receipt_number']); ?></td>
                                 <td>
                                     <?php echo htmlspecialchars($payment['full_name']); ?><br>
-                                    <small><?php echo htmlspecialchars($payment['index_number']); ?></small>
+                                    <small><?php echo htmlspecialchars($payment['admission_number']); ?></small>
                                 </td>
                                 <td><?php echo htmlspecialchars($payment['fee_type'] ?? 'General'); ?></td>
                                 <td><?php echo number_format($payment['amount'], 2); ?></td>
@@ -359,7 +359,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         
                         <div style="grid-column: span 2;">
                             <label>Student Index Number</label>
-                            <input type="text" name="index_number" class="form-control" required placeholder="e.g. NXC/2026/001">
+                            <input type="text" name="admission_number" class="form-control" required placeholder="e.g. NXC/2026/001">
                             <small id="indexLookupStatus" style="display:none; margin-top:6px; font-size:0.85rem;"></small>
                         </div>
 
@@ -445,7 +445,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         const modal = document.getElementById("paymentModal");
         const btn = document.getElementById("openModalBtn");
         const span = document.getElementsByClassName("close-btn")[0];
-        const indexInput = document.querySelector('input[name="index_number"]');
+        const indexInput = document.querySelector('input[name="admission_number"]');
         const classSelect = document.querySelector('select[name="class_name"]');
         const lookupStatus = document.getElementById('indexLookupStatus');
         let lookupTimer = null;
@@ -473,7 +473,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             lastLookupValue = indexNumber;
             setLookupStatus('Fetching student details...', '#0c5fb5');
 
-            fetch(`../api/api/admin/get_student_by_index.php?index_number=${encodeURIComponent(indexNumber)}`, {
+            fetch(`../api/api/admin/get_student_by_index.php?admission_number=${encodeURIComponent(indexNumber)}`, {
                 headers: { 'Accept': 'application/json' }
             })
                 .then(async response => {
@@ -490,7 +490,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                             }
                         }
                     }
-                    setLookupStatus(`Loaded: ${student.full_name} (${student.index_number})`, '#15803d');
+                    setLookupStatus(`Loaded: ${student.full_name} (${student.admission_number})`, '#15803d');
                 })
                 .catch(() => {
                     setLookupStatus('No student found for this index number.', '#b42333');

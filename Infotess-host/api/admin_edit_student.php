@@ -24,7 +24,7 @@ $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Student info
     $full_name = sanitize($_POST['full_name'] ?? '');
-    $index_number = sanitize($_POST['index_number'] ?? '');
+    $admission_number = sanitize($_POST['admission_number'] ?? '');
     $class_name = sanitize($_POST['class_name'] ?? '');
     $gender = sanitize($_POST['gender'] ?? '');
     $date_of_birth = sanitize($_POST['date_of_birth'] ?? '');
@@ -59,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $upload_dir = __DIR__ . '/../images/profiles/';
         if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
         $ext = pathinfo($_FILES['profile_picture']['name'], PATHINFO_EXTENSION);
-        $filename = $index_number . '_' . time() . '.' . $ext;
+        $filename = $admission_number . '_' . time() . '.' . $ext;
         if (move_uploaded_file($_FILES['profile_picture']['tmp_name'], $upload_dir . $filename)) {
             $profile_picture = 'images/profiles/' . $filename;
         }
@@ -70,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Update Student (all fields)
         $stmt = $pdo->prepare("UPDATE students SET 
-            full_name = ?, index_number = ?, class_name = ?, gender = ?, 
+            full_name = ?, admission_number = ?, class_name = ?, gender = ?, 
             date_of_birth = ?, place_of_birth = ?, nationality = ?, 
             address = ?, profile_picture = ?,
             guardian_name = ?, guardian_email = ?, guardian_relationship = ?,
@@ -79,7 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             previous_school = ?, previous_class = ?, admission_date = ?, academic_year = ?
             WHERE id = ?");
         $stmt->execute([
-            $full_name, $index_number, $class_name, $gender,
+            $full_name, $admission_number, $class_name, $gender,
             $date_of_birth ?: null, $place_of_birth, $nationality,
             $address, $profile_picture,
             $guardian_name, $guardian_email, $guardian_relationship,
@@ -186,7 +186,7 @@ if (!$student) {
                     </div>
                     <div class="form-group">
                         <label>Admission Number</label>
-                        <input type="text" name="index_number" class="form-control" value="<?php echo htmlspecialchars($student['index_number'] ?? ''); ?>" readonly style="background:#f0f0f0; cursor:not-allowed;">
+                        <input type="text" name="admission_number" class="form-control" value="<?php echo htmlspecialchars($student['admission_number'] ?? ''); ?>" readonly style="background:#f0f0f0; cursor:not-allowed;">
                     </div>
                     <div class="form-group">
                         <label>Enrollment ID</label>

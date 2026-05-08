@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $user = $stmt->fetch();
         } else {
             // Student Login (Lookup student by index number, then get user)
-            $stmt = $pdo->prepare("SELECT * FROM students WHERE index_number = ?");
+            $stmt = $pdo->prepare("SELECT * FROM students WHERE admission_number = ?");
             $stmt->execute([$identifier]);
             $student = $stmt->fetch();
             if ($student) {
@@ -35,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt->execute([$student['user_id']]);
                 $user = $stmt->fetch();
                 if ($user) {
-                    $user['index_number'] = $student['index_number'];
+                    $user['admission_number'] = $student['admission_number'];
                 }
             }
         }
@@ -55,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt_s->execute(['uid' => $user['id']]);
                     $student = $stmt_s->fetch();
                     $_SESSION['student_id'] = $student['id'];
-                    $_SESSION['index_number'] = $student['index_number'];
+                    $_SESSION['admission_number'] = $student['admission_number'];
                     $_SESSION['name'] = $student['full_name'];
                     
                     // If password has NOT been reset (is temporal), redirect to reset page

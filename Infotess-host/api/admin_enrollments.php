@@ -50,7 +50,7 @@ if ($filter !== 'all') {
 }
 
 if ($search) {
-    $where[] = "(full_name LIKE ? OR index_number LIKE ?)";
+    $where[] = "(full_name LIKE ? OR admission_number LIKE ?)";
     $params[] = "%$search%";
     $params[] = "%$search%";
 }
@@ -174,7 +174,7 @@ $enrollments = $stmt->fetchAll();
                             <?php else: ?>
                                 <?php foreach ($enrollments as $en): ?>
                                 <tr>
-                                    <td><strong><?php echo htmlspecialchars($en['index_number'] ?? '-'); ?></strong></td>
+                                    <td><strong><?php echo htmlspecialchars($en['admission_number'] ?? '-'); ?></strong></td>
                                     <td><?php echo htmlspecialchars($en['full_name']); ?></td>
                                     <td><?php echo htmlspecialchars($en['class_name'] ?? '-'); ?></td>
                                     <td><?php echo htmlspecialchars($en['guardian_name'] ?? '-'); ?></td>
@@ -212,7 +212,7 @@ $enrollments = $stmt->fetchAll();
             const statusColors = { pending: '#856404', enrolled: '#155724', rejected: '#721c24' };
             const statusBg = { pending: '#fff3cd', enrolled: '#d4edda', rejected: '#f8d7da' };
             let html = '<div class="detail-grid">';
-            html += '<div class="detail-item"><div class="label">Admission #</div><div class="value">' + (en.index_number || '-') + '</div></div>';
+            html += '<div class="detail-item"><div class="label">Admission #</div><div class="value">' + (en.admission_number || '-') + '</div></div>';
             html += '<div class="detail-item"><div class="label">Status</div><div class="value"><span class="status-badge ' + (en.status || '') + '">' + (en.status ? en.status.charAt(0).toUpperCase() + en.status.slice(1) : '-') + '</span></div></div>';
             html += '<div class="section-title">Student Information</div>';
             html += '<div class="detail-item"><div class="label">Full Name</div><div class="value">' + (en.full_name || '-') + '</div></div>';

@@ -24,12 +24,12 @@ if ($receipt_number) {
 
     if ($payment) {
         // Enrich with student data (two-step lookup for Supabase compatibility)
-        $s = $pdo->prepare("SELECT full_name, index_number, department, level FROM students WHERE id = ?");
+        $s = $pdo->prepare("SELECT full_name, admission_number, department, level FROM students WHERE id = ?");
         $s->execute([$payment['student_id']]);
         $stu = $s->fetch();
         if ($stu) {
             $payment['full_name'] = $stu['full_name'];
-            $payment['index_number'] = $stu['index_number'];
+            $payment['admission_number'] = $stu['admission_number'];
             $payment['department'] = $stu['department'];
             $payment['level'] = $stu['level'];
         }
@@ -77,7 +77,7 @@ if ($receipt_number) {
                     <div class="card success-card" style="margin-top: 20px; border-left: 5px solid green;">
                         <h3><i class="fas fa-check-circle" style="color: green;"></i> Valid Receipt</h3>
                         <div class="details-grid">
-                            <p><strong>Student:</strong> <?php echo htmlspecialchars($payment['full_name']); ?> (<?php echo htmlspecialchars($payment['index_number']); ?>)</p>
+                            <p><strong>Student:</strong> <?php echo htmlspecialchars($payment['full_name']); ?> (<?php echo htmlspecialchars($payment['admission_number']); ?>)</p>
                             <p><strong>Department:</strong> <?php echo htmlspecialchars($payment['department']); ?></p>
                             <p><strong>Amount:</strong> GHS <?php echo number_format($payment['amount'], 2); ?></p>
                             <p><strong>Date:</strong> <?php echo $payment['payment_date']; ?></p>

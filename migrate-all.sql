@@ -5,6 +5,15 @@
 -- ==========================================
 
 -- ==========================================
+-- IMPORTANT: Ensure admission_number + enrollment_id exist in students table FIRST.
+-- Uses ADD COLUMN IF NOT EXISTS so it's safe to run even if already present.
+-- Also DROP any legacy index_number column to avoid NOT NULL conflicts.
+-- index_number is replaced by admission_number in the Basic School schema.
+ALTER TABLE students DROP COLUMN IF EXISTS index_number CASCADE;
+ALTER TABLE students ADD COLUMN IF NOT EXISTS admission_number VARCHAR(50);
+ALTER TABLE students ADD COLUMN IF NOT EXISTS enrollment_id VARCHAR(20);
+
+-- ==========================================
 -- PHASE 1: SCHOOL FEES (Core)
 -- ==========================================
 
@@ -150,12 +159,6 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'students' AND column_name = 'status') THEN
         ALTER TABLE students ADD COLUMN status VARCHAR(20) DEFAULT 'active';
     END IF;
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'students' AND column_name = 'enrollment_type') THEN
-        ALTER TABLE students ADD COLUMN enrollment_type VARCHAR(20) DEFAULT 'admin';
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'students' AND column_name = 'enrollment_id') THEN
-        ALTER TABLE students ADD COLUMN enrollment_id VARCHAR(20);
-    END IF;
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'students' AND column_name = 'payment_status') THEN
         ALTER TABLE students ADD COLUMN payment_status VARCHAR(20) DEFAULT 'unpaid';
     END IF;
@@ -168,13 +171,13 @@ END $$;
 DO $$
 BEGIN
     -- students table
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'students_admission_number_key' AND conrelid = 'students'::regclass) THEN
+        DELETE FROM students a USING students b
+            WHERE a.id > b.id AND a.admission_number IS NOT NULL AND a.admission_number = b.admission_number;
+        ALTER TABLE students ADD CONSTRAINT students_admission_number_key UNIQUE (admission_number);
+    END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'students_enrollment_id_key' AND conrelid = 'students'::regclass) THEN
         ALTER TABLE students ADD CONSTRAINT students_enrollment_id_key UNIQUE (enrollment_id);
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'students_index_number_key' AND conrelid = 'students'::regclass) THEN
-        DELETE FROM students a USING students b
-            WHERE a.id > b.id AND a.index_number IS NOT NULL AND a.index_number = b.index_number;
-        ALTER TABLE students ADD CONSTRAINT students_index_number_key UNIQUE (index_number);
     END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'students_user_id_key' AND conrelid = 'students'::regclass) THEN
         DELETE FROM students a USING students b
@@ -265,25 +268,15 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'fee_structures' AND column_name = 'fee_type') THEN
         ALTER TABLE fee_structures ADD COLUMN fee_type VARCHAR(50) NOT NULL DEFAULT 'tuition';
     END IF;
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'fee_structures' AND column_name = 'class_id') THEN
-        ALTER TABLE fee_structures ADD COLUMN class_id INTEGER REFERENCES classes(id);
+    -- Drop any legacy UUID class_id and replace with INTEGER to match classes.id
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'fee_structures' AND column_name = 'class_id') THEN
+        ALTER TABLE fee_structures DROP COLUMN IF EXISTS class_id;
     END IF;
+    ALTER TABLE fee_structures ADD COLUMN class_id INTEGER REFERENCES classes(id);
 END $$;
 
--- Seed fee types for basic school
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM fee_structures WHERE title = 'Tuition Fee') THEN
-        INSERT INTO fee_structures (title, amount, academic_year, term, fee_type, is_mandatory) VALUES
-        ('Tuition Fee', 500.00, '2025/2026', 'Term 1', 'tuition', true),
-        ('PTA Dues', 50.00, '2025/2026', 'Term 1', 'pta', true),
-        ('Sports Fee', 30.00, '2025/2026', 'Term 1', 'sports', true),
-        ('Library Fee', 20.00, '2025/2026', 'Term 1', 'library', true),
-        ('ICT Fee', 40.00, '2025/2026', 'Term 1', 'ict', true),
-        ('Exam Fee', 25.00, '2025/2026', 'Term 1', 'exam', true),
-        ('Uniform', 80.00, '2025/2026', 'Term 1', 'uniform', false);
-    END IF;
-END $$;
+-- Fee structures are seeded per-class in seed-data.sql (section 14).
+-- This block just ensures the columns exist — handled above.
 
 -- 4. Payments Table — drop and recreate to ensure correct schema + unique constraint
 DO $$

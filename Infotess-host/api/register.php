@@ -21,7 +21,7 @@ $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'register') {
     $full_name = sanitize($_POST['full_name']);
-    $index_number = sanitize($_POST['index_number']);
+    $admission_number = sanitize($_POST['admission_number']);
     $class_name = sanitize($_POST['class_name']);
     $gender = sanitize($_POST['gender']);
     $email = sanitize($_POST['email']);
@@ -30,10 +30,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $guardian_phone = sanitize($_POST['guardian_phone']);
 
     // Check duplicate
-    $stmt = $pdo->prepare("SELECT id FROM students WHERE index_number = ?");
-    $stmt->execute([$index_number]);
+    $stmt = $pdo->prepare("SELECT id FROM students WHERE admission_number = ?");
+    $stmt->execute([$admission_number]);
     if ($stmt->fetch()) {
-        $error = "Student with Index Number $index_number already exists.";
+        $error = "Student with Index Number $admission_number already exists.";
     } else {
         // Check email duplicate
         $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ?");
@@ -53,8 +53,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $user_id = $pdo->lastInsertId();
 
                 // 2. Create Student Record
-                $stmt = $pdo->prepare("INSERT INTO students (user_id, index_number, full_name, class_name, gender, phone_number, guardian_name, guardian_phone) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-                $stmt->execute([$user_id, $index_number, $full_name, $class_name, $gender, $phone, $guardian_name, $guardian_phone]);
+                $stmt = $pdo->prepare("INSERT INTO students (user_id, admission_number, full_name, class_name, gender, phone_number, guardian_name, guardian_phone) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$user_id, $admission_number, $full_name, $class_name, $gender, $phone, $guardian_name, $guardian_phone]);
 
                 $pdo->commit();
                 $message = "Student registered successfully!";
@@ -90,7 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                             <div class='info-box'>
                                 <div class='info-title'>Student Details</div>
                                 <div class='info-row'><div class='info-label'>Name:</div><div class='info-value'>" . htmlspecialchars($full_name, ENT_QUOTES, 'UTF-8') . "</div></div>
-                                <div class='info-row'><div class='info-label'>Index Number:</div><div class='info-value'>" . htmlspecialchars($index_number, ENT_QUOTES, 'UTF-8') . "</div></div>
+                                <div class='info-row'><div class='info-label'>Index Number:</div><div class='info-value'>" . htmlspecialchars($admission_number, ENT_QUOTES, 'UTF-8') . "</div></div>
                                 <div class='info-row'><div class='info-label'>Class:</div><div class='info-value'>" . htmlspecialchars($class_name, ENT_QUOTES, 'UTF-8') . "</div></div>
                                 <div class='info-row'><div class='info-label'>Gender:</div><div class='info-value'>" . htmlspecialchars($gender, ENT_QUOTES, 'UTF-8') . "</div></div>
                                 <div class='info-row'><div class='info-label'>Guardian:</div><div class='info-value'>" . htmlspecialchars($guardian_name, ENT_QUOTES, 'UTF-8') . "</div></div>
@@ -112,7 +112,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 // Send SMS to guardian
                 if ($guardian_phone) {
                     $smsHelper = new SMSHelper();
-                    $smsMsg = "Registration successful for $full_name. Index: $index_number. Class: $class_name. Temp password: $auto_password. Login and reset password.";
+                    $smsMsg = "Registration successful for $full_name. Index: $admission_number. Class: $class_name. Temp password: $auto_password. Login and reset password.";
                     $smsHelper->send($guardian_phone, $smsMsg);
                 }
 
@@ -155,7 +155,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             </div>
             <div class="form-group">
                 <label>Index / Admission Number</label>
-                <input type="text" name="index_number" class="form-control" required placeholder="e.g. NXC/2026/001">
+                <input type="text" name="admission_number" class="form-control" required placeholder="e.g. NXC/2026/001">
             </div>
             <div class="form-group">
                 <label>Class</label>

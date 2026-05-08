@@ -31,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $upload_dir = __DIR__ . '/../images/profiles/';
         if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
         $file_extension = pathinfo($_FILES['profile_picture']['name'], PATHINFO_EXTENSION);
-        $file_name = $_SESSION['index_number'] . '_' . time() . '.' . $file_extension;
+        $file_name = $_SESSION['admission_number'] . '_' . time() . '.' . $file_extension;
         $target_file = $upload_dir . $file_name;
         if (move_uploaded_file($_FILES['profile_picture']['tmp_name'], $target_file)) {
             $profile_picture = 'images/profiles/' . $file_name;
@@ -133,7 +133,7 @@ if ($student) {
                         </div>
                         <div class="info-item">
                             <label>Index Number</label>
-                            <span><?php echo htmlspecialchars($student['index_number']); ?></span>
+                            <span><?php echo htmlspecialchars($student['admission_number']); ?></span>
                         </div>
                         <div class="info-item">
                             <label>Class</label>

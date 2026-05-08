@@ -26,7 +26,7 @@ if ($selected_class) {
     $stmt->execute([$selected_class]);
     $class_name = $stmt->fetchColumn();
     
-    $stmt = $pdo->prepare("SELECT id, full_name, index_number FROM students WHERE class_name = ? ORDER BY full_name ASC");
+    $stmt = $pdo->prepare("SELECT id, full_name, admission_number FROM students WHERE class_name = ? ORDER BY full_name ASC");
     $stmt->execute([$class_name]);
     $students = $stmt->fetchAll();
 }
@@ -188,7 +188,7 @@ if ($selected_class) {
                                         $reason = $existing_attendance[$student['id']]['reason'] ?? '';
                                     ?>
                                     <tr>
-                                        <td><?php echo htmlspecialchars($student['index_number']); ?></td>
+                                        <td><?php echo htmlspecialchars($student['admission_number']); ?></td>
                                         <td><strong><?php echo htmlspecialchars($student['full_name']); ?></strong></td>
                                         <td>
                                             <div style="display: flex; gap: 5px;">

@@ -96,7 +96,7 @@ $status_text = $outstanding <= 0 ? 'Fully Paid' : 'Outstanding';
                     <img src="../<?php echo !empty($student['profile_picture']) ? htmlspecialchars($student['profile_picture']) : 'images/aamusted.jpg'; ?>" alt="Profile" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
                     <div>
                         <h2>Welcome, <?php echo htmlspecialchars($student['full_name']); ?></h2>
-                        <div style="color: #666;"><?php echo htmlspecialchars($student['index_number']); ?> &bull; <?php echo htmlspecialchars($student['class_name'] ?? 'N/A'); ?></div>
+                        <div style="color: #666;"><?php echo htmlspecialchars($student['admission_number']); ?> &bull; <?php echo htmlspecialchars($student['class_name'] ?? 'N/A'); ?></div>
                     </div>
                 </div>
             </div>

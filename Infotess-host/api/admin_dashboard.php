@@ -38,15 +38,15 @@ try {
     
     // Enrich with student names
     foreach ($recent_payments as &$payment) {
-        $s = $pdo->prepare("SELECT full_name, index_number FROM students WHERE id = ?");
+        $s = $pdo->prepare("SELECT full_name, admission_number FROM students WHERE id = ?");
         $s->execute([$payment['student_id']]);
         $stu = $s->fetch();
         if ($stu) {
             $payment['full_name'] = $stu['full_name'];
-            $payment['index_number'] = $stu['index_number'];
+            $payment['admission_number'] = $stu['admission_number'];
         } else {
             $payment['full_name'] = 'Unknown';
-            $payment['index_number'] = '-';
+            $payment['admission_number'] = '-';
         }
     }
 } catch (Exception $e) {
@@ -202,7 +202,7 @@ if (empty($chart_labels)) {
                                 <?php foreach ($recent_payments as $payment): ?>
                                 <tr>
                                     <td><?php echo htmlspecialchars($payment['receipt_number']); ?></td>
-                                    <td><?php echo htmlspecialchars($payment['full_name']); ?><br><small><?php echo htmlspecialchars($payment['index_number']); ?></small></td>
+                                    <td><?php echo htmlspecialchars($payment['full_name']); ?><br><small><?php echo htmlspecialchars($payment['admission_number']); ?></small></td>
                                     <td><?php echo number_format($payment['amount'], 2); ?></td>
                                     <td><?php echo htmlspecialchars($payment['payment_date']); ?></td>
                                     <td><?php echo htmlspecialchars($payment['payment_method']); ?></td>

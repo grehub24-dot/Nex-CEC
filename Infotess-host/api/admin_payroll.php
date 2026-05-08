@@ -146,31 +146,7 @@ $pending_count = count(array_filter($payroll_records, fn($r) => $r['status'] ===
 </head>
 <body>
     <div class="dashboard-container">
-        <aside class="sidebar">
-            <div class="sidebar-header" style="text-align: center; padding: 20px 10px;">
-                <img src="../images/school-logo.png" alt="Logo" style="width: 80px; height: 80px; margin-bottom: 10px; border-radius: 50%; background: #fff; padding: 5px;" onerror="this.src='../images/aamusted.jpg'">
-                <h3><?php echo htmlspecialchars($school_name); ?> Admin</h3>
-            </div>
-                        <ul class="sidebar-menu">
-                <li><a href="dashboard.php"><i class="fas fa-home"></i> Dashboard</a></li>
-                <li><a href="students.php"><i class="fas fa-user-graduate"></i> Students</a></li>
-                <li><a href="staff.php"><i class="fas fa-chalkboard-teacher"></i> Staff</a></li>
-                <li><a href="payments.php"><i class="fas fa-money-bill-wave"></i> Payments</a></li>
-                <li><a href="fees.php"><i class="fas fa-list-alt"></i> Fee Structure</a></li>
-                <li><a href="payroll.php"><i class="fas fa-file-invoice-dollar"></i> Payroll</a></li>
-                <li><a href="salary.php"><i class="fas fa-money-check-alt"></i> Salary Structures</a></li>
-                <li><a href="grades.php"><i class="fas fa-clipboard-list"></i> SBA / Grades</a></li>
-                <li><a href="attendance.php"><i class="fas fa-user-check"></i> Attendance</a></li>
-                <li><a href="reports.php"><i class="fas fa-chart-bar"></i> Reports</a></li>
-                <li><a href="verify.php"><i class="fas fa-qrcode"></i> Verify Receipt</a></li>
-                <li><a href="users.php"><i class="fas fa-users-cog"></i> User Management</a></li>
-                <li><a href="messaging.php"><i class="fas fa-envelope"></i> Messaging</a></li>
-                <li><a href="inbox.php"><i class="fas fa-inbox"></i> Inbox</a></li>
-                <li><a href="module_settings.php"><i class="fas fa-cogs"></i> Module Settings</a></li>
-                <li><a href="settings.php"><i class="fas fa-tools"></i> System Settings</a></li>
-                <li><a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
-            </ul>
-        </aside>
+            <?php echo renderSidebar('payroll', $school_name); ?>
 
         <main class="main-content">
             <div class="top-bar">

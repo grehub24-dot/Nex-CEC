@@ -45,7 +45,7 @@ $routes = [
 ];
 
 // Admin routes
-$adminPages = ['dashboard','students','staff','edit_staff','payments','fees','payroll','pay_slip','salary','grades','attendance','staff_attendance','reports','settings','users','edit_student','inbox','messaging','module_settings','verify','bulk_import'];
+$adminPages = ['dashboard','students','staff','edit_staff','payments','fees','payroll','pay_slip','salary','grades','attendance','staff_attendance','reports','settings','users','edit_student','inbox','messaging','module_settings','verify','bulk_import','enrollments'];
 foreach ($adminPages as $page) {
     $routes["admin/$page.php"] = "admin_$page.php";
 }

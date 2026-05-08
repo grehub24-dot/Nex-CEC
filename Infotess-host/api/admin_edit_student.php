@@ -209,16 +209,32 @@ if (!$student) {
                         <input type="text" name="full_name" class="form-control" value="<?php echo htmlspecialchars($student['full_name'] ?? ''); ?>" required>
                     </div>
                     <div class="form-group">
-                        <label>Index Number</label>
-                        <input type="text" name="index_number" class="form-control" value="<?php echo htmlspecialchars($student['index_number'] ?? ''); ?>" required>
+                        <label>Admission Number</label>
+                        <input type="text" name="index_number" class="form-control" value="<?php echo htmlspecialchars($student['index_number'] ?? ''); ?>" readonly style="background:#f0f0f0; cursor:not-allowed;">
+                    </div>
+                    <div class="form-group">
+                        <label>Enrollment ID</label>
+                        <input type="text" class="form-control" value="<?php echo htmlspecialchars($student['enrollment_id'] ?? 'N/A'); ?>" readonly style="background:#f0f0f0; cursor:not-allowed;">
                     </div>
                     <div class="form-group">
                         <label>Class</label>
                         <select name="class_name" class="form-control" required>
-                            <option value="">-- Select --</option>
-                            <?php foreach (['Creche','Nursery','KG 1','KG 2','Basic 1','Basic 2','Basic 3','Basic 4','Basic 5','Basic 6','JHS 1','JHS 2','JHS 3'] as $c): ?>
-                                <option value="<?php echo $c; ?>" <?php echo ($student['class_name'] ?? '') === $c ? 'selected' : ''; ?>><?php echo $c; ?></option>
-                            <?php endforeach; ?>
+                            <option value="">-- Select Class --</option>
+                            <optgroup label="Early Childhood">
+                                <?php foreach (['Creche','Nursery','KG 1','KG 2'] as $c): ?>
+                                    <option value="<?php echo $c; ?>" <?php echo ($student['class_name'] ?? '') === $c ? 'selected' : ''; ?>><?php echo $c; ?></option>
+                                <?php endforeach; ?>
+                            </optgroup>
+                            <optgroup label="Primary">
+                                <?php foreach (['Basic 1','Basic 2','Basic 3','Basic 4','Basic 5','Basic 6'] as $c): ?>
+                                    <option value="<?php echo $c; ?>" <?php echo ($student['class_name'] ?? '') === $c ? 'selected' : ''; ?>><?php echo $c; ?></option>
+                                <?php endforeach; ?>
+                            </optgroup>
+                            <optgroup label="Junior High School">
+                                <?php foreach (['JHS 1','JHS 2','JHS 3'] as $c): ?>
+                                    <option value="<?php echo $c; ?>" <?php echo ($student['class_name'] ?? '') === $c ? 'selected' : ''; ?>><?php echo $c; ?></option>
+                                <?php endforeach; ?>
+                            </optgroup>
                         </select>
                     </div>
                     <div class="form-group">
@@ -242,17 +258,13 @@ if (!$student) {
                         <input type="text" name="nationality" class="form-control" value="<?php echo htmlspecialchars($student['nationality'] ?? 'Ghanaian'); ?>">
                     </div>
                     <div class="form-group">
-                        <label>Hometown</label>
-                        <input type="text" name="hometown" class="form-control" value="<?php echo htmlspecialchars($student['hometown'] ?? ''); ?>">
-                    </div>
-                    <div class="form-group">
                         <label>Place of Residence</label>
                         <input type="text" name="address" class="form-control" value="<?php echo htmlspecialchars($student['address'] ?? ''); ?>">
                     </div>
 
                     <!-- Guardian Details -->
                     <div class="section-divider" style="grid-column: span 2; border-top: 1px solid #eee; padding-top: 15px; margin-top: 10px;">
-                        <h4><i class="fas fa-user-shield"></i> Parent / Guardian Details</h4>
+                        <h4><i class="fas fa-user-shield"></i> Guardian Details</h4>
                     </div>
 
                     <div class="form-group">
@@ -260,7 +272,7 @@ if (!$student) {
                         <input type="text" name="guardian_name" class="form-control" value="<?php echo htmlspecialchars($student['guardian_name'] ?? ''); ?>">
                     </div>
                     <div class="form-group">
-                        <label>Relationship to Child</label>
+                        <label>Relationship</label>
                         <select name="guardian_relationship" class="form-control">
                             <option value="">-- Select --</option>
                             <?php foreach (['Father','Mother','Guardian','Uncle','Aunt','Grandparent','Sibling','Other'] as $r): ?>
@@ -269,7 +281,7 @@ if (!$student) {
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Guardian Email <span style="color:red;">(for receipts)</span></label>
+                        <label>Guardian Email</label>
                         <input type="email" name="guardian_email" class="form-control" value="<?php echo htmlspecialchars($student['guardian_email'] ?? $student['email'] ?? ''); ?>">
                     </div>
                     <div class="form-group">
@@ -277,7 +289,7 @@ if (!$student) {
                         <input type="text" name="guardian_occupation" class="form-control" value="<?php echo htmlspecialchars($student['guardian_occupation'] ?? ''); ?>">
                     </div>
                     <div class="form-group">
-                        <label>Primary Phone <span style="color:red;">(for SMS)</span></label>
+                        <label>Primary Phone</label>
                         <input type="text" name="guardian_phone_primary" class="form-control" value="<?php echo htmlspecialchars($student['guardian_phone_primary'] ?? ''); ?>">
                     </div>
                     <div class="form-group">
@@ -285,7 +297,7 @@ if (!$student) {
                         <input type="text" name="guardian_phone_emergency" class="form-control" value="<?php echo htmlspecialchars($student['guardian_phone_emergency'] ?? ''); ?>">
                     </div>
                     <div class="form-group" style="grid-column: span 2;">
-                        <label>Residence</label>
+                        <label>Guardian Address</label>
                         <input type="text" name="guardian_address" class="form-control" value="<?php echo htmlspecialchars($student['guardian_address'] ?? ''); ?>">
                     </div>
 
@@ -325,12 +337,17 @@ if (!$student) {
                         <input type="text" name="previous_class" class="form-control" value="<?php echo htmlspecialchars($student['previous_class'] ?? ''); ?>">
                     </div>
                     <div class="form-group">
-                        <label>Admission Date</label>
-                        <input type="date" name="admission_date" class="form-control" value="<?php echo htmlspecialchars($student['admission_date'] ?? ''); ?>">
-                    </div>
-                    <div class="form-group">
                         <label>Academic Year</label>
-                        <input type="text" name="academic_year" class="form-control" value="<?php echo htmlspecialchars($student['academic_year'] ?? ''); ?>">
+                        <select name="academic_year" class="form-control">
+                            <?php
+                            $curr = (int)date('Y');
+                            for ($y = $curr + 1; $y >= $curr - 2; $y--) {
+                                $val = ($y-1) . '/' . $y;
+                                $sel = ($student['academic_year'] ?? '') === $val ? 'selected' : '';
+                                echo "<option value=\"$val\" $sel>$val</option>";
+                            }
+                            ?>
+                        </select>
                     </div>
                     
                     <div style="grid-column: span 2; margin-top: 20px;">

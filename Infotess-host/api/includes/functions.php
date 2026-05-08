@@ -145,7 +145,7 @@ function getSidebarMenu($currentPage = '') {
     ];
     
     if ($isFullAdmin) {
-        $menu[] = ['href' => 'admin_enrollments.php', 'icon' => 'fas fa-file-signature', 'label' => 'Enrollments'];
+        $menu[] = ['href' => 'enrollments.php', 'icon' => 'fas fa-file-signature', 'label' => 'Enrollments'];
         $menu[] = ['href' => 'staff.php', 'icon' => 'fas fa-chalkboard-teacher', 'label' => 'Staff'];
     }
     

@@ -24,7 +24,7 @@ if (isset($_GET['action']) && isset($_GET['id'])) {
         $pdo->prepare("UPDATE students SET status = 'rejected' WHERE id = ?")->execute([$id]);
         $message = "Enrollment rejected.";
     }
-    header("Location: admin_enrollments.php?filter=" . ($_GET['filter'] ?? 'pending') . "&search=" . urlencode($_GET['search'] ?? ''));
+    header("Location: enrollments.php?filter=" . ($_GET['filter'] ?? 'pending') . "&search=" . urlencode($_GET['search'] ?? ''));
     exit;
 }
 
@@ -147,7 +147,7 @@ $enrollments = $stmt->fetchAll();
                         <a href="?filter=rejected" class="<?php echo $filter === 'rejected' ? 'active' : ''; ?>">Rejected</a>
                         <a href="?filter=all" class="<?php echo $filter === 'all' ? 'active' : ''; ?>">All</a>
                     </div>
-                    <form action="admin_enrollments.php" method="GET" style="display:flex; gap:10px;">
+                    <form action="enrollments.php" method="GET" style="display:flex; gap:10px;">
                         <input type="hidden" name="filter" value="<?php echo htmlspecialchars($filter); ?>">
                         <input type="text" name="search" placeholder="Search name or admission #..." class="form-control" value="<?php echo htmlspecialchars($search); ?>">
                         <button type="submit" class="btn-login"><i class="fas fa-search"></i></button>

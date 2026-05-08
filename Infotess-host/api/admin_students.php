@@ -462,8 +462,12 @@ $total_pages = ceil($total_rows / $limit);
                             <input type="date" name="date_of_birth" class="form-control">
                         </div>
                         <div>
-                            <label>Place of Residence</label>
-                            <input type="text" name="address" class="form-control" placeholder="e.g. Kumasi">
+                            <label>Place of Birth</label>
+                            <input type="text" name="place_of_birth" class="form-control" placeholder="e.g. Kumasi">
+                        </div>
+                        <div>
+                            <label>Nationality</label>
+                            <input type="text" name="nationality" class="form-control" value="Ghanaian" placeholder="e.g. Ghanaian">
                         </div>
                         <div>
                             <label>Place of Residence</label>
@@ -472,15 +476,15 @@ $total_pages = ceil($total_rows / $limit);
 
                         <!-- Guardian Section -->
                         <div class="section-divider" style="grid-column: span 2; border-top: 1px solid #eee; padding-top: 15px; margin-top: 10px;">
-                            <h4><i class="fas fa-user-shield"></i> Parent / Guardian Details <span style="font-weight:400; font-size:0.85rem; color:#666;">(Email &amp; SMS will be sent here)</span></h4>
+                            <h4><i class="fas fa-user-shield"></i> Guardian Details</h4>
                         </div>
 
                         <div>
-                            <label>Guardian Full Name *</label>
+                            <label>Guardian Name *</label>
                             <input type="text" name="guardian_name" class="form-control" required placeholder="e.g. Mr. Asante">
                         </div>
                         <div>
-                            <label>Relationship to Child *</label>
+                            <label>Relationship *</label>
                             <select name="guardian_relationship" class="form-control" required>
                                 <option value="">-- Select --</option>
                                 <option value="Father">Father</option>
@@ -494,7 +498,7 @@ $total_pages = ceil($total_rows / $limit);
                             </select>
                         </div>
                         <div>
-                            <label>Guardian Email * <span style="color:red;">(for receipts)</span></label>
+                            <label>Guardian Email *</label>
                             <input type="email" name="guardian_email" class="form-control" required placeholder="parent@email.com">
                         </div>
                         <div>
@@ -502,7 +506,7 @@ $total_pages = ceil($total_rows / $limit);
                             <input type="text" name="guardian_occupation" class="form-control" placeholder="e.g. Teacher">
                         </div>
                         <div>
-                            <label>Primary Phone * <span style="color:red;">(for SMS)</span></label>
+                            <label>Primary Phone *</label>
                             <input type="text" name="guardian_phone_primary" class="form-control" required placeholder="e.g. 0241234567">
                         </div>
                         <div>
@@ -510,7 +514,7 @@ $total_pages = ceil($total_rows / $limit);
                             <input type="text" name="guardian_phone_emergency" class="form-control" placeholder="Fallback contact">
                         </div>
                         <div style="grid-column: span 2;">
-                            <label>Residence</label>
+                            <label>Guardian Address</label>
                             <input type="text" name="guardian_address" class="form-control" placeholder="Guardian residential/work address">
                         </div>
 

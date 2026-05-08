@@ -183,17 +183,11 @@ BEGIN
         ALTER TABLE users ADD CONSTRAINT users_email_key UNIQUE (email);
     END IF;
     
-    -- payments table
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'payments_receipt_number_key' AND conrelid = 'payments'::regclass) THEN
-        ALTER TABLE payments ADD CONSTRAINT payments_receipt_number_key UNIQUE (receipt_number);
-    END IF;
-    
-    -- staff table
+    -- payments: unique constraint already defined in CREATE TABLE above
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'staff_staff_id_key' AND conrelid = 'staff'::regclass) THEN
+        DELETE FROM staff a USING staff b
+            WHERE a.id > b.id AND a.staff_id IS NOT NULL AND a.staff_id = b.staff_id;
         ALTER TABLE staff ADD CONSTRAINT staff_staff_id_key UNIQUE (staff_id);
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'staff_email_key' AND conrelid = 'staff'::regclass) THEN
-        ALTER TABLE staff ADD CONSTRAINT staff_email_key UNIQUE (email);
     END IF;
     
     -- system_settings table
@@ -203,11 +197,21 @@ BEGIN
     
     -- terms table
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'terms_academic_year_name_key' AND conrelid = 'terms'::regclass) THEN
+        -- Fix duplicates in terms first (keep first occurrence by id)
+        DELETE FROM terms a USING terms b
+            WHERE a.id > b.id
+            AND a.academic_year = b.academic_year
+            AND a.name = b.name;
+        -- Now safe to add constraint
         ALTER TABLE terms ADD CONSTRAINT terms_academic_year_name_key UNIQUE (academic_year, name);
     END IF;
     
     -- subjects table
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'subjects_name_class_id_key' AND conrelid = 'subjects'::regclass) THEN
+        DELETE FROM subjects a USING subjects b
+            WHERE a.id > b.id
+            AND a.name = b.name
+            AND (a.class_id = b.class_id OR (a.class_id IS NULL AND b.class_id IS NULL));
         ALTER TABLE subjects ADD CONSTRAINT subjects_name_class_id_key UNIQUE (name, class_id);
     END IF;
     

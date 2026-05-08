@@ -210,6 +210,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
+// Handle Student Deletion
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete_student') {
+    $studentId = (int)$_POST['student_id'];
+    $studentName = sanitize($_POST['student_name'] ?? 'this student');
+
+    try {
+        // Get user_id before deleting student
+        $stmt = $pdo->prepare("SELECT user_id FROM students WHERE id = ?");
+        $stmt->execute([$studentId]);
+        $userId = $stmt->fetchColumn();
+
+        $pdo->beginTransaction();
+        // Delete the student record
+        $pdo->prepare("DELETE FROM students WHERE id = ?")->execute([$studentId]);
+
+        // Delete the associated user account (if exists)
+        if ($userId) {
+            $pdo->prepare("DELETE FROM users WHERE id = ?")->execute([$userId]);
+        }
+
+        $pdo->commit();
+        $message = "Student \"$studentName\" has been deleted successfully.";
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        $error = "Error deleting student: " . $e->getMessage();
+    }
+}
+
 // Pagination settings
 $limit = 10;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
@@ -554,7 +582,7 @@ $total_pages = ceil($total_rows / $limit);
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
                     <h3>Registered Students</h3>
                     <form action="students.php" method="GET" style="display:flex; gap:10px;">
-                        <input type="text" name="search" placeholder="Search name or index..." class="form-control" value="<?php echo htmlspecialchars($search); ?>">
+                        <input type="text" name="search" placeholder="Search name or admission number..." class="form-control" value="<?php echo htmlspecialchars($search); ?>">
                         <button type="submit" class="btn-login"><i class="fas fa-search"></i></button>
                     </form>
                 </div>
@@ -564,7 +592,7 @@ $total_pages = ceil($total_rows / $limit);
                         <thead>
                             <tr>
                                 <th>Photo</th>
-                                <th>Index</th>
+                                <th>Adm. No.</th>
                                 <th>Name</th>
                                 <th>Class</th>
                                 <th>Gender</th>
@@ -599,6 +627,7 @@ $total_pages = ceil($total_rows / $limit);
                                 <td><small><?php echo htmlspecialchars($student['academic_year'] ?? '-'); ?></small></td>
                                 <td>
                                     <a href="edit_student.php?id=<?php echo $student['id']; ?>" class="btn-login" style="background:#f0ad4e;">Edit</a>
+                                    <button type="button" class="btn-login" style="background:#e74c3c; color:#fff; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:12px;" onclick="showDeleteConfirm(<?php echo $student['id']; ?>, '<?php echo htmlspecialchars(addslashes($student['full_name']), ENT_QUOTES, 'UTF-8'); ?>')"><i class="fas fa-trash"></i> Delete</button>
                                 </td>
                             </tr>
                             <?php endforeach; ?>
@@ -627,6 +656,34 @@ $total_pages = ceil($total_rows / $limit);
     </div>
 
     <script>
+        // ========================================
+        // DELETE CONFIRMATION MODAL
+        // ========================================
+        function showDeleteConfirm(studentId, studentName) {
+            document.getElementById('deleteStudentId').value = studentId;
+            document.getElementById('deleteStudentName').textContent = studentName;
+            document.getElementById('deleteStudentForm').action = 'students.php';
+            document.getElementById('deleteConfirmModal').style.display = 'block';
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('deleteConfirmModal').style.display = 'none';
+        }
+
+        // Close modal on backdrop click
+        document.addEventListener('click', function(e) {
+            var modal = document.getElementById('deleteConfirmModal');
+            if (e.target === modal) closeDeleteModal();
+        });
+
+        // Close modal on Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeDeleteModal();
+        });
+
+        // ========================================
+        // ADD STUDENT MODAL
+        // ========================================
         // Force close any stuck modal on load
         document.addEventListener('DOMContentLoaded', function() {
             const modal = document.getElementById("studentModal");
@@ -665,5 +722,58 @@ $total_pages = ceil($total_rows / $limit);
             });
         }
     </script>
+
+    <!-- ========================================
+         DELETE CONFIRMATION MODAL
+         ======================================== -->
+    <div id="deleteConfirmModal" style="display:none; position:fixed; z-index:2000; left:0; top:0; width:100%; height:100%; background-color:rgba(0,0,0,0.5);">
+        <div style="background:#fff; margin:10% auto; padding:0; width:90%; max-width:500px; border-radius:10px; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.3); border-top:5px solid #e74c3c;">
+            <!-- Warning Header -->
+            <div style="background:#e74c3c; padding:20px 24px; display:flex; align-items:center; gap:12px;">
+                <i class="fas fa-exclamation-triangle" style="font-size:28px; color:#fff;"></i>
+                <div>
+                    <div style="font-size:18px; font-weight:700; color:#fff; margin:0;">Delete Student Record</div>
+                    <div style="font-size:12px; color:rgba(255,255,255,0.8); margin:4px 0 0 0;">This action cannot be undone</div>
+                </div>
+            </div>
+
+            <!-- Modal Body -->
+            <div style="padding:24px;">
+                <!-- Warning Badge -->
+                <div style="background:#fef3cd; border:1px solid #ffc107; border-radius:8px; padding:14px 16px; margin-bottom:20px; display:flex; align-items:flex-start; gap:10px;">
+                    <i class="fas fa-exclamation-circle" style="color:#856404; font-size:20px; margin-top:2px; flex-shrink:0;"></i>
+                    <div style="font-size:13px; color:#856404; line-height:1.5;">
+                        <strong>You are about to permanently delete:</strong><br>
+                        <span id="deleteStudentName" style="font-weight:700; font-size:15px;"></span><br>
+                        This will also remove the guardian's login account and cannot be recovered.
+                    </div>
+                </div>
+
+                <!-- Warning Points -->
+                <ul style="font-size:13px; color:#6c757d; padding-left:18px; margin:0 0 24px 0; line-height:1.8;">
+                    <li>All academic records (grades, attendance, report cards) will be lost</li>
+                    <li>Payment history for this student will be affected</li>
+                    <li>The guardian will no longer be able to access the parent portal</li>
+                    <li>This student will be removed from all classes and groups</li>
+                </ul>
+
+                <!-- Actions -->
+                <div style="display:flex; gap:12px; justify-content:flex-end;">
+                    <button type="button" onclick="closeDeleteModal()" style="padding:10px 24px; background:#f8f9fa; color:#495057; border:1px solid #dee2e6; border-radius:6px; cursor:pointer; font-size:14px; font-weight:600;">
+                        <i class="fas fa-times"></i>&nbsp; Cancel
+                    </button>
+                    <form id="deleteStudentForm" method="POST" style="margin:0;">
+                        <input type="hidden" name="action" value="delete_student">
+                        <input type="hidden" name="student_id" id="deleteStudentId" value="">
+                        <input type="hidden" name="student_name" id="deleteStudentNameHidden" value="">
+                        <button type="submit" onclick="document.getElementById('deleteStudentNameHidden').value = document.getElementById('deleteStudentName').textContent;" style="padding:10px 24px; background:#dc3545; color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:14px; font-weight:600;">
+                            <i class="fas fa-trash"></i>&nbsp; Delete Student
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>

@@ -176,7 +176,7 @@ if (!$student) {
         <main class="main-content">
             <div class="top-bar">
                 <h2>Edit Student</h2>
-                <a href="students.php" class="btn-secondary">Back to List</a>
+                <a href="students.php" class="btn-secondary" style="display:inline-block; padding:8px 20px; background:linear-gradient(135deg,#4b5563,#374151); color:#fff; text-decoration:none; border-radius:6px; font-size:14px; font-weight:600; border:1px solid rgba(31,41,55,0.35); box-shadow:0 2px 6px rgba(55,65,81,0.2);"><i class="fas fa-arrow-left"></i> Back to List</a>
             </div>
 
             <?php if ($message): ?>

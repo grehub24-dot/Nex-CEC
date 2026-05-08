@@ -156,7 +156,11 @@ BEGIN
         ALTER TABLE students ADD COLUMN enrollment_type VARCHAR(20) DEFAULT 'admin';
     END IF;
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'students' AND column_name = 'enrollment_id') THEN
-        ALTER TABLE students ADD COLUMN enrollment_id VARCHAR(20) UNIQUE;
+        ALTER TABLE students ADD COLUMN enrollment_id VARCHAR(20);
+    END IF;
+    -- Add UNIQUE constraint on enrollment_id (skip if already exists)
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'students_enrollment_id_key' AND conrelid = 'students'::regclass) THEN
+        ALTER TABLE students ADD CONSTRAINT students_enrollment_id_key UNIQUE (enrollment_id);
     END IF;
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'students' AND column_name = 'payment_status') THEN
         ALTER TABLE students ADD COLUMN payment_status VARCHAR(20) DEFAULT 'unpaid';
@@ -220,29 +224,6 @@ CREATE TABLE IF NOT EXISTS payments (
     enrollment_id VARCHAR(20),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
-
--- Add payments columns if table already exists but is missing them
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'payments' AND column_name = 'amount') THEN
-        ALTER TABLE payments ADD COLUMN amount NUMERIC(10,2) DEFAULT 0;
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'payments' AND column_name = 'status') THEN
-        ALTER TABLE payments ADD COLUMN status VARCHAR(20) DEFAULT 'completed';
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'payments' AND column_name = 'enrollment_id') THEN
-        ALTER TABLE payments ADD COLUMN enrollment_id VARCHAR(20);
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'payments' AND column_name = 'fee_type') THEN
-        ALTER TABLE payments ADD COLUMN fee_type VARCHAR(50);
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'payments' AND column_name = 'academic_year') THEN
-        ALTER TABLE payments ADD COLUMN academic_year VARCHAR(20);
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'payments' AND column_name = 'semester') THEN
-        ALTER TABLE payments ADD COLUMN semester VARCHAR(20);
-    END IF;
-END $$;
 
 -- 5. Messaging Tables
 CREATE TABLE IF NOT EXISTS messages (

@@ -18,8 +18,14 @@ if (isset($_GET['action']) && isset($_GET['id'])) {
     $id = (int)$_GET['id'];
     $action = $_GET['action'];
     if ($action === 'approve') {
-        $pdo->prepare("UPDATE students SET status = 'enrolled' WHERE id = ?")->execute([$id]);
-        $message = "Enrollment approved successfully!";
+        // Assign admission number
+        $today = date('ymd');
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM students WHERE admission_number LIKE ?");
+        $stmt->execute(["CEC-{$today}-%"]);
+        $counter = str_pad($stmt->fetchColumn() + 1, 3, '0', STR_PAD_LEFT);
+        $admissionNumber = "CEC-{$today}-{$counter}";
+        $pdo->prepare("UPDATE students SET admission_number = ?, status = 'enrolled' WHERE id = ?")->execute([$admissionNumber, $id]);
+        $message = "Enrollment approved! Admission Number: $admissionNumber";
     } elseif ($action === 'reject') {
         $pdo->prepare("UPDATE students SET status = 'rejected' WHERE id = ?")->execute([$id]);
         $message = "Enrollment rejected.";
@@ -29,9 +35,9 @@ if (isset($_GET['action']) && isset($_GET['id'])) {
 }
 
 // Fetch stats
-$pendingCount = $pdo->query("SELECT COUNT(*) FROM students WHERE status = 'pending'")->fetchColumn();
-$enrolledToday = $pdo->query("SELECT COUNT(*) FROM students WHERE status = 'enrolled' AND DATE(admission_date) = CURRENT_DATE")->fetchColumn();
-$totalEnrolled = $pdo->query("SELECT COUNT(*) FROM students WHERE status = 'enrolled'")->fetchColumn();
+$pendingCount = $pdo->query("SELECT COUNT(*) FROM students WHERE status IN ('pending','Active') AND admission_number IS NULL")->fetchColumn();
+$enrolledToday = $pdo->query("SELECT COUNT(*) FROM students WHERE (status = 'enrolled' OR status = 'Active') AND DATE(admission_date) = CURRENT_DATE")->fetchColumn();
+$totalEnrolled = $pdo->query("SELECT COUNT(*) FROM students WHERE status = 'enrolled' OR status = 'Active'")->fetchColumn();
 $rejectedCount = $pdo->query("SELECT COUNT(*) FROM students WHERE status = 'rejected'")->fetchColumn();
 
 // Fetch enrollments based on filter
@@ -42,17 +48,28 @@ $query = "SELECT * FROM students";
 $params = [];
 $where = [];
 
-if ($filter !== 'all') {
-    $where[] = "status = ?";
-    $params[] = $filter;
+if ($filter === 'pending') {
+    // Show students without admission_number (online enrollment not yet confirmed)
+    $where[] = "admission_number IS NULL";
+} elseif ($filter === 'enrolled') {
+    $where[] = "admission_number IS NOT NULL AND status != 'rejected'";
+} elseif ($filter === 'rejected') {
+    $where[] = "status = 'rejected'";
 } else {
-    $where[] = "status IN ('pending', 'enrolled', 'rejected')";
+    // All — show everything except fully deleted records
+    $where[] = "status != 'inactive'";
 }
 
 if ($search) {
-    $where[] = "(full_name LIKE ? OR admission_number LIKE ?)";
-    $params[] = "%$search%";
-    $params[] = "%$search%";
+    if ($filter === 'pending') {
+        // Pending students don't have admission_number yet — search by name only
+        $where[] = "full_name LIKE ?";
+        $params[] = "%$search%";
+    } else {
+        $where[] = "(full_name LIKE ? OR admission_number LIKE ?)";
+        $params[] = "%$search%";
+        $params[] = "%$search%";
+    }
 }
 
 if (!empty($where)) {
@@ -182,7 +199,7 @@ $enrollments = $stmt->fetchAll();
                                     <td><?php echo $en['admission_date'] ? date('n/j/Y', strtotime($en['admission_date'])) : '-'; ?></td>
                                     <td><span class="status-badge <?php echo $en['status']; ?>"><?php echo ucfirst($en['status']); ?></span></td>
                                     <td>
-                                        <?php if ($en['status'] === 'pending'): ?>
+                                        <?php if (empty($en['admission_number'])): ?>
                                             <a href="?action=approve&id=<?php echo $en['id']; ?>&filter=<?php echo $filter; ?>&search=<?php echo urlencode($search); ?>" class="btn-approve" onclick="return confirm('Approve this enrollment?')">Approve</a>
                                             <a href="?action=reject&id=<?php echo $en['id']; ?>&filter=<?php echo $filter; ?>&search=<?php echo urlencode($search); ?>" class="btn-reject" onclick="return confirm('Reject this enrollment?')">Reject</a>
                                         <?php endif; ?>

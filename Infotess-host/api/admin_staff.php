@@ -174,9 +174,12 @@ $total_pages = ceil($total_rows / $limit);
             <!-- Staff Stats -->
             <div class="stat-cards" style="margin-bottom: 30px;">
                 <?php
+                // Clean up duplicate staff rows (keep oldest per staff_id), run once per page load for safety
+                $pdo->exec("DELETE FROM staff a USING staff b WHERE a.id > b.id AND a.staff_id = b.staff_id");
                 $total_staff = (int)$pdo->query("SELECT COUNT(*) FROM staff")->fetchColumn();
                 $active_staff = (int)$pdo->query("SELECT COUNT(*) FROM staff WHERE status = 'active'")->fetchColumn();
-                $teachers = (int)$pdo->query("SELECT COUNT(*) FROM staff WHERE position LIKE '%Teacher%' OR position LIKE '%Instructor%'")->fetchColumn();
+                $non_teachers = (int)$pdo->query("SELECT COUNT(*) FROM staff WHERE position NOT LIKE '%Teacher%' AND position NOT LIKE '%Instructor%' AND position NOT LIKE '%Head%'")->fetchColumn();
+                $teachers = $total_staff - $non_teachers;
                 ?>
                 <div class="stat-card">
                     <div class="stat-icon"><i class="fas fa-users"></i></div>
@@ -189,6 +192,10 @@ $total_pages = ceil($total_rows / $limit);
                 <div class="stat-card">
                     <div class="stat-icon"><i class="fas fa-chalkboard" style="color: #f39c12;"></i></div>
                     <div class="stat-details"><h3><?php echo $teachers; ?></h3><p>Teachers</p></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-user-cog" style="color: #8e44ad;"></i></div>
+                    <div class="stat-details"><h3><?php echo $non_teachers; ?></h3><p>Non-Teaching Staff</p></div>
                 </div>
             </div>
 

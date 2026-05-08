@@ -172,14 +172,20 @@ BEGIN
         ALTER TABLE students ADD CONSTRAINT students_enrollment_id_key UNIQUE (enrollment_id);
     END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'students_index_number_key' AND conrelid = 'students'::regclass) THEN
+        DELETE FROM students a USING students b
+            WHERE a.id > b.id AND a.index_number IS NOT NULL AND a.index_number = b.index_number;
         ALTER TABLE students ADD CONSTRAINT students_index_number_key UNIQUE (index_number);
     END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'students_user_id_key' AND conrelid = 'students'::regclass) THEN
+        DELETE FROM students a USING students b
+            WHERE a.id > b.id AND a.user_id IS NOT NULL AND a.user_id = b.user_id;
         ALTER TABLE students ADD CONSTRAINT students_user_id_key UNIQUE (user_id);
     END IF;
     
     -- users table
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'users_email_key' AND conrelid = 'users'::regclass) THEN
+        DELETE FROM users a USING users b
+            WHERE a.id > b.id AND a.email IS NOT NULL AND a.email = b.email;
         ALTER TABLE users ADD CONSTRAINT users_email_key UNIQUE (email);
     END IF;
     
@@ -189,9 +195,16 @@ BEGIN
             WHERE a.id > b.id AND a.staff_id IS NOT NULL AND a.staff_id = b.staff_id;
         ALTER TABLE staff ADD CONSTRAINT staff_staff_id_key UNIQUE (staff_id);
     END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'staff_email_key' AND conrelid = 'staff'::regclass) THEN
+        DELETE FROM staff a USING staff b
+            WHERE a.id > b.id AND a.email IS NOT NULL AND a.email = b.email;
+        ALTER TABLE staff ADD CONSTRAINT staff_email_key UNIQUE (email);
+    END IF;
     
     -- system_settings table
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'system_settings_setting_key_key' AND conrelid = 'system_settings'::regclass) THEN
+        DELETE FROM system_settings a USING system_settings b
+            WHERE a.id > b.id AND a.setting_key IS NOT NULL AND a.setting_key = b.setting_key;
         ALTER TABLE system_settings ADD CONSTRAINT system_settings_setting_key_key UNIQUE (setting_key);
     END IF;
     

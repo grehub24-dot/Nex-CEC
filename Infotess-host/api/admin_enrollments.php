@@ -38,12 +38,13 @@ if (isset($_GET['action']) && isset($_GET['id'])) {
 try {
     $totalStudents = (int)$pdo->query("SELECT COUNT(*) FROM students")->fetchColumn();
     $totalApproved  = (int)$pdo->query("SELECT COUNT(*) FROM students WHERE admission_number IS NOT NULL")->fetchColumn();
-    $totalRejected  = (int)$pdo->query("SELECT COUNT(*) FROM students WHERE status = 'rejected'")->fetchColumn();
+    $totalRejected = (int)$pdo->query("SELECT COUNT(*) FROM students WHERE status = 'rejected'")->fetchColumn();
+    $rejectedCount = $totalRejected;
     $pendingCount   = $totalStudents - $totalApproved;
     $enrolledToday  = (int)$pdo->query("SELECT COUNT(*) FROM students WHERE admission_date = CURRENT_DATE")->fetchColumn();
     $totalEnrolled  = $totalApproved - $totalRejected;
 } catch (Exception $e) {
-    $pendingCount = $totalApproved = $totalRejected = $enrolledToday = $totalEnrolled = 0;
+    $pendingCount = $rejectedCount = $totalApproved = $totalRejected = $enrolledToday = $totalEnrolled = 0;
 }
 
 $filter = $_GET['filter'] ?? 'pending';

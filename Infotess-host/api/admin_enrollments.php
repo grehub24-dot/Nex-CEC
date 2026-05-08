@@ -40,36 +40,31 @@ $enrolledToday = $pdo->query("SELECT COUNT(*) FROM students WHERE (status = 'enr
 $totalEnrolled = $pdo->query("SELECT COUNT(*) FROM students WHERE status = 'enrolled' OR status = 'Active'")->fetchColumn();
 $rejectedCount = $pdo->query("SELECT COUNT(*) FROM students WHERE status = 'rejected'")->fetchColumn();
 
-// Fetch enrollments based on filter
 $filter = $_GET['filter'] ?? 'pending';
 $search = $_GET['search'] ?? '';
 
+// Fetch enrollments based on filter — MUST match the stats queries above
 $query = "SELECT * FROM students";
 $params = [];
 $where = [];
 
 if ($filter === 'pending') {
-    // Show students without admission_number (online enrollment not yet confirmed)
-    $where[] = "admission_number IS NULL";
+    // Students created via online enrollment with no admission_number yet
+    $where[] = "status IN ('pending','Active') AND admission_number IS NULL";
 } elseif ($filter === 'enrolled') {
-    $where[] = "admission_number IS NOT NULL AND status != 'rejected'";
+    // Seed-data + admin-confirmed students with admission numbers
+    $where[] = "status IN ('enrolled','Active') AND admission_number IS NOT NULL";
 } elseif ($filter === 'rejected') {
     $where[] = "status = 'rejected'";
 } else {
-    // All — show everything except fully deleted records
+    // All — show everything except inactive
     $where[] = "status != 'inactive'";
 }
 
 if ($search) {
-    if ($filter === 'pending') {
-        // Pending students don't have admission_number yet — search by name only
-        $where[] = "full_name LIKE ?";
-        $params[] = "%$search%";
-    } else {
-        $where[] = "(full_name LIKE ? OR admission_number LIKE ?)";
-        $params[] = "%$search%";
-        $params[] = "%$search%";
-    }
+    $where[] = "(full_name LIKE ? OR admission_number LIKE ?)";
+    $params[] = "%$search%";
+    $params[] = "%$search%";
 }
 
 if (!empty($where)) {

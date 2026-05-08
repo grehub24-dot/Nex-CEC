@@ -162,6 +162,14 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'students_enrollment_id_key' AND conrelid = 'students'::regclass) THEN
         ALTER TABLE students ADD CONSTRAINT students_enrollment_id_key UNIQUE (enrollment_id);
     END IF;
+    -- Ensure users.email has unique constraint (for ON CONFLICT)
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'users_email_key' AND conrelid = 'users'::regclass) THEN
+        ALTER TABLE users ADD CONSTRAINT users_email_key UNIQUE (email);
+    END IF;
+    -- Ensure students.index_number has unique constraint
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'students_index_number_key' AND conrelid = 'students'::regclass) THEN
+        ALTER TABLE students ADD CONSTRAINT students_index_number_key UNIQUE (index_number);
+    END IF;
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'students' AND column_name = 'payment_status') THEN
         ALTER TABLE students ADD COLUMN payment_status VARCHAR(20) DEFAULT 'unpaid';
     END IF;
@@ -544,9 +552,13 @@ CREATE TABLE IF NOT EXISTS attendance_summary (
     UNIQUE(student_id, month, year)
 );
 
--- ==========================================
--- SYSTEM SETTINGS
--- ==========================================
+-- Ensure system_settings exists with unique constraint on setting_key
+CREATE TABLE IF NOT EXISTS system_settings (
+    id SERIAL PRIMARY KEY,
+    setting_key VARCHAR(100) UNIQUE NOT NULL,
+    setting_value TEXT,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
 -- Add school branding settings
 INSERT INTO system_settings (setting_key, setting_value) VALUES

@@ -120,7 +120,10 @@ $month_name = date('F', mktime(0, 0, 0, $payroll['month'], 1));
                 </tr>
                 <tr>
                     <td>Housing Allowance</td>
-                    <td style="text-align: right;"><?php echo number_format($payroll['total_allowances'] - (float)$payroll['transport_allowance'] - (float)$payroll['other_deductions'] > 0 ? ($payroll['total_allowances'] - (float)$payroll['transport_allowance'] - (float)$payroll['other_allowances'] + (float)$payroll['housing_allowance']) : 0; ?></td>
+                    <td style="text-align: right;"><?php
+                        $housing = (float)($payroll['housing_allowance'] ?? 0);
+                        echo number_format($housing, 2);
+                    ?></td>
                     <td>PAYE Tax</td>
                     <td style="text-align: right; color: #e74c3c;"><?php echo number_format($payroll['tax_deduction'], 2); ?></td>
                 </tr>

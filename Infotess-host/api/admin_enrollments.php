@@ -34,37 +34,46 @@ if (isset($_GET['action']) && isset($_GET['id'])) {
     exit;
 }
 
-// Fetch stats
-$pendingCount = $pdo->query("SELECT COUNT(*) FROM students WHERE status IN ('pending','Active') AND admission_number IS NULL")->fetchColumn();
-$enrolledToday = $pdo->query("SELECT COUNT(*) FROM students WHERE (status = 'enrolled' OR status = 'Active') AND DATE(admission_date) = CURRENT_DATE")->fetchColumn();
-$totalEnrolled = $pdo->query("SELECT COUNT(*) FROM students WHERE status = 'enrolled' OR status = 'Active'")->fetchColumn();
-$rejectedCount = $pdo->query("SELECT COUNT(*) FROM students WHERE status = 'rejected'")->fetchColumn();
+// Fetch stats — use simple counts the bridge handles correctly
+try {
+    $totalStudents = (int)$pdo->query("SELECT COUNT(*) FROM students")->fetchColumn();
+    $totalApproved  = (int)$pdo->query("SELECT COUNT(*) FROM students WHERE admission_number IS NOT NULL")->fetchColumn();
+    $totalRejected  = (int)$pdo->query("SELECT COUNT(*) FROM students WHERE status = 'rejected'")->fetchColumn();
+    $pendingCount   = $totalStudents - $totalApproved;
+    $enrolledToday  = (int)$pdo->query("SELECT COUNT(*) FROM students WHERE admission_date = CURRENT_DATE")->fetchColumn();
+    $totalEnrolled  = $totalApproved - $totalRejected;
+} catch (Exception $e) {
+    $pendingCount = $totalApproved = $totalRejected = $enrolledToday = $totalEnrolled = 0;
+}
 
 $filter = $_GET['filter'] ?? 'pending';
 $search = $_GET['search'] ?? '';
 
-// Fetch enrollments based on filter — MUST match the stats queries above
+// Fetch enrollments — WHERE clauses are limited by the Supabase bridge.
+// Workaround: fetch all, filter in PHP.
 $query = "SELECT * FROM students";
 $params = [];
 $where = [];
 
 if ($filter === 'pending') {
-    // Students created via online enrollment with no admission_number yet
-    $where[] = "status IN ('pending','Active') AND admission_number IS NULL";
+    $where[] = "admission_number IS NULL";
 } elseif ($filter === 'enrolled') {
-    // Seed-data + admin-confirmed students with admission numbers
-    $where[] = "status IN ('enrolled','Active') AND admission_number IS NOT NULL";
+    $where[] = "admission_number IS NOT NULL";
 } elseif ($filter === 'rejected') {
     $where[] = "status = 'rejected'";
 } else {
-    // All — show everything except inactive
-    $where[] = "status != 'inactive'";
+    $where[] = "id > 0";
 }
 
 if ($search) {
-    $where[] = "(full_name LIKE ? OR admission_number LIKE ?)";
-    $params[] = "%$search%";
-    $params[] = "%$search%";
+    if ($filter === 'pending') {
+        $where[] = "full_name LIKE ?";
+        $params[] = "%$search%";
+    } else {
+        $where[] = "(full_name LIKE ? OR admission_number LIKE ?)";
+        $params[] = "%$search%";
+        $params[] = "%$search%";
+    }
 }
 
 if (!empty($where)) {
@@ -74,7 +83,16 @@ $query .= " ORDER BY admission_date DESC";
 
 $stmt = $pdo->prepare($query);
 $stmt->execute($params);
-$enrollments = $stmt->fetchAll();
+$all_enrollments = $stmt->fetchAll();
+
+// Bridge limitation: complex WHERE clauses (IS NULL, IN, AND) may be dropped.
+// Fallback: filter in PHP to match what the user sees.
+$enrollments = array_filter($all_enrollments, function($s) use ($filter) {
+    if ($filter === 'pending')  return empty($s['admission_number']) && ($s['status'] ?? '') !== 'rejected';
+    if ($filter === 'enrolled') return !empty($s['admission_number']) && ($s['status'] ?? '') !== 'rejected';
+    if ($filter === 'rejected') return ($s['status'] ?? '') === 'rejected';
+    return true;
+});
 ?>
 <!DOCTYPE html>
 <html lang="en">

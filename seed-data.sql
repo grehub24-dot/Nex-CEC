@@ -16,7 +16,7 @@ INSERT INTO system_settings (setting_key, setting_value) VALUES
 ('current_term', '1'),
 ('next_term_begins', '2026-01-06'),
 ('school_logo', 'images/school-logo.png')
-ON CONFLICT (setting_key) DO NOTHING;
+ON CONFLICT ON CONSTRAINT system_settings_setting_key_key DO NOTHING;
 
 -- ==========================================
 -- 2. CLASSES (from migrate-all, ensure they exist)
@@ -35,7 +35,7 @@ INSERT INTO classes (name, level_group, sort_order) VALUES
 ('JHS 1', 'jhs', 10),
 ('JHS 2', 'jhs', 11),
 ('JHS 3', 'jhs', 12)
-ON CONFLICT (name) DO NOTHING;
+ON CONFLICT ON CONSTRAINT classes_name_key DO NOTHING;
 
 -- ==========================================
 -- 3. TERMS
@@ -44,24 +44,24 @@ INSERT INTO terms (name, academic_year, start_date, end_date, is_active) VALUES
 ('Term 1', '2025/2026', '2025-09-08', '2025-12-19', true),
 ('Term 2', '2025/2026', '2026-01-06', '2026-04-10', false),
 ('Term 3', '2025/2026', '2026-04-27', '2026-07-31', false)
-ON CONFLICT DO NOTHING;
+ON CONFLICT ON CONSTRAINT terms_academic_year_name_key DO NOTHING;
 
 -- ==========================================
 -- 4. SUBJECTS
 -- ==========================================
-INSERT INTO subjects (name, code) VALUES
-('English Language', 'ENG'),
-('Mathematics', 'MATH'),
-('Integrated Science', 'SCI'),
-('Social Studies', 'SST'),
-('French', 'FRE'),
-('Creative Arts & Design', 'CAD'),
-('Ghanaian Language (Twi)', 'GL'),
-('Computing', 'COMP'),
-('Physical Education', 'PE'),
-('Religious & Moral Education', 'RME'),
-('Career Technology', 'CT')
-ON CONFLICT (name) DO NOTHING;
+INSERT INTO subjects (name, code, class_id) VALUES
+('English Language', 'ENG', NULL),
+('Mathematics', 'MATH', NULL),
+('Integrated Science', 'SCI', NULL),
+('Social Studies', 'SST', NULL),
+('French', 'FRE', NULL),
+('Creative Arts & Design', 'CAD', NULL),
+('Ghanaian Language (Twi)', 'GL', NULL),
+('Computing', 'COMP', NULL),
+('Physical Education', 'PE', NULL),
+('Religious & Moral Education', 'RME', NULL),
+('Career Technology', 'CT', NULL)
+ON CONFLICT ON CONSTRAINT subjects_name_class_id_key DO NOTHING;
 
 -- ==========================================
 -- 5. USERS — Admin & Bursar
@@ -239,209 +239,209 @@ BEGIN
 SELECT id INTO uid FROM users WHERE email = 'guardian.kwame@parent.com';
 INSERT INTO students (user_id, full_name, enrollment_id, index_number, class_name, gender, date_of_birth, place_of_birth, nationality, address, guardian_name, guardian_email, guardian_relationship, guardian_phone_primary, guardian_phone_emergency, guardian_occupation, guardian_address, health_insurance_id, medical_conditions, allergies, special_needs, previous_school, previous_class, admission_date, academic_year, enrollment_type, payment_status, status)
 VALUES (uid, 'Kwame Junior Asante', 'ENR-2025-A1B2C3', 'CEC-250908-001', 'Creche', 'Male', '2022-05-10', 'Kumasi', 'Ghanaian', '15 Bantama', 'Mr. Kwame Asante Sr.', 'guardian.kwame@parent.com', 'Father', '0244111222', '0244111333', 'Trader', '15 Bantama High St', 'NHIS-1234567', '', 'None', '', '', '', '2025-09-08', '2025/2026', 'admin', 'paid', 'enrolled')
-ON CONFLICT (enrollment_id) DO NOTHING;
+ON CONFLICT ON CONSTRAINT students_enrollment_id_key DO NOTHING;
 
 SELECT id INTO uid FROM users WHERE email = 'guardian.abena@parent.com';
 INSERT INTO students (user_id, full_name, enrollment_id, index_number, class_name, gender, date_of_birth, place_of_birth, nationality, address, guardian_name, guardian_email, guardian_relationship, guardian_phone_primary, guardian_phone_emergency, guardian_occupation, guardian_address, health_insurance_id, medical_conditions, allergies, special_needs, previous_school, previous_class, admission_date, academic_year, enrollment_type, payment_status, status)
 VALUES (uid, 'Abena Grace Mensah', 'ENR-2025-D4E5F6', 'CEC-250908-002', 'Creche', 'Female', '2022-08-15', 'Kumasi', 'Ghanaian', '22 Ayeduase', 'Mrs. Abena Mensah', 'guardian.abena@parent.com', 'Mother', '0245222333', '0245222444', 'Nurse', '22 Ayeduase Rd', 'NHIS-2345678', '', 'None', '', '', '', '2025-09-08', '2025/2026', 'admin', 'paid', 'enrolled')
-ON CONFLICT (enrollment_id) DO NOTHING;
+ON CONFLICT ON CONSTRAINT students_enrollment_id_key DO NOTHING;
 
 SELECT id INTO uid FROM users WHERE email = 'guardian.kofi@parent.com';
 INSERT INTO students (user_id, full_name, enrollment_id, index_number, class_name, gender, date_of_birth, place_of_birth, nationality, address, guardian_name, guardian_email, guardian_relationship, guardian_phone_primary, guardian_phone_emergency, guardian_occupation, guardian_address, health_insurance_id, medical_conditions, allergies, special_needs, previous_school, previous_class, admission_date, academic_year, enrollment_type, payment_status, status)
 VALUES (uid, 'Kofi Owusu Jnr.', 'ENR-2025-G7H8I9', NULL, 'Creche', 'Male', '2022-11-20', 'Kumasi', 'Ghanaian', '8 Suame', 'Mr. Kofi Owusu Sr.', 'guardian.kofi@parent.com', 'Father', '0246333444', '0246333555', 'Mechanic', '8 Suame Magazine Rd', 'NHIS-3456789', '', 'Peanuts', '', '', '', '2025-09-08', '2025/2026', 'online', 'unpaid', 'pending')
-ON CONFLICT (enrollment_id) DO NOTHING;
+ON CONFLICT ON CONSTRAINT students_enrollment_id_key DO NOTHING;
 
 -- Nursery (3 students)
 SELECT id INTO uid FROM users WHERE email = 'guardian.ama@parent.com';
 INSERT INTO students (user_id, full_name, enrollment_id, index_number, class_name, gender, date_of_birth, place_of_birth, nationality, address, guardian_name, guardian_email, guardian_relationship, guardian_phone_primary, guardian_phone_emergency, guardian_occupation, guardian_address, health_insurance_id, medical_conditions, allergies, special_needs, previous_school, previous_class, admission_date, academic_year, enrollment_type, payment_status, status)
 VALUES (uid, 'Ama Serwaa Darko', 'ENR-2025-J1K2L3', 'CEC-250908-004', 'Nursery', 'Female', '2021-03-12', 'Kumasi', 'Ghanaian', '5 Roman Hill', 'Mrs. Ama Darko', 'guardian.ama@parent.com', 'Mother', '0247444555', '0247444666', 'Teacher', '5 Roman Hill', 'NHIS-4567890', 'Mild asthma', 'None', '', '', '', '2025-09-08', '2025/2026', 'admin', 'paid', 'enrolled')
-ON CONFLICT (enrollment_id) DO NOTHING;
+ON CONFLICT ON CONSTRAINT students_enrollment_id_key DO NOTHING;
 
 SELECT id INTO uid FROM users WHERE email = 'guardian.yaw@parent.com';
 INSERT INTO students (user_id, full_name, enrollment_id, index_number, class_name, gender, date_of_birth, place_of_birth, nationality, address, guardian_name, guardian_email, guardian_relationship, guardian_phone_primary, guardian_phone_emergency, guardian_occupation, guardian_address, health_insurance_id, medical_conditions, allergies, special_needs, previous_school, previous_class, admission_date, academic_year, enrollment_type, payment_status, status)
 VALUES (uid, 'Yaw Boateng Jnr.', 'ENR-2025-M4N5O6', 'CEC-250908-005', 'Nursery', 'Male', '2021-06-18', 'Kumasi', 'Ghanaian', '20 Oforikrom', 'Mr. Yaw Boateng Sr.', 'guardian.yaw@parent.com', 'Father', '0248555666', '0248555777', 'Farmer', '20 Oforikrom', 'NHIS-5678901', '', 'None', '', '', '', '2025-09-08', '2025/2026', 'admin', 'paid', 'enrolled')
-ON CONFLICT (enrollment_id) DO NOTHING;
+ON CONFLICT ON CONSTRAINT students_enrollment_id_key DO NOTHING;
 
 SELECT id INTO uid FROM users WHERE email = 'guardian.efua@parent.com';
 INSERT INTO students (user_id, full_name, enrollment_id, index_number, class_name, gender, date_of_birth, place_of_birth, nationality, address, guardian_name, guardian_email, guardian_relationship, guardian_phone_primary, guardian_phone_emergency, guardian_occupation, guardian_address, health_insurance_id, medical_conditions, allergies, special_needs, previous_school, previous_class, admission_date, academic_year, enrollment_type, payment_status, status)
 VALUES (uid, 'Efua Adjei', 'ENR-2025-P7Q8R9', NULL, 'Nursery', 'Female', '2021-09-25', 'Kumasi', 'Ghanaian', '3 Asokwa', 'Mrs. Efua Adjei', 'guardian.efua@parent.com', 'Mother', '0249666777', '0249666888', 'Hairdresser', '3 Asokwa Estate', '', '', 'None', '', '', '', '2025-09-08', '2025/2026', 'online', 'unpaid', 'pending')
-ON CONFLICT (enrollment_id) DO NOTHING;
+ON CONFLICT ON CONSTRAINT students_enrollment_id_key DO NOTHING;
 
 -- KG 1 (3 students)
 SELECT id INTO uid FROM users WHERE email = 'guardian.kweku@parent.com';
 INSERT INTO students (user_id, full_name, enrollment_id, index_number, class_name, gender, date_of_birth, place_of_birth, nationality, address, guardian_name, guardian_email, guardian_relationship, guardian_phone_primary, guardian_phone_emergency, guardian_occupation, guardian_address, health_insurance_id, medical_conditions, allergies, special_needs, previous_school, previous_class, admission_date, academic_year, enrollment_type, payment_status, status)
 VALUES (uid, 'Kweku Tetteh', 'ENR-2025-S1T2U3', 'CEC-250908-007', 'KG 1', 'Male', '2020-01-14', 'Kumasi', 'Ghanaian', '17 Ahodwo', 'Mr. Kweku Tetteh', 'guardian.kweku@parent.com', 'Father', '0240777888', '0240777999', 'Banker', '17 Ahodwo Circle', 'NHIS-6789012', '', 'None', '', 'Happy Kids KG', 'Nursery', '2025-09-08', '2025/2026', 'admin', 'paid', 'enrolled')
-ON CONFLICT (enrollment_id) DO NOTHING;
+ON CONFLICT ON CONSTRAINT students_enrollment_id_key DO NOTHING;
 
 SELECT id INTO uid FROM users WHERE email = 'guardian.akua@parent.com';
 INSERT INTO students (user_id, full_name, enrollment_id, index_number, class_name, gender, date_of_birth, place_of_birth, nationality, address, guardian_name, guardian_email, guardian_relationship, guardian_phone_primary, guardian_phone_emergency, guardian_occupation, guardian_address, health_insurance_id, medical_conditions, allergies, special_needs, previous_school, previous_class, admission_date, academic_year, enrollment_type, payment_status, status)
 VALUES (uid, 'Akua Frimpong', 'ENR-2025-V4W5X6', 'CEC-250908-008', 'KG 1', 'Female', '2020-04-22', 'Kumasi', 'Ghanaian', '9 Kentinkrono', 'Mrs. Akua Frimpong', 'guardian.akua@parent.com', 'Mother', '0241888999', '0241888000', 'Accountant', '9 Kentinkrono', 'NHIS-7890123', '', 'None', '', 'Happy Kids KG', 'Nursery', '2025-09-08', '2025/2026', 'admin', 'paid', 'enrolled')
-ON CONFLICT (enrollment_id) DO NOTHING;
+ON CONFLICT ON CONSTRAINT students_enrollment_id_key DO NOTHING;
 
 SELECT id INTO uid FROM users WHERE email = 'guardian.osei@parent.com';
 INSERT INTO students (user_id, full_name, enrollment_id, index_number, class_name, gender, date_of_birth, place_of_birth, nationality, address, guardian_name, guardian_email, guardian_relationship, guardian_phone_primary, guardian_phone_emergency, guardian_occupation, guardian_address, health_insurance_id, medical_conditions, allergies, special_needs, previous_school, previous_class, admission_date, academic_year, enrollment_type, payment_status, status)
 VALUES (uid, 'Osei Kwarteng', 'ENR-2025-Y7Z8A0', NULL, 'KG 1', 'Male', '2020-07-30', 'Kumasi', 'Ghanaian', '14 Patasi', 'Mr. Osei Kwarteng', 'guardian.osei@parent.com', 'Father', '0242999000', '0242999111', 'Driver', '14 Patasi', '', '', 'None', '', 'Sunshine Academy', 'Nursery', '2025-09-08', '2025/2026', 'online', 'unpaid', 'pending')
-ON CONFLICT (enrollment_id) DO NOTHING;
+ON CONFLICT ON CONSTRAINT students_enrollment_id_key DO NOTHING;
 
 -- KG 2 (3 students)
 SELECT id INTO uid FROM users WHERE email = 'guardian.adwoa@parent.com';
 INSERT INTO students (user_id, full_name, enrollment_id, index_number, class_name, gender, date_of_birth, place_of_birth, nationality, address, guardian_name, guardian_email, guardian_relationship, guardian_phone_primary, guardian_phone_emergency, guardian_occupation, guardian_address, health_insurance_id, medical_conditions, allergies, special_needs, previous_school, previous_class, admission_date, academic_year, enrollment_type, payment_status, status)
 VALUES (uid, 'Adwoa Mensah', 'ENR-2025-B1C2D3', 'CEC-250908-010', 'KG 2', 'Female', '2019-02-14', 'Kumasi', 'Ghanaian', '6 Danyame', 'Mrs. Adwoa Mensah', 'guardian.adwoa@parent.com', 'Mother', '0243000111', '0243000222', 'Pharmacist', '6 Danyame', 'NHIS-8901234', '', 'Dust allergy', '', 'Bright Stars KG', 'KG 1', '2024-09-02', '2025/2026', 'admin', 'paid', 'enrolled')
-ON CONFLICT (enrollment_id) DO NOTHING;
+ON CONFLICT ON CONSTRAINT students_enrollment_id_key DO NOTHING;
 
 SELECT id INTO uid FROM users WHERE email = 'guardian.kwabena2@parent.com';
 INSERT INTO students (user_id, full_name, enrollment_id, index_number, class_name, gender, date_of_birth, place_of_birth, nationality, address, guardian_name, guardian_email, guardian_relationship, guardian_phone_primary, guardian_phone_emergency, guardian_occupation, guardian_address, health_insurance_id, medical_conditions, allergies, special_needs, previous_school, previous_class, admission_date, academic_year, enrollment_type, payment_status, status)
 VALUES (uid, 'Kwabena Osei II', 'ENR-2025-E4F5G6', 'CEC-250908-011', 'KG 2', 'Male', '2019-05-20', 'Kumasi', 'Ghanaian', '21 Bompata', 'Mr. Kwabena Osei', 'guardian.kwabena2@parent.com', 'Father', '0244111222', '0244111333', 'Engineer', '21 Bompata', 'NHIS-9012345', '', 'None', '', 'Bright Stars KG', 'KG 1', '2024-09-02', '2025/2026', 'admin', 'paid', 'enrolled')
-ON CONFLICT (enrollment_id) DO NOTHING;
+ON CONFLICT ON CONSTRAINT students_enrollment_id_key DO NOTHING;
 
 SELECT id INTO uid FROM users WHERE email = 'guardian.nana@parent.com';
 INSERT INTO students (user_id, full_name, enrollment_id, index_number, class_name, gender, date_of_birth, place_of_birth, nationality, address, guardian_name, guardian_email, guardian_relationship, guardian_phone_primary, guardian_phone_emergency, guardian_occupation, guardian_address, health_insurance_id, medical_conditions, allergies, special_needs, previous_school, previous_class, admission_date, academic_year, enrollment_type, payment_status, status)
 VALUES (uid, 'Nana Ama Frimpong', 'ENR-2025-H7I8J9', NULL, 'KG 2', 'Female', '2019-08-11', 'Kumasi', 'Ghanaian', '11 Amakom', 'Mrs. Nana Frimpong', 'guardian.nana@parent.com', 'Mother', '0245222333', '0245222444', 'Civil Servant', '11 Amakom', '', '', 'None', '', 'Little Angels KG', 'KG 1', '2024-09-02', '2025/2026', 'online', 'unpaid', 'pending')
-ON CONFLICT (enrollment_id) DO NOTHING;
+ON CONFLICT ON CONSTRAINT students_enrollment_id_key DO NOTHING;
 
 -- Basic 1 (3 students)
 SELECT id INTO uid FROM users WHERE email = 'guardian.akosua2@parent.com';
 INSERT INTO students (user_id, full_name, enrollment_id, index_number, class_name, gender, date_of_birth, place_of_birth, nationality, address, guardian_name, guardian_email, guardian_relationship, guardian_phone_primary, guardian_phone_emergency, guardian_occupation, guardian_address, health_insurance_id, medical_conditions, allergies, special_needs, previous_school, previous_class, admission_date, academic_year, enrollment_type, payment_status, status)
 VALUES (uid, 'Akosua Yeboah', 'ENR-2025-K1L2M3', 'CEC-250908-013', 'Basic 1', 'Female', '2018-03-15', 'Kumasi', 'Ghanaian', '7 Asafo', 'Mrs. Akosua Yeboah', 'guardian.akosua2@parent.com', 'Mother', '0246333444', '0246333555', 'Business Owner', '7 Asafo', 'NHIS-0123456', '', 'None', '', 'Nex CEC Basic School', 'KG 2', '2024-09-02', '2025/2026', 'admin', 'paid', 'enrolled')
-ON CONFLICT (enrollment_id) DO NOTHING;
+ON CONFLICT ON CONSTRAINT students_enrollment_id_key DO NOTHING;
 
 SELECT id INTO uid FROM users WHERE email = 'guardian.daniel2@parent.com';
 INSERT INTO students (user_id, full_name, enrollment_id, index_number, class_name, gender, date_of_birth, place_of_birth, nationality, address, guardian_name, guardian_email, guardian_relationship, guardian_phone_primary, guardian_phone_emergency, guardian_occupation, guardian_address, health_insurance_id, medical_conditions, allergies, special_needs, previous_school, previous_class, admission_date, academic_year, enrollment_type, payment_status, status)
 VALUES (uid, 'Daniel Kofi Asante', 'ENR-2025-N4O5P6', 'CEC-250908-014', 'Basic 1', 'Male', '2018-06-22', 'Kumasi', 'Ghanaian', '18 Tafo', 'Mr. Daniel Asante', 'guardian.daniel2@parent.com', 'Father', '0247444555', '0247444666', 'Pastor', '18 Tafo', 'NHIS-1234560', '', 'None', '', 'Nex CEC Basic School', 'KG 2', '2024-09-02', '2025/2026', 'admin', 'paid', 'enrolled')
-ON CONFLICT (enrollment_id) DO NOTHING;
+ON CONFLICT ON CONSTRAINT students_enrollment_id_key DO NOTHING;
 
 SELECT id INTO uid FROM users WHERE email = 'guardian.grace2@parent.com';
 INSERT INTO students (user_id, full_name, enrollment_id, index_number, class_name, gender, date_of_birth, place_of_birth, nationality, address, guardian_name, guardian_email, guardian_relationship, guardian_phone_primary, guardian_phone_emergency, guardian_occupation, guardian_address, health_insurance_id, medical_conditions, allergies, special_needs, previous_school, previous_class, admission_date, academic_year, enrollment_type, payment_status, status)
 VALUES (uid, 'Grace Adwoa Boateng', 'ENR-2025-Q7R8S9', NULL, 'Basic 1', 'Female', '2018-09-30', 'Kumasi', 'Ghanaian', '25 Suame', 'Mrs. Grace Boateng', 'guardian.grace2@parent.com', 'Mother', '0248555666', '0248555777', 'Market Woman', '25 Suame', '', '', 'None', '', 'Nex CEC Basic School', 'KG 2', '2024-09-02', '2025/2026', 'online', 'unpaid', 'pending')
-ON CONFLICT (enrollment_id) DO NOTHING;
+ON CONFLICT ON CONSTRAINT students_enrollment_id_key DO NOTHING;
 
 -- Basic 2 (3 students)
 SELECT id INTO uid FROM users WHERE email = 'guardian.samuel2@parent.com';
 INSERT INTO students (user_id, full_name, enrollment_id, index_number, class_name, gender, date_of_birth, place_of_birth, nationality, address, guardian_name, guardian_email, guardian_relationship, guardian_phone_primary, guardian_phone_emergency, guardian_occupation, guardian_address, health_insurance_id, medical_conditions, allergies, special_needs, previous_school, previous_class, admission_date, academic_year, enrollment_type, payment_status, status)
 VALUES (uid, 'Samuel Owusu Tetteh', 'ENR-2025-T1U2V3', 'CEC-250908-016', 'Basic 2', 'Male', '2017-01-10', 'Kumasi', 'Ghanaian', '10 Manhyia', 'Mr. Samuel Tetteh', 'guardian.samuel2@parent.com', 'Father', '0249666777', '0249666888', 'Teacher', '10 Manhyia', 'NHIS-2345670', '', 'None', '', 'Nex CEC Basic School', 'Basic 1', '2023-09-04', '2025/2026', 'admin', 'paid', 'enrolled')
-ON CONFLICT (enrollment_id) DO NOTHING;
+ON CONFLICT ON CONSTRAINT students_enrollment_id_key DO NOTHING;
 
 SELECT id INTO uid FROM users WHERE email = 'guardian.victoria2@parent.com';
 INSERT INTO students (user_id, full_name, enrollment_id, index_number, class_name, gender, date_of_birth, place_of_birth, nationality, address, guardian_name, guardian_email, guardian_relationship, guardian_phone_primary, guardian_phone_emergency, guardian_occupation, guardian_address, health_insurance_id, medical_conditions, allergies, special_needs, previous_school, previous_class, admission_date, academic_year, enrollment_type, payment_status, status)
 VALUES (uid, 'Victoria Ama Gyamfi', 'ENR-2025-W4X5Y6', 'CEC-250908-017', 'Basic 2', 'Female', '2017-04-18', 'Kumasi', 'Ghanaian', '4 Kwame Nkrumah St', 'Mrs. Victoria Gyamfi', 'guardian.victoria2@parent.com', 'Mother', '0240777888', '0240777999', 'Fashion Designer', '4 Kwame Nkrumah St', 'NHIS-3456780', 'Sickle cell trait', 'None', '', 'Nex CEC Basic School', 'Basic 1', '2023-09-04', '2025/2026', 'admin', 'paid', 'enrolled')
-ON CONFLICT (enrollment_id) DO NOTHING;
+ON CONFLICT ON CONSTRAINT students_enrollment_id_key DO NOTHING;
 
 SELECT id INTO uid FROM users WHERE email = 'guardian.isaac2@parent.com';
 INSERT INTO students (user_id, full_name, enrollment_id, index_number, class_name, gender, date_of_birth, place_of_birth, nationality, address, guardian_name, guardian_email, guardian_relationship, guardian_phone_primary, guardian_phone_emergency, guardian_occupation, guardian_address, health_insurance_id, medical_conditions, allergies, special_needs, previous_school, previous_class, admission_date, academic_year, enrollment_type, payment_status, status)
 VALUES (uid, 'Isaac Mensah Jnr.', 'ENR-2025-Z7A8B9', NULL, 'Basic 2', 'Male', '2017-07-25', 'Kumasi', 'Ghanaian', '13 Ejisu Rd', 'Mr. Isaac Mensah Sr.', 'guardian.isaac2@parent.com', 'Father', '0241888999', '0241888000', 'Electrician', '13 Ejisu Rd', '', '', 'None', '', 'Nex CEC Basic School', 'Basic 1', '2023-09-04', '2025/2026', 'online', 'unpaid', 'pending')
-ON CONFLICT (enrollment_id) DO NOTHING;
+ON CONFLICT ON CONSTRAINT students_enrollment_id_key DO NOTHING;
 
 -- Basic 3 (3 students)
 SELECT id INTO uid FROM users WHERE email = 'guardian.nana2@parent.com';
 INSERT INTO students (user_id, full_name, enrollment_id, index_number, class_name, gender, date_of_birth, place_of_birth, nationality, address, guardian_name, guardian_email, guardian_relationship, guardian_phone_primary, guardian_phone_emergency, guardian_occupation, guardian_address, health_insurance_id, medical_conditions, allergies, special_needs, previous_school, previous_class, admission_date, academic_year, enrollment_type, payment_status, status)
 VALUES (uid, 'Nana Kwame Frimpong', 'ENR-2025-C1D2E3', 'CEC-250908-019', 'Basic 3', 'Male', '2016-02-14', 'Kumasi', 'Ghanaian', '16 Bantama', 'Mr. Nana Frimpong', 'guardian.nana2@parent.com', 'Father', '0242999000', '0242999111', 'Police Officer', '16 Bantama', 'NHIS-4567890', '', 'None', '', 'Nex CEC Basic School', 'Basic 2', '2022-09-05', '2025/2026', 'admin', 'paid', 'enrolled')
-ON CONFLICT (enrollment_id) DO NOTHING;
+ON CONFLICT ON CONSTRAINT students_enrollment_id_key DO NOTHING;
 
 SELECT id INTO uid FROM users WHERE email = 'guardian.frank2@parent.com';
 INSERT INTO students (user_id, full_name, enrollment_id, index_number, class_name, gender, date_of_birth, place_of_birth, nationality, address, guardian_name, guardian_email, guardian_relationship, guardian_phone_primary, guardian_phone_emergency, guardian_occupation, guardian_address, health_insurance_id, medical_conditions, allergies, special_needs, previous_school, previous_class, admission_date, academic_year, enrollment_type, payment_status, status)
 VALUES (uid, 'Frank Agyemang Asante', 'ENR-2025-F4G5H6', 'CEC-250908-020', 'Basic 3', 'Male', '2016-05-22', 'Kumasi', 'Ghanaian', '19 Ayeduase', 'Mr. Frank Asante', 'guardian.frank2@parent.com', 'Father', '0243000111', '0243000222', 'Soldier', '19 Ayeduase', 'NHIS-5678900', '', 'None', '', 'Nex CEC Basic School', 'Basic 2', '2022-09-05', '2025/2026', 'admin', 'paid', 'enrolled')
-ON CONFLICT (enrollment_id) DO NOTHING;
+ON CONFLICT ON CONSTRAINT students_enrollment_id_key DO NOTHING;
 
 SELECT id INTO uid FROM users WHERE email = 'guardian.emmanuel2@parent.com';
 INSERT INTO students (user_id, full_name, enrollment_id, index_number, class_name, gender, date_of_birth, place_of_birth, nationality, address, guardian_name, guardian_email, guardian_relationship, guardian_phone_primary, guardian_phone_emergency, guardian_occupation, guardian_address, health_insurance_id, medical_conditions, allergies, special_needs, previous_school, previous_class, admission_date, academic_year, enrollment_type, payment_status, status)
 VALUES (uid, 'Emmanuel Tetteh II', 'ENR-2025-I7J8K9', NULL, 'Basic 3', 'Male', '2016-08-30', 'Kumasi', 'Ghanaian', '23 Suame', 'Mr. Emmanuel Tetteh', 'guardian.emmanuel2@parent.com', 'Father', '0244111222', '0244111333', 'Carpenter', '23 Suame', '', '', 'None', '', 'Nex CEC Basic School', 'Basic 2', '2022-09-05', '2025/2026', 'online', 'unpaid', 'pending')
-ON CONFLICT (enrollment_id) DO NOTHING;
+ON CONFLICT ON CONSTRAINT students_enrollment_id_key DO NOTHING;
 
 -- Basic 4 (3 students)
 SELECT id INTO uid FROM users WHERE email = 'guardian.bernice@parent.com';
 INSERT INTO students (user_id, full_name, enrollment_id, index_number, class_name, gender, date_of_birth, place_of_birth, nationality, address, guardian_name, guardian_email, guardian_relationship, guardian_phone_primary, guardian_phone_emergency, guardian_occupation, guardian_address, health_insurance_id, medical_conditions, allergies, special_needs, previous_school, previous_class, admission_date, academic_year, enrollment_type, payment_status, status)
 VALUES (uid, 'Bernice Adjei Mensah', 'ENR-2025-L1M2N3', 'CEC-250908-022', 'Basic 4', 'Female', '2015-01-14', 'Kumasi', 'Ghanaian', '12 Tech Junction', 'Mrs. Bernice Mensah', 'guardian.bernice@parent.com', 'Mother', '0245222333', '0245222444', 'Doctor', '12 Tech Junction', 'NHIS-6789010', '', 'Penicillin', '', 'Nex CEC Basic School', 'Basic 3', '2021-09-06', '2025/2026', 'admin', 'paid', 'enrolled')
-ON CONFLICT (enrollment_id) DO NOTHING;
+ON CONFLICT ON CONSTRAINT students_enrollment_id_key DO NOTHING;
 
 SELECT id INTO uid FROM users WHERE email = 'guardian.richard@parent.com';
 INSERT INTO students (user_id, full_name, enrollment_id, index_number, class_name, gender, date_of_birth, place_of_birth, nationality, address, guardian_name, guardian_email, guardian_relationship, guardian_phone_primary, guardian_phone_emergency, guardian_occupation, guardian_address, health_insurance_id, medical_conditions, allergies, special_needs, previous_school, previous_class, admission_date, academic_year, enrollment_type, payment_status, status)
 VALUES (uid, 'Richard Osei Boateng', 'ENR-2025-O4P5Q6', 'CEC-250908-023', 'Basic 4', 'Male', '2015-04-18', 'Kumasi', 'Ghanaian', '28 Oforikrom', 'Mr. Richard Boateng', 'guardian.richard@parent.com', 'Father', '0246333444', '0246333555', 'Lawyer', '28 Oforikrom', 'NHIS-7890120', '', 'None', '', 'Nex CEC Basic School', 'Basic 3', '2021-09-06', '2025/2026', 'admin', 'paid', 'enrolled')
-ON CONFLICT (enrollment_id) DO NOTHING;
+ON CONFLICT ON CONSTRAINT students_enrollment_id_key DO NOTHING;
 
 SELECT id INTO uid FROM users WHERE email = 'guardian.prince@parent.com';
 INSERT INTO students (user_id, full_name, enrollment_id, index_number, class_name, gender, date_of_birth, place_of_birth, nationality, address, guardian_name, guardian_email, guardian_relationship, guardian_phone_primary, guardian_phone_emergency, guardian_occupation, guardian_address, health_insurance_id, medical_conditions, allergies, special_needs, previous_school, previous_class, admission_date, academic_year, enrollment_type, payment_status, status)
 VALUES (uid, 'Prince Kofi Asante', 'ENR-2025-R7S8T9', NULL, 'Basic 4', 'Male', '2015-07-25', 'Kumasi', 'Ghanaian', '30 Roman Hill', 'Mr. Prince Asante', 'guardian.prince@parent.com', 'Father', '0247444555', '0247444666', 'Plumber', '30 Roman Hill', '', '', 'None', '', 'Nex CEC Basic School', 'Basic 3', '2021-09-06', '2025/2026', 'online', 'unpaid', 'pending')
-ON CONFLICT (enrollment_id) DO NOTHING;
+ON CONFLICT ON CONSTRAINT students_enrollment_id_key DO NOTHING;
 
 -- Basic 5 (3 students)
 SELECT id INTO uid FROM users WHERE email = 'guardian.bridget@parent.com';
 INSERT INTO students (user_id, full_name, enrollment_id, index_number, class_name, gender, date_of_birth, place_of_birth, nationality, address, guardian_name, guardian_email, guardian_relationship, guardian_phone_primary, guardian_phone_emergency, guardian_occupation, guardian_address, health_insurance_id, medical_conditions, allergies, special_needs, previous_school, previous_class, admission_date, academic_year, enrollment_type, payment_status, status)
 VALUES (uid, 'Bridget Ama Darko', 'ENR-2025-U1V2W3', 'CEC-250908-025', 'Basic 5', 'Female', '2014-02-14', 'Kumasi', 'Ghanaian', '33 Ahodwo', 'Mrs. Bridget Darko', 'guardian.bridget@parent.com', 'Mother', '0248555666', '0248555777', 'Journalist', '33 Ahodwo', 'NHIS-8901230', '', 'None', '', 'Nex CEC Basic School', 'Basic 4', '2020-09-07', '2025/2026', 'admin', 'paid', 'enrolled')
-ON CONFLICT (enrollment_id) DO NOTHING;
+ON CONFLICT ON CONSTRAINT students_enrollment_id_key DO NOTHING;
 
 SELECT id INTO uid FROM users WHERE email = 'guardian.felix@parent.com';
 INSERT INTO students (user_id, full_name, enrollment_id, index_number, class_name, gender, date_of_birth, place_of_birth, nationality, address, guardian_name, guardian_email, guardian_relationship, guardian_phone_primary, guardian_phone_emergency, guardian_occupation, guardian_address, health_insurance_id, medical_conditions, allergies, special_needs, previous_school, previous_class, admission_date, academic_year, enrollment_type, payment_status, status)
 VALUES (uid, 'Felix Mensah Owusu', 'ENR-2025-X4Y5Z6', 'CEC-250908-026', 'Basic 5', 'Male', '2014-05-22', 'Kumasi', 'Ghanaian', '36 Kentinkrono', 'Mr. Felix Owusu', 'guardian.felix@parent.com', 'Father', '0249666777', '0249666888', 'Architect', '36 Kentinkrono', 'NHIS-9012340', '', 'None', '', 'Nex CEC Basic School', 'Basic 4', '2020-09-07', '2025/2026', 'admin', 'paid', 'enrolled')
-ON CONFLICT (enrollment_id) DO NOTHING;
+ON CONFLICT ON CONSTRAINT students_enrollment_id_key DO NOTHING;
 
 SELECT id INTO uid FROM users WHERE email = 'guardian.stella@parent.com';
 INSERT INTO students (user_id, full_name, enrollment_id, index_number, class_name, gender, date_of_birth, place_of_birth, nationality, address, guardian_name, guardian_email, guardian_relationship, guardian_phone_primary, guardian_phone_emergency, guardian_occupation, guardian_address, health_insurance_id, medical_conditions, allergies, special_needs, previous_school, previous_class, admission_date, academic_year, enrollment_type, payment_status, status)
 VALUES (uid, 'Stella Adwoa Frimpong', 'ENR-2025-A0B1C2', NULL, 'Basic 5', 'Female', '2014-08-30', 'Kumasi', 'Ghanaian', '39 Patasi', 'Mrs. Stella Frimpong', 'guardian.stella@parent.com', 'Mother', '0240777888', '0240777999', 'Pharmacist', '39 Patasi', '', '', 'None', '', 'Nex CEC Basic School', 'Basic 4', '2020-09-07', '2025/2026', 'online', 'unpaid', 'pending')
-ON CONFLICT (enrollment_id) DO NOTHING;
+ON CONFLICT ON CONSTRAINT students_enrollment_id_key DO NOTHING;
 
 -- Basic 6 (3 students)
 SELECT id INTO uid FROM users WHERE email = 'guardian.alfred@parent.com';
 INSERT INTO students (user_id, full_name, enrollment_id, index_number, class_name, gender, date_of_birth, place_of_birth, nationality, address, guardian_name, guardian_email, guardian_relationship, guardian_phone_primary, guardian_phone_emergency, guardian_occupation, guardian_address, health_insurance_id, medical_conditions, allergies, special_needs, previous_school, previous_class, admission_date, academic_year, enrollment_type, payment_status, status)
 VALUES (uid, 'Alfred Kwarteng Asante', 'ENR-2025-D3E4F5', 'CEC-250908-028', 'Basic 6', 'Male', '2013-01-14', 'Kumasi', 'Ghanaian', '42 Bompata', 'Mr. Alfred Asante', 'guardian.alfred@parent.com', 'Father', '0241888999', '0241888000', 'Accountant', '42 Bompata', 'NHIS-0123450', '', 'None', '', 'Nex CEC Basic School', 'Basic 5', '2019-09-02', '2025/2026', 'admin', 'paid', 'enrolled')
-ON CONFLICT (enrollment_id) DO NOTHING;
+ON CONFLICT ON CONSTRAINT students_enrollment_id_key DO NOTHING;
 
 SELECT id INTO uid FROM users WHERE email = 'guardian.mercy@parent.com';
 INSERT INTO students (user_id, full_name, enrollment_id, index_number, class_name, gender, date_of_birth, place_of_birth, nationality, address, guardian_name, guardian_email, guardian_relationship, guardian_phone_primary, guardian_phone_emergency, guardian_occupation, guardian_address, health_insurance_id, medical_conditions, allergies, special_needs, previous_school, previous_class, admission_date, academic_year, enrollment_type, payment_status, status)
 VALUES (uid, 'Mercy Yeboah Boateng', 'ENR-2025-G6H7I8', 'CEC-250908-029', 'Basic 6', 'Female', '2013-04-18', 'Kumasi', 'Ghanaian', '45 Danyame', 'Mrs. Mercy Boateng', 'guardian.mercy@parent.com', 'Mother', '0242999000', '0242999111', 'Entrepreneur', '45 Danyame', 'NHIS-1234500', '', 'None', '', 'Nex CEC Basic School', 'Basic 5', '2019-09-02', '2025/2026', 'admin', 'paid', 'enrolled')
-ON CONFLICT (enrollment_id) DO NOTHING;
+ON CONFLICT ON CONSTRAINT students_enrollment_id_key DO NOTHING;
 
 SELECT id INTO uid FROM users WHERE email = 'guardian.joseph2@parent.com';
 INSERT INTO students (user_id, full_name, enrollment_id, index_number, class_name, gender, date_of_birth, place_of_birth, nationality, address, guardian_name, guardian_email, guardian_relationship, guardian_phone_primary, guardian_phone_emergency, guardian_occupation, guardian_address, health_insurance_id, medical_conditions, allergies, special_needs, previous_school, previous_class, admission_date, academic_year, enrollment_type, payment_status, status)
 VALUES (uid, 'Joseph Tawiah Jnr.', 'ENR-2025-J9K0L1', NULL, 'Basic 6', 'Male', '2013-07-25', 'Kumasi', 'Ghanaian', '48 Asafo', 'Mr. Joseph Tawiah', 'guardian.joseph2@parent.com', 'Father', '0243000111', '0243000222', 'Security Guard', '48 Asafo', '', '', 'None', '', 'Nex CEC Basic School', 'Basic 5', '2019-09-02', '2025/2026', 'online', 'unpaid', 'pending')
-ON CONFLICT (enrollment_id) DO NOTHING;
+ON CONFLICT ON CONSTRAINT students_enrollment_id_key DO NOTHING;
 
 -- JHS 1 (3 students)
 SELECT id INTO uid FROM users WHERE email = 'guardian.ruth@parent.com';
 INSERT INTO students (user_id, full_name, enrollment_id, index_number, class_name, gender, date_of_birth, place_of_birth, nationality, address, guardian_name, guardian_email, guardian_relationship, guardian_phone_primary, guardian_phone_emergency, guardian_occupation, guardian_address, health_insurance_id, medical_conditions, allergies, special_needs, previous_school, previous_class, admission_date, academic_year, enrollment_type, payment_status, status)
 VALUES (uid, 'Ruth Ama Asante', 'ENR-2025-M2N3O4', 'CEC-250908-031', 'JHS 1', 'Female', '2012-01-14', 'Kumasi', 'Ghanaian', '51 Amakom', 'Mrs. Ruth Asante', 'guardian.ruth@parent.com', 'Mother', '0244111222', '0244111333', 'Teacher', '51 Amakom', 'NHIS-2345600', '', 'None', '', 'Nex CEC Basic School', 'Basic 6', '2024-09-02', '2025/2026', 'admin', 'paid', 'enrolled')
-ON CONFLICT (enrollment_id) DO NOTHING;
+ON CONFLICT ON CONSTRAINT students_enrollment_id_key DO NOTHING;
 
 SELECT id INTO uid FROM users WHERE email = 'guardian.peter@parent.com';
 INSERT INTO students (user_id, full_name, enrollment_id, index_number, class_name, gender, date_of_birth, place_of_birth, nationality, address, guardian_name, guardian_email, guardian_relationship, guardian_phone_primary, guardian_phone_emergency, guardian_occupation, guardian_address, health_insurance_id, medical_conditions, allergies, special_needs, previous_school, previous_class, admission_date, academic_year, enrollment_type, payment_status, status)
 VALUES (uid, 'Peter Kwame Mensah', 'ENR-2025-P5Q6R7', 'CEC-250908-032', 'JHS 1', 'Male', '2012-04-18', 'Kumasi', 'Ghanaian', '54 Tafo', 'Mr. Peter Mensah', 'guardian.peter@parent.com', 'Father', '0245222333', '0245222444', 'Engineer', '54 Tafo', 'NHIS-3456700', '', 'None', '', 'Nex CEC Basic School', 'Basic 6', '2024-09-02', '2025/2026', 'admin', 'paid', 'enrolled')
-ON CONFLICT (enrollment_id) DO NOTHING;
+ON CONFLICT ON CONSTRAINT students_enrollment_id_key DO NOTHING;
 
 SELECT id INTO uid FROM users WHERE email = 'guardian.hannah@parent.com';
 INSERT INTO students (user_id, full_name, enrollment_id, index_number, class_name, gender, date_of_birth, place_of_birth, nationality, address, guardian_name, guardian_email, guardian_relationship, guardian_phone_primary, guardian_phone_emergency, guardian_occupation, guardian_address, health_insurance_id, medical_conditions, allergies, special_needs, previous_school, previous_class, admission_date, academic_year, enrollment_type, payment_status, status)
 VALUES (uid, 'Hannah Adjei Kwarteng', 'ENR-2025-S8T9U0', NULL, 'JHS 1', 'Female', '2012-07-25', 'Kumasi', 'Ghanaian', '57 Suame', 'Mrs. Hannah Kwarteng', 'guardian.hannah@parent.com', 'Mother', '0246333444', '0246333555', 'Nurse', '57 Suame', '', '', 'None', '', 'Nex CEC Basic School', 'Basic 6', '2024-09-02', '2025/2026', 'online', 'unpaid', 'pending')
-ON CONFLICT (enrollment_id) DO NOTHING;
+ON CONFLICT ON CONSTRAINT students_enrollment_id_key DO NOTHING;
 
 -- JHS 2 (3 students)
 SELECT id INTO uid FROM users WHERE email = 'guardian.charles@parent.com';
 INSERT INTO students (user_id, full_name, enrollment_id, index_number, class_name, gender, date_of_birth, place_of_birth, nationality, address, guardian_name, guardian_email, guardian_relationship, guardian_phone_primary, guardian_phone_emergency, guardian_occupation, guardian_address, health_insurance_id, medical_conditions, allergies, special_needs, previous_school, previous_class, admission_date, academic_year, enrollment_type, payment_status, status)
 VALUES (uid, 'Charles Osei Frimpong', 'ENR-2025-V1W2X3', 'CEC-250908-034', 'JHS 2', 'Male', '2011-02-14', 'Kumasi', 'Ghanaian', '60 Ejisu Rd', 'Mr. Charles Frimpong', 'guardian.charles@parent.com', 'Father', '0247444555', '0247444666', 'Businessman', '60 Ejisu Rd', 'NHIS-4567800', '', 'None', '', 'Nex CEC Basic School', 'JHS 1', '2023-09-04', '2025/2026', 'admin', 'paid', 'enrolled')
-ON CONFLICT (enrollment_id) DO NOTHING;
+ON CONFLICT ON CONSTRAINT students_enrollment_id_key DO NOTHING;
 
 SELECT id INTO uid FROM users WHERE email = 'guardian.deborah@parent.com';
 INSERT INTO students (user_id, full_name, enrollment_id, index_number, class_name, gender, date_of_birth, place_of_birth, nationality, address, guardian_name, guardian_email, guardian_relationship, guardian_phone_primary, guardian_phone_emergency, guardian_occupation, guardian_address, health_insurance_id, medical_conditions, allergies, special_needs, previous_school, previous_class, admission_date, academic_year, enrollment_type, payment_status, status)
 VALUES (uid, 'Deborah Ama Boateng', 'ENR-2025-Y4Z5A6', 'CEC-250908-035', 'JHS 2', 'Female', '2011-05-22', 'Kumasi', 'Ghanaian', '63 Manhyia', 'Mrs. Deborah Boateng', 'guardian.deborah@parent.com', 'Mother', '0248555666', '0248555777', 'Civil Servant', '63 Manhyia', 'NHIS-5678900', '', 'None', '', 'Nex CEC Basic School', 'JHS 1', '2023-09-04', '2025/2026', 'admin', 'paid', 'enrolled')
-ON CONFLICT (enrollment_id) DO NOTHING;
+ON CONFLICT ON CONSTRAINT students_enrollment_id_key DO NOTHING;
 
 SELECT id INTO uid FROM users WHERE email = 'guardian.eric@parent.com';
 INSERT INTO students (user_id, full_name, enrollment_id, index_number, class_name, gender, date_of_birth, place_of_birth, nationality, address, guardian_name, guardian_email, guardian_relationship, guardian_phone_primary, guardian_phone_emergency, guardian_occupation, guardian_address, health_insurance_id, medical_conditions, allergies, special_needs, previous_school, previous_class, admission_date, academic_year, enrollment_type, payment_status, status)
 VALUES (uid, 'Eric Mensah Tetteh', 'ENR-2025-B7C8D9', NULL, 'JHS 2', 'Male', '2011-08-30', 'Kumasi', 'Ghanaian', '66 Bantama', 'Mr. Eric Tetteh', 'guardian.eric@parent.com', 'Father', '0249666777', '0249666888', 'Driver', '66 Bantama', '', '', 'None', '', 'Nex CEC Basic School', 'JHS 1', '2023-09-04', '2025/2026', 'online', 'unpaid', 'pending')
-ON CONFLICT (enrollment_id) DO NOTHING;
+ON CONFLICT ON CONSTRAINT students_enrollment_id_key DO NOTHING;
 
 -- JHS 3 (3 students)
 SELECT id INTO uid FROM users WHERE email = 'guardian.joyce@parent.com';
 INSERT INTO students (user_id, full_name, enrollment_id, index_number, class_name, gender, date_of_birth, place_of_birth, nationality, address, guardian_name, guardian_email, guardian_relationship, guardian_phone_primary, guardian_phone_emergency, guardian_occupation, guardian_address, health_insurance_id, medical_conditions, allergies, special_needs, previous_school, previous_class, admission_date, academic_year, enrollment_type, payment_status, status)
 VALUES (uid, 'Joyce Adwoa Asante', 'ENR-2025-E0F1G2', 'CEC-250908-037', 'JHS 3', 'Female', '2010-01-14', 'Kumasi', 'Ghanaian', '69 Ayeduase', 'Mrs. Joyce Asante', 'guardian.joyce@parent.com', 'Mother', '0240777888', '0240777999', 'Headteacher', '69 Ayeduase', 'NHIS-6789000', '', 'None', '', 'Nex CEC Basic School', 'JHS 2', '2022-09-05', '2025/2026', 'admin', 'paid', 'enrolled')
-ON CONFLICT (enrollment_id) DO NOTHING;
+ON CONFLICT ON CONSTRAINT students_enrollment_id_key DO NOTHING;
 
 SELECT id INTO uid FROM users WHERE email = 'guardian.david2@parent.com';
 INSERT INTO students (user_id, full_name, enrollment_id, index_number, class_name, gender, date_of_birth, place_of_birth, nationality, address, guardian_name, guardian_email, guardian_relationship, guardian_phone_primary, guardian_phone_emergency, guardian_occupation, guardian_address, health_insurance_id, medical_conditions, allergies, special_needs, previous_school, previous_class, admission_date, academic_year, enrollment_type, payment_status, status)
 VALUES (uid, 'David Kwame Osei', 'ENR-2025-H3I4J5', 'CEC-250908-038', 'JHS 3', 'Male', '2010-04-18', 'Kumasi', 'Ghanaian', '72 Oforikrom', 'Mr. David Osei', 'guardian.david2@parent.com', 'Father', '0241888999', '0241888000', 'Professor', '72 Oforikrom', 'NHIS-7890100', '', 'None', '', 'Nex CEC Basic School', 'JHS 2', '2022-09-05', '2025/2026', 'admin', 'paid', 'enrolled')
-ON CONFLICT (enrollment_id) DO NOTHING;
+ON CONFLICT ON CONSTRAINT students_enrollment_id_key DO NOTHING;
 
 SELECT id INTO uid FROM users WHERE email = 'guardian.linda@parent.com';
 INSERT INTO students (user_id, full_name, enrollment_id, index_number, class_name, gender, date_of_birth, place_of_birth, nationality, address, guardian_name, guardian_email, guardian_relationship, guardian_phone_primary, guardian_phone_emergency, guardian_occupation, guardian_address, health_insurance_id, medical_conditions, allergies, special_needs, previous_school, previous_class, admission_date, academic_year, enrollment_type, payment_status, status)
 VALUES (uid, 'Linda Ama Gyamfi', 'ENR-2025-K6L7M8', 'CEC-250908-039', 'JHS 3', 'Female', '2010-07-25', 'Kumasi', 'Ghanaian', '75 Roman Hill', 'Mrs. Linda Gyamfi', 'guardian.linda@parent.com', 'Mother', '0242999000', '0242999111', 'Diplomat', '75 Roman Hill', 'NHIS-8901200', '', 'None', '', 'Nex CEC Basic School', 'JHS 2', '2022-09-05', '2025/2026', 'admin', 'paid', 'enrolled')
-ON CONFLICT (enrollment_id) DO NOTHING;
+ON CONFLICT ON CONSTRAINT students_enrollment_id_key DO NOTHING;
 
 END $$;
 
@@ -473,7 +473,7 @@ BEGIN
         
         INSERT INTO payments (student_id, amount, payment_method, payment_date, receipt_number, status, enrollment_id, academic_year)
         VALUES (s.id, 745.00, method, '2025-09-10', receipt, 'completed', s.enrollment_id, '2025/2026')
-        ON CONFLICT (receipt_number) DO NOTHING;
+        ON CONFLICT ON CONSTRAINT payments_receipt_number_key DO NOTHING;
     END LOOP;
 END $$;
 
@@ -523,7 +523,7 @@ INSERT INTO grade_boundaries (min_score, max_score, grade, remark) VALUES
 (45, 49, 7, 'Poor'),
 (40, 44, 8, 'Very Poor'),
 (0, 39, 9, 'Fail')
-ON CONFLICT DO NOTHING;
+ON CONFLICT ON CONSTRAINT grade_boundaries_min_score_max_score_key DO NOTHING;
 
 -- ==========================================
 -- 14. SBA SCORES — Term 1, Basic 1 students (core subjects)
@@ -562,11 +562,11 @@ BEGIN
             
             INSERT INTO sba_scores (student_id, subject_id, term_id, class_test, mid_term, end_term, project, attitude, interest)
             VALUES (sid, subj_id, 1, ct, mt, et, 0, att[1 + (i % 3)], int[1 + (i % 3)])
-            ON CONFLICT (student_id, subject_id, term_id) DO NOTHING;
+            ON CONFLICT ON CONSTRAINT sba_scores_student_subject_term_key DO NOTHING;
             
             INSERT INTO exam_scores (student_id, subject_id, term_id, exam_score)
             VALUES (sid, subj_id, 1, exam)
-            ON CONFLICT (student_id, subject_id, term_id) DO NOTHING;
+            ON CONFLICT ON CONSTRAINT sba_scores_student_subject_term_key DO NOTHING;
             
             i := i + 1;
         END LOOP;
@@ -603,11 +603,11 @@ BEGIN
             
             INSERT INTO sba_scores (student_id, subject_id, term_id, class_test, mid_term, end_term, project, attitude, interest)
             VALUES (sid, subj_id, 1, ct, mt, et, (RANDOM() * 5 + 3)::NUMERIC(5,2), att[1 + (i % 3)], int[1 + (i % 3)])
-            ON CONFLICT (student_id, subject_id, term_id) DO NOTHING;
+            ON CONFLICT ON CONSTRAINT sba_scores_student_subject_term_key DO NOTHING;
             
             INSERT INTO exam_scores (student_id, subject_id, term_id, exam_score)
             VALUES (sid, subj_id, 1, exam)
-            ON CONFLICT (student_id, subject_id, term_id) DO NOTHING;
+            ON CONFLICT ON CONSTRAINT sba_scores_student_subject_term_key DO NOTHING;
             
             i := i + 1;
         END LOOP;
@@ -635,7 +635,7 @@ CROSS JOIN (
     UNION ALL SELECT '2025-11-14' UNION ALL SELECT '2025-11-17' UNION ALL SELECT '2025-11-18'
     UNION ALL SELECT '2025-11-19' UNION ALL SELECT '2025-11-20' UNION ALL SELECT '2025-11-21'
 ) dates
-ON CONFLICT (student_id, attendance_date) DO NOTHING;
+ON CONFLICT ON CONSTRAINT student_attendance_student_attendance_date_key DO NOTHING;
 
 -- ==========================================
 -- 16. REPORT CARDS — Basic 1 and JHS 3 students
@@ -659,7 +659,7 @@ BEGIN
             CASE pos WHEN 1 THEN 'Excellent work! Maintain this standard.' ELSE 'Good effort. Keep working hard.' END,
             'Mr. Kwabena Asante',
             '2026-01-06')
-        ON CONFLICT (student_id, term_id) DO NOTHING;
+        ON CONFLICT ON CONSTRAINT report_cards_student_term_key DO NOTHING;
     END LOOP;
     
     -- JHS 3 report cards
@@ -674,7 +674,7 @@ BEGIN
             CASE pos WHEN 1 THEN 'BECE champion in the making!' ELSE 'Focus on BECE preparation. You can do better.' END,
             'Mr. Kwabena Asante',
             '2026-01-06')
-        ON CONFLICT (student_id, term_id) DO NOTHING;
+        ON CONFLICT ON CONSTRAINT report_cards_student_term_key DO NOTHING;
     END LOOP;
 END $$;
 

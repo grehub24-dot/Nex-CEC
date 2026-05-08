@@ -1,7 +1,6 @@
 -- ==========================================
 -- COMPLETE DATABASE MIGRATION: Nex CEC School Management System
 -- Run this ENTIRE script in Supabase SQL Editor
--- Covers ALL 4 phases: Fees, Staff Payroll, Report Cards, Attendance
 -- Idempotent: safe to run multiple times
 -- ==========================================
 
@@ -19,7 +18,6 @@ BEGIN
     WHERE table_name = 'classes' AND column_name = 'id';
 
     IF col_type IS NOT NULL AND col_type != 'integer' THEN
-        -- Drop legacy UUID table and all dependent constraints
         DROP TABLE IF EXISTS classes CASCADE;
     END IF;
 END $$;
@@ -70,7 +68,7 @@ END $$;
 -- =====================================================
 DO $$
 BEGIN
-    -- Guardian Details (replaces legacy guardian_name/guardian_phone)
+    -- Guardian Details
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'students' AND column_name = 'guardian_name') THEN
         ALTER TABLE students ADD COLUMN guardian_name VARCHAR(255);
     END IF;
@@ -158,20 +156,89 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'students' AND column_name = 'enrollment_id') THEN
         ALTER TABLE students ADD COLUMN enrollment_id VARCHAR(20);
     END IF;
-    -- Add UNIQUE constraint on enrollment_id (skip if already exists)
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'students' AND column_name = 'payment_status') THEN
+        ALTER TABLE students ADD COLUMN payment_status VARCHAR(20) DEFAULT 'unpaid';
+    END IF;
+END $$;
+
+-- ==========================================
+-- CRITICAL: Force-add ALL missing unique constraints
+-- These work even if table already exists (won't error on existing constraints)
+-- ==========================================
+DO $$
+BEGIN
+    -- students table
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'students_enrollment_id_key' AND conrelid = 'students'::regclass) THEN
         ALTER TABLE students ADD CONSTRAINT students_enrollment_id_key UNIQUE (enrollment_id);
     END IF;
-    -- Ensure users.email has unique constraint (for ON CONFLICT)
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'users_email_key' AND conrelid = 'users'::regclass) THEN
-        ALTER TABLE users ADD CONSTRAINT users_email_key UNIQUE (email);
-    END IF;
-    -- Ensure students.index_number has unique constraint
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'students_index_number_key' AND conrelid = 'students'::regclass) THEN
         ALTER TABLE students ADD CONSTRAINT students_index_number_key UNIQUE (index_number);
     END IF;
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'students' AND column_name = 'payment_status') THEN
-        ALTER TABLE students ADD COLUMN payment_status VARCHAR(20) DEFAULT 'unpaid';
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'students_user_id_key' AND conrelid = 'students'::regclass) THEN
+        ALTER TABLE students ADD CONSTRAINT students_user_id_key UNIQUE (user_id);
+    END IF;
+    
+    -- users table
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'users_email_key' AND conrelid = 'users'::regclass) THEN
+        ALTER TABLE users ADD CONSTRAINT users_email_key UNIQUE (email);
+    END IF;
+    
+    -- payments table
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'payments_receipt_number_key' AND conrelid = 'payments'::regclass) THEN
+        ALTER TABLE payments ADD CONSTRAINT payments_receipt_number_key UNIQUE (receipt_number);
+    END IF;
+    
+    -- staff table
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'staff_staff_id_key' AND conrelid = 'staff'::regclass) THEN
+        ALTER TABLE staff ADD CONSTRAINT staff_staff_id_key UNIQUE (staff_id);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'staff_email_key' AND conrelid = 'staff'::regclass) THEN
+        ALTER TABLE staff ADD CONSTRAINT staff_email_key UNIQUE (email);
+    END IF;
+    
+    -- system_settings table
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'system_settings_setting_key_key' AND conrelid = 'system_settings'::regclass) THEN
+        ALTER TABLE system_settings ADD CONSTRAINT system_settings_setting_key_key UNIQUE (setting_key);
+    END IF;
+    
+    -- terms table
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'terms_academic_year_name_key' AND conrelid = 'terms'::regclass) THEN
+        ALTER TABLE terms ADD CONSTRAINT terms_academic_year_name_key UNIQUE (academic_year, name);
+    END IF;
+    
+    -- subjects table
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'subjects_name_class_id_key' AND conrelid = 'subjects'::regclass) THEN
+        ALTER TABLE subjects ADD CONSTRAINT subjects_name_class_id_key UNIQUE (name, class_id);
+    END IF;
+    
+    -- sba_scores table
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'sba_scores_student_subject_term_key' AND conrelid = 'sba_scores'::regclass) THEN
+        ALTER TABLE sba_scores ADD CONSTRAINT sba_scores_student_subject_term_key UNIQUE (student_id, subject_id, term_id);
+    END IF;
+    
+    -- exam_scores table
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'exam_scores_student_subject_term_key' AND conrelid = 'exam_scores'::regclass) THEN
+        ALTER TABLE exam_scores ADD CONSTRAINT exam_scores_student_subject_term_key UNIQUE (student_id, subject_id, term_id);
+    END IF;
+    
+    -- report_cards table
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'report_cards_student_term_key' AND conrelid = 'report_cards'::regclass) THEN
+        ALTER TABLE report_cards ADD CONSTRAINT report_cards_student_term_key UNIQUE (student_id, term_id);
+    END IF;
+    
+    -- student_attendance table
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'student_attendance_student_attendance_date_key' AND conrelid = 'student_attendance'::regclass) THEN
+        ALTER TABLE student_attendance ADD CONSTRAINT student_attendance_student_attendance_date_key UNIQUE (student_id, attendance_date);
+    END IF;
+    
+    -- staff_attendance table
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'staff_attendance_staff_attendance_date_key' AND conrelid = 'staff_attendance'::regclass) THEN
+        ALTER TABLE staff_attendance ADD CONSTRAINT staff_attendance_staff_attendance_date_key UNIQUE (staff_id, attendance_date);
+    END IF;
+    
+    -- message_reads table
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'message_reads_message_user_key' AND conrelid = 'message_reads'::regclass) THEN
+        ALTER TABLE message_reads ADD CONSTRAINT message_reads_message_user_key UNIQUE (message_id, user_id);
     END IF;
 END $$;
 
@@ -181,7 +248,6 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'fee_structures' AND column_name = 'fee_type') THEN
         ALTER TABLE fee_structures ADD COLUMN fee_type VARCHAR(50) NOT NULL DEFAULT 'tuition';
     END IF;
-    -- Use INTEGER for class_id to match classes.id
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'fee_structures' AND column_name = 'class_id') THEN
         ALTER TABLE fee_structures ADD COLUMN class_id INTEGER REFERENCES classes(id);
     END IF;
@@ -202,8 +268,7 @@ BEGIN
     END IF;
 END $$;
 
--- 4. Payments Table — recreate with correct columns for PHP bridge
--- Drop legacy UUID version if exists
+-- 4. Payments Table — drop and recreate to ensure correct schema + unique constraint
 DO $$
 DECLARE
     col_type TEXT;
@@ -393,7 +458,7 @@ INSERT INTO terms (name, academic_year, is_active) VALUES
 ('Term 1', '2025/2026', true),
 ('Term 2', '2025/2026', false),
 ('Term 3', '2025/2026', false)
-ON CONFLICT DO NOTHING;
+ON CONFLICT ON CONSTRAINT terms_academic_year_name_key DO NOTHING;
 
 -- Recreate subjects table with INTEGER id & class_id if legacy UUID version exists
 DO $$
@@ -432,7 +497,7 @@ INSERT INTO subjects (name, code, class_id) VALUES
 ('Physical Education', 'PE', NULL),
 ('Religious and Moral Education', 'RME', NULL),
 ('Career Technology', 'CT', NULL)
-ON CONFLICT DO NOTHING;
+ON CONFLICT ON CONSTRAINT subjects_name_class_id_key DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS grade_boundaries (
     id SERIAL PRIMARY KEY,
@@ -563,13 +628,14 @@ CREATE TABLE IF NOT EXISTS system_settings (
 -- Add school branding settings
 INSERT INTO system_settings (setting_key, setting_value) VALUES
 ('school_name', 'Nex CEC Basic School'),
-('school_motto', 'Education for Excellence'),
-('school_address', 'Kumasi, Ghana'),
-('school_phone', '+233 123 456 789'),
+('school_motto', 'Education for Excellence and Character'),
+('school_address', '12 Education Ridge, Kumasi, Ghana'),
+('school_phone', '+233 32 277 0000'),
 ('school_email', 'info@necxec.edu.gh'),
 ('current_term', '1'),
-('next_term_begins', '2026-01-06')
-ON CONFLICT (setting_key) DO NOTHING;
+('next_term_begins', '2026-01-06'),
+('school_logo', 'images/school-logo.png')
+ON CONFLICT ON CONSTRAINT system_settings_setting_key_key DO NOTHING;
 
 -- ==========================================
 -- VERIFICATION

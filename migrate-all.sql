@@ -190,7 +190,61 @@ BEGIN
     END IF;
 END $$;
 
--- 4. Messaging Tables
+-- 4. Payments Table — recreate with correct columns for PHP bridge
+-- Drop legacy UUID version if exists
+DO $$
+DECLARE
+    col_type TEXT;
+BEGIN
+    SELECT data_type INTO col_type
+    FROM information_schema.columns
+    WHERE table_name = 'payments' AND column_name = 'id';
+
+    IF col_type IS NOT NULL AND col_type != 'integer' THEN
+        DROP TABLE IF EXISTS payments CASCADE;
+    END IF;
+END $$;
+
+CREATE TABLE IF NOT EXISTS payments (
+    id SERIAL PRIMARY KEY,
+    student_id INTEGER NOT NULL,
+    amount NUMERIC(10,2) NOT NULL DEFAULT 0,
+    academic_year VARCHAR(20),
+    semester VARCHAR(20),
+    fee_type VARCHAR(50),
+    payment_method VARCHAR(50),
+    payment_date DATE DEFAULT CURRENT_DATE,
+    receipt_number VARCHAR(50) UNIQUE NOT NULL,
+    recorded_by INTEGER REFERENCES users(id),
+    status VARCHAR(20) DEFAULT 'completed',
+    enrollment_id VARCHAR(20),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Add payments columns if table already exists but is missing them
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'payments' AND column_name = 'amount') THEN
+        ALTER TABLE payments ADD COLUMN amount NUMERIC(10,2) DEFAULT 0;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'payments' AND column_name = 'status') THEN
+        ALTER TABLE payments ADD COLUMN status VARCHAR(20) DEFAULT 'completed';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'payments' AND column_name = 'enrollment_id') THEN
+        ALTER TABLE payments ADD COLUMN enrollment_id VARCHAR(20);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'payments' AND column_name = 'fee_type') THEN
+        ALTER TABLE payments ADD COLUMN fee_type VARCHAR(50);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'payments' AND column_name = 'academic_year') THEN
+        ALTER TABLE payments ADD COLUMN academic_year VARCHAR(20);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'payments' AND column_name = 'semester') THEN
+        ALTER TABLE payments ADD COLUMN semester VARCHAR(20);
+    END IF;
+END $$;
+
+-- 5. Messaging Tables
 CREATE TABLE IF NOT EXISTS messages (
     id SERIAL PRIMARY KEY,
     sender_id INTEGER REFERENCES users(id),

@@ -188,8 +188,18 @@ function renderSidebar($currentPage = '', $schoolName = 'Nex CEC') {
     $role = $_SESSION['role'] ?? 'admin';
     $roleLabel = ucfirst($role);
     
-    $html = '<aside class="sidebar">';
-    $html .= '<div class="sidebar-header" style="text-align: center; padding: 20px 10px;">';
+    $html = '';
+    
+    // Hamburger button (visible on mobile)
+    $html .= '<button class="hamburger-btn" id="hamburgerBtn" aria-label="Open menu"><i class="fas fa-bars"></i></button>';
+    
+    // Sidebar overlay
+    $html .= '<div class="sidebar-overlay" id="sidebarOverlay"></div>';
+    
+    // Sidebar
+    $html .= '<aside class="sidebar" id="sidebar">';
+    $html .= '<div class="sidebar-header" style="text-align: center; padding: 20px 10px; position: relative;">';
+    $html .= '<button class="sidebar-close-btn" id="sidebarCloseBtn" aria-label="Close menu"><i class="fas fa-times"></i></button>';
     $html .= '<img src="../images/school-logo.png" alt="Logo" style="width: 80px; height: 80px; margin-bottom: 10px; border-radius: 50%; background: #fff; padding: 5px;" onerror="this.src=\'../images/aamusted.jpg\'">';
     $html .= '<h3>' . htmlspecialchars($schoolName) . ' ' . $roleLabel . '</h3>';
     $html .= '</div>';
@@ -201,6 +211,51 @@ function renderSidebar($currentPage = '', $schoolName = 'Nex CEC') {
     }
     
     $html .= '</ul></aside>';
+    
+    // Mobile sidebar toggle script
+    $html .= '<script>
+    (function() {
+        var hamburger = document.getElementById("hamburgerBtn");
+        var sidebar = document.getElementById("sidebar");
+        var overlay = document.getElementById("sidebarOverlay");
+        var closeBtn = document.getElementById("sidebarCloseBtn");
+        if (!hamburger || !sidebar || !overlay) return;
+        
+        function openSidebar() {
+            sidebar.classList.add("open");
+            overlay.classList.add("active");
+            document.body.style.overflow = "hidden";
+        }
+        function closeSidebar() {
+            sidebar.classList.remove("open");
+            overlay.classList.remove("active");
+            document.body.style.overflow = "";
+        }
+        
+        hamburger.addEventListener("click", openSidebar);
+        overlay.addEventListener("click", closeSidebar);
+        if (closeBtn) closeBtn.addEventListener("click", closeSidebar);
+        
+        // Close sidebar when clicking a menu link (mobile)
+        var links = sidebar.querySelectorAll(".sidebar-menu a");
+        for (var i = 0; i < links.length; i++) {
+            links[i].addEventListener("click", function() {
+                if (window.innerWidth <= 768) closeSidebar();
+            });
+        }
+        
+        // Close on Escape key
+        document.addEventListener("keydown", function(e) {
+            if (e.key === "Escape") closeSidebar();
+        });
+        
+        // Close on window resize to desktop
+        window.addEventListener("resize", function() {
+            if (window.innerWidth > 768) closeSidebar();
+        });
+    })();
+    </script>';
+    
     return $html;
 }
 

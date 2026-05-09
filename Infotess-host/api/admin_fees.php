@@ -85,23 +85,28 @@ try {
 // Fetch All Fees
 $filter_year = $_GET['year'] ?? $current_year;
 $filter_term = $_GET['term'] ?? $current_term;
-$filter_class = isset($_GET['class_id']) && $_GET['class_id'] !== '' ? (int)$_GET['class_id'] : null;
+$filter_class = isset($_GET['class_id']) && $_GET['class_id'] !== '' ? $_GET['class_id'] : null;
 
 // Fetch All Fees (bridge drops complex WHERE — filter in PHP)
+// NOTE: Supabase REST returns JSON; types may differ from PHP (int vs string, etc.).
+// Cast all filter values to strings for safe comparison.
 $fees = array_filter($pdo->query("SELECT * FROM fee_structures")->fetchAll(), function($f) use ($filter_year, $filter_term, $filter_class) {
-    if ($f['academic_year'] !== $filter_year || $f['term'] !== $filter_term) return false;
+    if ((string)($f['academic_year'] ?? '') !== (string)$filter_year) return false;
+    if ((string)($f['term'] ?? '') !== (string)$filter_term) return false;
     if ($filter_class !== null) {
-        $fClassId = !empty($f['class_id']) ? (int)$f['class_id'] : 0;
-        if ($fClassId !== (int)$filter_class) return false;
+        $fClassId = !empty($f['class_id']) ? (string)$f['class_id'] : '';
+        if ($fClassId !== (string)$filter_class) return false;
     }
     return true;
 });
 // Sort in PHP (bridge can't handle ORDER BY with COALESCE)
 usort($fees, function($a, $b) {
-    $aCid = (int)($a['class_id'] ?? 0); $bCid = (int)($b['class_id'] ?? 0);
-    if ($aCid !== $bCid) return $aCid - $bCid;
-    if (($b['is_mandatory'] ?? false) !== ($a['is_mandatory'] ?? false)) return $b['is_mandatory'] ? 1 : -1;
-    return strcmp($a['title'], $b['title']);
+    $aCid = (string)($a['class_id'] ?? ''); $bCid = (string)($b['class_id'] ?? '');
+    if ($aCid !== $bCid) return strcmp($aCid, $bCid);
+    $aMand = (bool)($a['is_mandatory'] ?? false);
+    $bMand = (bool)($b['is_mandatory'] ?? false);
+    if ($bMand !== $aMand) return $bMand ? 1 : -1;
+    return strcmp((string)($a['title'] ?? ''), (string)($b['title'] ?? ''));
 });
 
 // Enrich with class name

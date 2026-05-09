@@ -20,9 +20,15 @@ if (isset($_GET['action']) && isset($_GET['id'])) {
     if ($action === 'approve') {
         // Assign admission number
         $today = date('ymd');
-        $stmt = $pdo->prepare("SELECT COUNT(*) FROM students WHERE admission_number LIKE ?");
-        $stmt->execute(["CEC-{$today}-%"]);
-        $counter = str_pad($stmt->fetchColumn() + 1, 3, '0', STR_PAD_LEFT);
+        // Bridge can't handle LIKE with param — fetch all, find next counter in PHP
+        $allStudentsForCount = $pdo->query("SELECT * FROM students")->fetchAll();
+        $counter = 0;
+        foreach ($allStudentsForCount as $s) {
+            $adm = $s['admission_number'] ?? '';
+            if (strpos($adm, "CEC-{$today}-") === 0) {
+                $counter++;
+            }
+        }
         $admissionNumber = "CEC-{$today}-{$counter}";
         $pdo->prepare("UPDATE students SET admission_number = ?, status = 'enrolled' WHERE id = ?")->execute([$admissionNumber, $id]);
         $message = "Enrollment approved! Admission Number: $admissionNumber";
@@ -30,70 +36,51 @@ if (isset($_GET['action']) && isset($_GET['id'])) {
         $pdo->prepare("UPDATE students SET status = 'rejected' WHERE id = ?")->execute([$id]);
         $message = "Enrollment rejected.";
     }
-    header("Location: enrollments.php?filter=" . ($_GET['filter'] ?? 'pending') . "&search=" . urlencode($_GET['search'] ?? ''));
+    header("Location: admin/enrollments.php?filter=" . ($_GET['filter'] ?? 'all') . "&search=" . urlencode($_GET['search'] ?? ''));
     exit;
 }
 
-// Fetch stats — use simple counts the bridge handles correctly
+// Fetch all students (bridge only handles simple WHERE col = ?)
+// All complex filtering is done in PHP below.
 try {
-    $totalStudents = (int)$pdo->query("SELECT COUNT(*) FROM students")->fetchColumn();
-    $totalApproved  = (int)$pdo->query("SELECT COUNT(*) FROM students WHERE admission_number IS NOT NULL")->fetchColumn();
-    $totalRejected = (int)$pdo->query("SELECT COUNT(*) FROM students WHERE status = 'rejected'")->fetchColumn();
-    $rejectedCount = $totalRejected;
-    $pendingCount   = $totalStudents - $totalApproved;
-    $enrolledToday  = (int)$pdo->query("SELECT COUNT(*) FROM students WHERE admission_date = CURRENT_DATE")->fetchColumn();
-    $totalEnrolled  = $totalApproved - $totalRejected;
+    $allStudents = $pdo->query("SELECT * FROM students")->fetchAll();
 } catch (Exception $e) {
-    $pendingCount = $rejectedCount = $totalApproved = $totalRejected = $enrolledToday = $totalEnrolled = 0;
+    $allStudents = [];
 }
 
-$filter = $_GET['filter'] ?? 'pending';
+$totalStudents = count($allStudents);
+$totalApproved  = count(array_filter($allStudents, fn($s) => !empty($s['admission_number'])));
+$totalRejected  = count(array_filter($allStudents, fn($s) => ($s['status'] ?? '') === 'rejected'));
+// Pending = no admission_number AND not rejected (matches Pending tab filter exactly)
+$pendingCount   = count(array_filter($allStudents, fn($s) => empty($s['admission_number']) && ($s['status'] ?? '') !== 'rejected'));
+$totalEnrolled  = count(array_filter($allStudents, fn($s) => !empty($s['admission_number']) && ($s['status'] ?? '') !== 'rejected'));
+$today = date('Y-m-d');
+$enrolledToday  = count(array_filter($allStudents, fn($s) => !empty($s['admission_date']) && substr($s['admission_date'], 0, 10) === $today));
+
+// Fetch enrollments — bridge only handles bare SELECT with LIMIT/OFFSET.
+// All filtering is done in PHP.
+$filter = $_GET['filter'] ?? 'all';
 $search = $_GET['search'] ?? '';
 
-// Fetch enrollments — WHERE clauses are limited by the Supabase bridge.
-// Workaround: fetch all, filter in PHP.
-$query = "SELECT * FROM students";
-$params = [];
-$where = [];
+// PHP-side filter matches the tab logic
+$enrollments = array_filter($allStudents, function($s) use ($filter, $search) {
+    // Apply tab filter first
+    if ($filter === 'pending')   { if ( !empty($s['admission_number']) || ($s['status'] ?? '') === 'rejected') return false; }
+    if ($filter === 'enrolled') { if ( empty($s['admission_number']) || ($s['status'] ?? '') === 'rejected') return false; }
+    if ($filter === 'rejected') { if (($s['status'] ?? '') !== 'rejected') return false; }
 
-if ($filter === 'pending') {
-    $where[] = "admission_number IS NULL";
-} elseif ($filter === 'enrolled') {
-    $where[] = "admission_number IS NOT NULL";
-} elseif ($filter === 'rejected') {
-    $where[] = "status = 'rejected'";
-} else {
-    $where[] = "id > 0";
-}
-
-if ($search) {
-    if ($filter === 'pending') {
-        $where[] = "full_name LIKE ?";
-        $params[] = "%$search%";
-    } else {
-        $where[] = "(full_name LIKE ? OR admission_number LIKE ?)";
-        $params[] = "%$search%";
-        $params[] = "%$search%";
+    // Apply search filter (matches both full_name and admission_number)
+    if ($search !== '') {
+        $term = strtolower($search);
+        $matchName = stripos($s['full_name'] ?? '', $search) !== false;
+        $matchAdm  = stripos($s['admission_number'] ?? '', $search) !== false;
+        if (!$matchName && !$matchAdm) return false;
     }
-}
-
-if (!empty($where)) {
-    $query .= " WHERE " . implode(" AND ", $where);
-}
-$query .= " ORDER BY admission_date DESC";
-
-$stmt = $pdo->prepare($query);
-$stmt->execute($params);
-$all_enrollments = $stmt->fetchAll();
-
-// Bridge limitation: complex WHERE clauses (IS NULL, IN, AND) may be dropped.
-// Fallback: filter in PHP to match what the user sees.
-$enrollments = array_filter($all_enrollments, function($s) use ($filter) {
-    if ($filter === 'pending')  return empty($s['admission_number']) && ($s['status'] ?? '') !== 'rejected';
-    if ($filter === 'enrolled') return !empty($s['admission_number']) && ($s['status'] ?? '') !== 'rejected';
-    if ($filter === 'rejected') return ($s['status'] ?? '') === 'rejected';
     return true;
 });
+
+// Sort by admission_date DESC
+usort($enrollments, fn($a, $b) => strcmp($b['admission_date'] ?? '', $a['admission_date'] ?? ''));
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -164,7 +151,7 @@ $enrollments = array_filter($all_enrollments, function($s) use ($filter) {
                     <div class="stat-label">Total Enrolled</div>
                 </div>
                 <div class="stat-card rejected">
-                    <div class="stat-number"><?php echo (int)$rejectedCount; ?></div>
+                    <div class="stat-number"><?php echo (int)$totalRejected; ?></div>
                     <div class="stat-label">Rejected</div>
                 </div>
             </div>

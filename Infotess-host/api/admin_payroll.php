@@ -20,16 +20,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     try {
         $pdo->beginTransaction();
         
-        // Get all active staff
-        $stmt = $pdo->query("SELECT * FROM staff WHERE status = 'active'");
-        $active_staff = $stmt->fetchAll();
+        // Get all active staff (filter in PHP — bridge drops WHERE status = 'active')
+        $all_staff = $pdo->query("SELECT * FROM staff")->fetchAll();
+        $active_staff = array_filter($all_staff, fn($s) => ($s['status'] ?? '') === 'active');
         
         $generated_count = 0;
         foreach ($active_staff as $staff) {
-            // Check if payroll already exists for this month/year
-            $stmt = $pdo->prepare("SELECT id FROM payroll WHERE staff_id = ? AND month = ? AND year = ?");
-            $stmt->execute([$staff['id'], $month, $year]);
-            if ($stmt->fetch()) continue;
+            // Check if payroll already exists for this staff/month/year (PHP-side check)
+            $already_exists = false;
+            $all_payroll = $pdo->query("SELECT staff_id, month, year FROM payroll")->fetchAll();
+            foreach ($all_payroll as $p) {
+                if ((int)$p['staff_id'] === (int)$staff['id'] && (int)$p['month'] === $month && (int)$p['year'] === $year) {
+                    $already_exists = true; break;
+                }
+            }
+            if ($already_exists) continue;
             
             // Get salary structure
             $stmt = $pdo->prepare("SELECT * FROM salary_structures WHERE staff_id = ? ORDER BY created_at DESC LIMIT 1");

@@ -20,20 +20,26 @@ $selected_class = $_GET['class_id'] ?? '';
 $selected_term = $_GET['term_id'] ?? '';
 $selected_subject = $_GET['subject_id'] ?? '';
 
-// Get subjects for selected class
-$subjects = [];
+// Get all subjects (bridge drops OR conditions in WHERE)
+$all_subjects = $pdo->query("SELECT * FROM subjects ORDER BY name ASC")->fetchAll();
 if ($selected_class) {
-    $stmt = $pdo->prepare("SELECT * FROM subjects WHERE class_id = ? OR class_id IS NULL ORDER BY name ASC");
-    $stmt->execute([$selected_class]);
-    $subjects = $stmt->fetchAll();
+    $subjects = array_filter($all_subjects, fn($s) => empty($s['class_id']) || (int)$s['class_id'] === (int)$selected_class);
+} else {
+    $subjects = $all_subjects;
 }
 
 // Get students in selected class
 $students = [];
 if ($selected_class) {
-    $stmt = $pdo->prepare("SELECT id, full_name, admission_number FROM students WHERE class_name = (SELECT name FROM classes WHERE id = ?) ORDER BY full_name ASC");
-    $stmt->execute([$selected_class]);
-    $students = $stmt->fetchAll();
+    // Two-step lookup: bridge can't handle subquery in WHERE
+    $stmt = $pdo->prepare("SELECT name FROM classes WHERE id = ?");
+    $stmt->execute([(int)$selected_class]);
+    $className = $stmt->fetchColumn();
+    if ($className) {
+        $stmt = $pdo->prepare("SELECT id, full_name, admission_number FROM students WHERE class_name = ? ORDER BY full_name ASC");
+        $stmt->execute([$className]);
+        $students = $stmt->fetchAll();
+    }
 }
 
 // Handle Save SBA Scores

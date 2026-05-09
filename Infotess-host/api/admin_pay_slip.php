@@ -11,46 +11,41 @@ $school_name = $settings['school_name'] ?? 'Nex CEC';
 $school_address = $settings['school_address'] ?? 'Kumasi, Ghana';
 $school_phone = $settings['school_phone'] ?? '+233 123 456 789';
 
-if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
-    redirect('payroll.php');
-}
+// Guard: ensure payroll and staff_id exist before any bridge query
+$payroll_id = (int)($_GET['id'] ?? 0);
+if ($payroll_id <= 0) { redirect('payroll.php'); }
 
-$payroll_id = (int)$_GET['id'];
+$stmt = $pdo->prepare("SELECT * FROM payroll WHERE id = ?");
+$stmt->execute([$payroll_id]);
+$payroll = $stmt->fetch();
 
-try {
-    $stmt = $pdo->prepare("SELECT * FROM payroll WHERE id = ?");
-    $stmt->execute([$payroll_id]);
-    $payroll = $stmt->fetch();
-    
-    if ($payroll && $payroll['staff_id']) {
-        $stmt = $pdo->prepare("SELECT full_name, staff_id, position, department, bank_name, account_number, phone, email FROM staff WHERE id = ?");
-        $stmt->execute([$payroll['staff_id']]);
-        $s = $stmt->fetch();
-        if ($s) {
-            $payroll['full_name'] = $s['full_name'];
-            $payroll['staff_id'] = $s['staff_id'];
-            $payroll['position'] = $s['position'];
-            $payroll['department'] = $s['department'] ?? '';
-            $payroll['bank_name'] = $s['bank_name'] ?? '';
-            $payroll['account_number'] = $s['account_number'] ?? '';
-            $payroll['phone'] = $s['phone'] ?? '';
-            $payroll['email'] = $s['email'] ?? '';
-        }
+if (!$payroll) { redirect('payroll.php'); }
+
+// Enrich payroll with staff info from staff table
+$staff_id = (int)($payroll['staff_id'] ?? 0);
+if ($staff_id > 0) {
+    $stmt = $pdo->prepare("SELECT full_name, staff_id, position, department, bank_name, account_number, phone, email FROM staff WHERE id = ?");
+    $stmt->execute([$staff_id]);
+    $s = $stmt->fetch();
+    if ($s) {
+        $payroll['full_name'] = $s['full_name'] ?? $payroll['full_name'] ?? '';
+        $payroll['staff_id'] = $s['staff_id'] ?? $payroll['staff_id'] ?? '';
+        $payroll['position'] = $s['position'] ?? '';
+        $payroll['department'] = $s['department'] ?? '';
+        $payroll['bank_name'] = $s['bank_name'] ?? '';
+        $payroll['account_number'] = $s['account_number'] ?? '';
+        $payroll['phone'] = $s['phone'] ?? '';
+        $payroll['email'] = $s['email'] ?? '';
     }
-} catch (Exception $e) {
-    $payroll = null;
+    // Get deductions for this staff
+    $stmt = $pdo->prepare("SELECT * FROM deductions WHERE staff_id = ? AND is_recurring = true");
+    $stmt->execute([$staff_id]);
+    $deductions = $stmt->fetchAll();
+} else {
+    $deductions = [];
 }
 
-if (!$payroll) {
-    redirect('payroll.php');
-}
-
-// Get deductions for this staff
-$stmt = $pdo->prepare("SELECT * FROM deductions WHERE staff_id = ? AND is_recurring = true");
-$stmt->execute([$payroll['staff_id']]);
-$deductions = $stmt->fetchAll();
-
-$month_name = date('F', mktime(0, 0, 0, $payroll['month'], 1));
+$month_name = date('F', mktime(0, 0, 0, (int)($payroll['month'] ?? 1), 1));
 ?>
 
 <!DOCTYPE html>
@@ -129,8 +124,14 @@ $month_name = date('F', mktime(0, 0, 0, $payroll['month'], 1));
                 </tr>
                 <?php
                 // Parse allowances
-                $stmt = $pdo->prepare("SELECT * FROM salary_structures WHERE staff_id = ? ORDER BY created_at DESC LIMIT 1");
-                $stmt->execute([$payroll['staff_id']]);
+                $salary_struct_id = (int)($payroll['salary_structure_id'] ?? 0);
+                if ($salary_struct_id > 0) {
+                    $stmt = $pdo->prepare("SELECT * FROM salary_structures WHERE id = ?");
+                    $stmt->execute([$salary_struct_id]);
+                } else {
+                    $stmt = $pdo->prepare("SELECT * FROM salary_structures WHERE staff_id = ? ORDER BY created_at DESC LIMIT 1");
+                    $stmt->execute([$staff_id]);
+                }
                 $salary_struct = $stmt->fetch();
                 if ($salary_struct) {
                     if ((float)$salary_struct['transport_allowance'] > 0) {

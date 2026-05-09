@@ -42,10 +42,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt = $pdo->prepare("UPDATE users SET email = ? WHERE id = ?");
         $stmt->execute([$email, $_SESSION['user_id']]);
         if ($profile_picture) {
-            $stmt = $pdo->prepare("UPDATE students SET phone_number = ?, profile_picture = ? WHERE id = ?");
+            $stmt = $pdo->prepare("UPDATE students SET guardian_phone_primary = ?, profile_picture = ? WHERE id = ?");
             $stmt->execute([$phone, $profile_picture, $student_id]);
         } else {
-            $stmt = $pdo->prepare("UPDATE students SET phone_number = ? WHERE id = ?");
+            $stmt = $pdo->prepare("UPDATE students SET guardian_phone_primary = ? WHERE id = ?");
             $stmt->execute([$phone, $student_id]);
         }
         $message = "Profile updated successfully.";
@@ -156,7 +156,7 @@ if ($student) {
                         </div>
                         <div class="info-item">
                             <label>Guardian Phone</label>
-                            <span><?php echo htmlspecialchars($student['guardian_phone'] ?? 'N/A'); ?></span>
+                            <span><?php echo htmlspecialchars($student['guardian_phone_primary'] ?? 'N/A'); ?></span>
                         </div>
                     </div>
 
@@ -168,7 +168,7 @@ if ($student) {
                         </div>
                         <div class="form-group">
                             <label>Phone Number</label>
-                            <input type="text" name="phone_number" class="form-control" value="<?php echo htmlspecialchars($student['phone_number'] ?? ''); ?>">
+                            <input type="text" name="phone_number" class="form-control" value="<?php echo htmlspecialchars($student['guardian_phone_primary'] ?? ''); ?>">
                         </div>
                     </div>
 

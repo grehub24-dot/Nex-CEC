@@ -114,27 +114,26 @@ if ($page < 1) $page = 1;
 $offset = ($page - 1) * $limit;
 
 $search = $_GET['search'] ?? '';
-$query = "SELECT * FROM staff";
-$params = [];
-if ($search) {
-    $query .= " WHERE full_name LIKE ? OR staff_id LIKE ? OR position LIKE ?";
-    $params = ["%$search%", "%$search%", "%$search%"];
-}
-$query .= " ORDER BY created_at DESC LIMIT $limit OFFSET $offset";
-$stmt = $pdo->prepare($query);
-$stmt->execute($params);
-$staff_list = $stmt->fetchAll();
+// Fetch all staff (bridge only handles simple WHERE col = ?)
+// Complex search filtering is done in PHP.
+$all_staff = $pdo->query("SELECT * FROM staff")->fetchAll();
 
-$total_query = "SELECT COUNT(*) FROM staff";
-$total_params = [];
-if ($search) {
-    $total_query .= " WHERE full_name LIKE ? OR staff_id LIKE ? OR position LIKE ?";
-    $total_params = ["%$search%", "%$search%", "%$search%"];
+// Apply search filter in PHP (matches full_name, staff_id, and position)
+if ($search !== '') {
+    $staff_list = array_filter($all_staff, function($s) use ($search) {
+        return stripos($s['full_name'] ?? '', $search) !== false
+            || stripos($s['staff_id'] ?? '', $search) !== false
+            || stripos($s['position'] ?? '', $search) !== false;
+    });
+} else {
+    $staff_list = $all_staff;
 }
-$total_stmt = $pdo->prepare($total_query);
-$total_stmt->execute($total_params);
-$total_rows = (int)$total_stmt->fetchColumn();
-$total_pages = ceil($total_rows / $limit);
+
+// Sort by created_at DESC and apply pagination in PHP
+usort($staff_list, fn($a, $b) => strcmp($b['created_at'] ?? '', $a['created_at'] ?? ''));
+$total_rows = count($staff_list);
+$staff_list = array_slice($staff_list, $offset, $limit);
+$total_pages = $total_rows > 0 ? (int)ceil($total_rows / $limit) : 1;
 ?>
 
 <!DOCTYPE html>
@@ -175,10 +174,33 @@ $total_pages = ceil($total_rows / $limit);
             <div class="stat-cards" style="margin-bottom: 30px;">
                 <?php
                 // Clean up duplicate staff rows (keep oldest per staff_id), run once per page load for safety
-                $pdo->exec("DELETE FROM staff a USING staff b WHERE a.id > b.id AND a.staff_id = b.staff_id");
-                $total_staff = (int)$pdo->query("SELECT COUNT(*) FROM staff")->fetchColumn();
-                $active_staff = (int)$pdo->query("SELECT COUNT(*) FROM staff WHERE status = 'active'")->fetchColumn();
-                $non_teachers = (int)$pdo->query("SELECT COUNT(*) FROM staff WHERE position NOT LIKE '%Teacher%' AND position NOT LIKE '%Instructor%' AND position NOT LIKE '%Head%'")->fetchColumn();
+                try {
+                    $dupStmt = $pdo->query("SELECT id, staff_id FROM staff ORDER BY staff_id ASC, id ASC");
+                    $rows = $dupStmt ? $dupStmt->fetchAll() : [];
+                    $seen = [];
+                    $del = $pdo->prepare("DELETE FROM staff WHERE id = ?");
+                    foreach ($rows as $r) {
+                        $sid = $r['staff_id'] ?? null;
+                        $id = $r['id'] ?? null;
+                        if (!$sid || !$id) continue;
+                        if (isset($seen[$sid])) {
+                            $del->execute([(int)$id]);
+                        } else {
+                            $seen[$sid] = true;
+                        }
+                    }
+                } catch (Exception $e) {
+                    // ignore cleanup errors
+                }
+                // Bridge doesn't support COUNT(*) — fetch all rows, count in PHP
+                $allStaffStats = $pdo->query("SELECT * FROM staff")->fetchAll();
+                if (!is_array($allStaffStats)) $allStaffStats = [];
+                $total_staff = count($allStaffStats);
+                $active_staff = count(array_filter($allStaffStats, fn($s) => ($s['status'] ?? '') === 'active'));
+                $non_teachers = count(array_filter($allStaffStats, function($s) {
+                    $pos = strtolower($s['position'] ?? '');
+                    return strpos($pos, 'teacher') === false && strpos($pos, 'instructor') === false && strpos($pos, 'head') === false;
+                }));
                 $teachers = $total_staff - $non_teachers;
                 ?>
                 <div class="stat-card">
@@ -387,9 +409,9 @@ $total_pages = ceil($total_rows / $limit);
             }
         });
 
-        // Auto-generate Staff ID preview
+        // Auto-generate Staff ID preview (uses $total_staff computed from PHP)
         function updateStaffIdPreview() {
-            const count = <?php echo (int)$pdo->query("SELECT COUNT(*) FROM staff")->fetchColumn(); ?>;
+            const count = <?php echo (int)$total_staff; ?>;
             const el = document.getElementById('autoStaffId');
             if (el) el.value = 'NXC-STF-' + String(count + 1).padStart(4, '0');
         }

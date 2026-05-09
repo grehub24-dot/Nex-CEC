@@ -53,8 +53,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $user_id = $pdo->lastInsertId();
 
                 // 2. Create Student Record
-                $stmt = $pdo->prepare("INSERT INTO students (user_id, admission_number, full_name, class_name, gender, phone_number, guardian_name, guardian_phone) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-                $stmt->execute([$user_id, $admission_number, $full_name, $class_name, $gender, $phone, $guardian_name, $guardian_phone]);
+                $stmt = $pdo->prepare("INSERT INTO students (user_id, admission_number, full_name, class_name, gender, guardian_name, guardian_email, guardian_phone_primary) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$user_id, $admission_number, $full_name, $class_name, $gender, $guardian_name, $email, $guardian_phone]);
 
                 $pdo->commit();
                 $message = "Student registered successfully!";
@@ -98,7 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                                 <div class='info-row'><div class='info-label'>Temporary Password:</div><div class='info-value'>" . htmlspecialchars($auto_password, ENT_QUOTES, 'UTF-8') . "</div></div>
                             </div>
                             <div class='notes'><ul>
-                                <li>Keep your index number safe — you'll need it for all fee payments</li>
+                                <li>Keep your admission number safe — you'll need it for all fee payments</li>
                                 <li>Login and reset your password immediately</li>
                                 <li>Payment receipts will be sent to this email</li>
                             </ul></div>

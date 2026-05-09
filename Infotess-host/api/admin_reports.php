@@ -18,27 +18,27 @@ $data = [];
 $headers = [];
 
 if ($report_type) {
-    if ($report_type === 'payments_per_dept') {
-        // Two-step lookup for Supabase: fetch payments, then enrich with student dept
+    if ($report_type === 'payments_per_class') {
+        // Two-step lookup for Supabase: fetch payments, then enrich with student class
         $all_payments = $pdo->query("SELECT student_id, amount FROM payments")->fetchAll();
-        $dept_map = [];
+        $class_map = [];
         $seen_students = [];
         foreach ($all_payments as $p) {
             if (!isset($seen_students[$p['student_id']])) {
-                $s = $pdo->prepare("SELECT department FROM students WHERE id = ?");
+                $s = $pdo->prepare("SELECT class_name FROM students WHERE id = ?");
                 $s->execute([$p['student_id']]);
                 $stu = $s->fetch();
-                $seen_students[$p['student_id']] = $stu ? $stu['department'] : 'Unknown';
+                $seen_students[$p['student_id']] = $stu ? ($stu['class_name'] ?: 'Unknown') : 'Unknown';
             }
-            $dept = $seen_students[$p['student_id']];
-            if (!isset($dept_map[$dept])) {
-                $dept_map[$dept] = ['department' => $dept, 'payment_count' => 0, 'total_amount' => 0];
+            $class_name = $seen_students[$p['student_id']];
+            if (!isset($class_map[$class_name])) {
+                $class_map[$class_name] = ['class' => $class_name, 'payment_count' => 0, 'total_amount' => 0];
             }
-            $dept_map[$dept]['payment_count']++;
-            $dept_map[$dept]['total_amount'] += (float)$p['amount'];
+            $class_map[$class_name]['payment_count']++;
+            $class_map[$class_name]['total_amount'] += (float)$p['amount'];
         }
-        $data = array_values($dept_map);
-        $headers = ['Department', 'Payment Count', 'Total Amount'];
+        $data = array_values($class_map);
+        $headers = ['Class', 'Payment Count', 'Total Amount'];
     } elseif ($report_type === 'payments_per_year') {
         $stmt = $pdo->query("
             SELECT academic_year, COUNT(id) as payment_count, SUM(amount) as total_amount 
@@ -47,14 +47,14 @@ if ($report_type) {
         ");
         $data = $stmt->fetchAll();
         $headers = ['Academic Year', 'Payment Count', 'Total Amount'];
-    } elseif ($report_type === 'payments_per_semester') {
+    } elseif ($report_type === 'payments_per_term') {
         $stmt = $pdo->query("
             SELECT semester, COUNT(id) as payment_count, SUM(amount) as total_amount 
             FROM payments 
             GROUP BY semester
         ");
         $data = $stmt->fetchAll();
-        $headers = ['Semester', 'Payment Count', 'Total Amount'];
+        $headers = ['Term', 'Payment Count', 'Total Amount'];
     }
 }
 
@@ -95,9 +95,9 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv' && $data) {
                 <form method="GET" action="">
                     <select name="type" required style="padding: 10px; margin-right: 10px;">
                         <option value="">Select Report Type</option>
-                        <option value="payments_per_dept" <?php echo $report_type == 'payments_per_dept' ? 'selected' : ''; ?>>Payments per Department</option>
+                        <option value="payments_per_class" <?php echo $report_type == 'payments_per_class' ? 'selected' : ''; ?>>Payments per Class</option>
                         <option value="payments_per_year" <?php echo $report_type == 'payments_per_year' ? 'selected' : ''; ?>>Payments per Academic Year</option>
-                        <option value="payments_per_semester" <?php echo $report_type == 'payments_per_semester' ? 'selected' : ''; ?>>Payments per Semester</option>
+                        <option value="payments_per_term" <?php echo $report_type == 'payments_per_term' ? 'selected' : ''; ?>>Payments per Term</option>
                     </select>
                     <button type="submit" class="btn-admin-action"><i class="fas fa-chart-line"></i> View Report</button>
                 </form>

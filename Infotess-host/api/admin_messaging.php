@@ -30,21 +30,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($send_sms) {
                 $sms = new SMSHelper();
                 $smsText = trim($title . ': ' . $content);
-                $students = $pdo->query("
-                    SELECT DISTINCT phone_number
-                    FROM students
-                    WHERE phone_number IS NOT NULL
-                      AND phone_number != ''
-                ")->fetchAll();
+                $students = array_filter($pdo->query("SELECT guardian_phone_primary, guardian_phone_emergency FROM students")->fetchAll(), function($s) {
+                    $p = $s['guardian_phone_primary'] ?? ''; $e = $s['guardian_phone_emergency'] ?? '';
+                    return !empty($p) || !empty($e);
+                });
                 $sentCount = 0;
                 $failedCount = 0;
                 foreach ($students as $student) {
-                    if ($sms->send($student['phone_number'], $smsText)) {
+                    $to = $student['guardian_phone_primary'] ?? '';
+                    if (!$to) {
+                        $to = $student['guardian_phone_emergency'] ?? '';
+                    }
+                    if (!$to) {
+                        continue;
+                    }
+                    if ($sms->send($to, $smsText)) {
                         $sentCount++;
                     } else {
                         $failedCount++;
                     }
                 }
+
                 $message = "Broadcast sent. SMS delivered to $sentCount member(s)";
                 if ($failedCount > 0) {
                     $message .= " ($failedCount failed).";
@@ -80,18 +86,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 if ($recipient_type === 'all') {
                     $students = $pdo->query("
-                        SELECT DISTINCT phone_number
+                        SELECT DISTINCT guardian_phone_primary, guardian_phone_emergency
                         FROM students
-                        WHERE phone_number IS NOT NULL
-                          AND phone_number != ''
+                        WHERE (guardian_phone_primary IS NOT NULL AND guardian_phone_primary != '')
+                           OR (guardian_phone_emergency IS NOT NULL AND guardian_phone_emergency != '')
                     ")->fetchAll();
                     foreach ($students as $student) {
-                        if ($sms->send($student['phone_number'], $sms_content)) {
+                        $to = $student['guardian_phone_primary'] ?? '';
+                        if (!$to) {
+                            $to = $student['guardian_phone_emergency'] ?? '';
+                        }
+                        if (!$to) {
+                            continue;
+                        }
+                        if ($sms->send($to, $sms_content)) {
                             $count++;
                         } else {
                             $failedCount++;
                         }
                     }
+
                     $stmt = $pdo->prepare("INSERT INTO messages (sender_id, title, content, is_broadcast) VALUES (?, ?, ?, 1)");
                     $stmt->execute([$_SESSION['user_id'], "Bulk SMS", $sms_content]);
 
@@ -102,11 +116,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $message .= ".";
                     }
                 } else {
-                    $stmt = $pdo->prepare("SELECT s.phone_number, s.full_name, s.user_id FROM students s WHERE s.id = ?");
+                    $stmt = $pdo->prepare("SELECT s.guardian_phone_primary, s.guardian_phone_emergency, s.full_name, s.user_id FROM students s WHERE s.id = ?");
                     $stmt->execute([$student_id]);
                     $student = $stmt->fetch();
-                    if ($student && !empty($student['phone_number'])) {
-                        if ($sms->send($student['phone_number'], $sms_content)) {
+                    $to = $student['guardian_phone_primary'] ?? '';
+                    if (!$to) {
+                        $to = $student['guardian_phone_emergency'] ?? '';
+                    }
+                    if ($student && !empty($to)) {
+                        if ($sms->send($to, $sms_content)) {
                             $stmt = $pdo->prepare("INSERT INTO messages (sender_id, receiver_id, title, content, is_broadcast) VALUES (?, ?, ?, ?, 0)");
                             $stmt->execute([$_SESSION['user_id'], $student['user_id'], "Individual SMS", $sms_content]);
                             

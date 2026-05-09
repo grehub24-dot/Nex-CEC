@@ -46,7 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 
     if (!$student) {
-        $error = "Student with Index Number $admission_number not found.";
+        $error = "Student with Admission Number $admission_number not found.";
     } else {
         try {
             $pdo->beginTransaction();
@@ -84,18 +84,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $pdo->commit();
             $message = "Payment recorded and receipt generated successfully. Receipt #: $receipt_number";
             
-            // Send SMS notification to student phone
-            if (!empty($student['phone_number'])) {
-                $sms = new SMSHelper();
-                $sms_message = "Hello {$student['full_name']}, payment of GHS " . number_format($amount, 2) . " for $fee_type ($year Term $term) received. Receipt: $receipt_number.";
-                $sms->send($student['phone_number'], $sms_message);
+            // Send SMS to guardian (basic school schema)
+            $guardianPhone = $student['guardian_phone_primary'] ?? '';
+            if (!$guardianPhone) {
+                $guardianPhone = $student['guardian_phone_emergency'] ?? '';
             }
-
-            // Send SMS to guardian
-            if (!empty($student['guardian_phone'])) {
+            if (!empty($guardianPhone)) {
                 $sms = new SMSHelper();
                 $sms_message = "Payment alert: GHS " . number_format($amount, 2) . " received for {$student['full_name']} - $fee_type ($year Term $term). Receipt: $receipt_number.";
-                $sms->send($student['guardian_phone'], $sms_message);
+                $sms->send($guardianPhone, $sms_message);
             }
 
             // Send Email with Receipt
@@ -150,7 +147,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                                     <strong>" . htmlspecialchars($student['full_name'], ENT_QUOTES, 'UTF-8') . "</strong>
                                 </div>
                                 <div class='receipt-row'>
-                                    <span style='color: #666;'>Index Number:</span>
+                                    <span style='color: #666;'>Admission Number:</span>
                                     <strong>" . htmlspecialchars($student['admission_number'], ENT_QUOTES, 'UTF-8') . "</strong>
                                 </div>
                                 <div class='receipt-row'>
@@ -493,7 +490,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     setLookupStatus(`Loaded: ${student.full_name} (${student.admission_number})`, '#15803d');
                 })
                 .catch(() => {
-                    setLookupStatus('No student found for this index number.', '#b42333');
+                    setLookupStatus('No student found for this admission number.', '#b42333');
                 });
         }
 

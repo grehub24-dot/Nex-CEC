@@ -213,11 +213,10 @@ $status_text = $outstanding <= 0 ? 'Fully Paid' : 'Outstanding';
                 } catch (Exception $e) { $recent_notifications = []; }
 
                 if (empty($recent_notifications)) {
-                    try {
-                        $stmt = $pdo->prepare("SELECT title, content AS message, created_at FROM messages WHERE is_broadcast = true OR receiver_id = ? ORDER BY created_at DESC LIMIT 3");
-                        $stmt->execute([$_SESSION['user_id']]);
-                        $recent_notifications = $stmt->fetchAll();
-                    } catch (Exception $e) { $recent_notifications = []; }
+                    // Bridge drops OR — filter in PHP
+                    $uid = (int)$_SESSION['user_id'];
+                    $allMsgs = $pdo->query("SELECT title, content AS message, created_at FROM messages ORDER BY created_at DESC")->fetchAll();
+                    $recent_notifications = array_slice(array_filter($allMsgs, fn($m) => !empty($m['is_broadcast']) || (int)($m['receiver_id'] ?? 0) === $uid), 0, 3);
                 }
 
                 if (empty($recent_notifications)):

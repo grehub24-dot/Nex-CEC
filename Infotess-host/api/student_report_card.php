@@ -33,10 +33,14 @@ foreach ($terms as $t) {
 // Get student's class
 $class_name = $student['class_name'] ?? '';
 
-// Get subjects for this class
-$stmt = $pdo->prepare("SELECT * FROM subjects WHERE class_id = (SELECT id FROM classes WHERE name = ?) OR class_id IS NULL ORDER BY name ASC");
+// Get subjects for this class (bridge can't handle subquery in WHERE)
+$stmt = $pdo->prepare("SELECT id FROM classes WHERE name = ?");
 $stmt->execute([$class_name]);
-$subjects = $stmt->fetchAll();
+$classId = $stmt->fetchColumn();
+$allSubj = $pdo->query("SELECT * FROM subjects ORDER BY name ASC")->fetchAll();
+$subjects = array_filter($allSubj, function($s) use ($classId) {
+    return empty($s['class_id']) || (int)$s['class_id'] === (int)$classId;
+});
 
 // Get SBA scores for this term
 $sba_scores = [];

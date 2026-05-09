@@ -19,9 +19,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $identifier = trim($_POST['identifier']); // Email or Index Number
 
     if (empty($identifier)) {
-        $error = "Please enter your Email or Index Number.";
+        $error = "Please enter your Email or Admission Number.";
     } else {
-        // Find user by email or index number
+        // Find user by email or admission number
         if (filter_var($identifier, FILTER_VALIDATE_EMAIL)) {
             // Admin/Executive or Student via email
             $stmt = $pdo->prepare("SELECT * FROM users WHERE email = :email");
@@ -35,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         } else {
             // Student via Index Number (two-step lookup for Supabase compatibility)
-            $stmt_s = $pdo->prepare("SELECT user_id, admission_number, full_name, phone_number FROM students WHERE admission_number = :admission_number");
+            $stmt_s = $pdo->prepare("SELECT user_id, admission_number, full_name, guardian_phone_primary, guardian_phone_emergency FROM students WHERE admission_number = :admission_number");
             $stmt_s->execute(['admission_number' => $identifier]);
             $student = $stmt_s->fetch();
             if ($student) {
@@ -45,7 +45,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($user) {
                     $user['admission_number'] = $student['admission_number'];
                     $user['full_name'] = $student['full_name'];
-                    $user['phone_number'] = $student['phone_number'];
+                    $user['guardian_phone_primary'] = $student['guardian_phone_primary'] ?? '';
+                    $user['guardian_phone_emergency'] = $student['guardian_phone_emergency'] ?? '';
                 }
             }
             $student = $user;
@@ -112,10 +113,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $mail_sent = $mailer->sendHTML($user['email'], $subject, $email_html);
                 
                 // Send SMS if student has phone number
-                if (isset($student) && !empty($student['phone_number'])) {
+                $smsTo = '';
+                if (isset($student)) {
+                    $smsTo = $student['guardian_phone_primary'] ?? '';
+                    if (!$smsTo) {
+                        $smsTo = $student['guardian_phone_emergency'] ?? '';
+                    }
+                }
+                if (!empty($smsTo)) {
                     $sms = new SMSHelper();
                     $message = "Hello $name, your password has been reset. Your temporary password is: $temp_password. Please login and change it.";
-                    $sms->send($student['phone_number'], $message);
+                    $sms->send($smsTo, $message);
                 }
 
                 $pdo->commit();

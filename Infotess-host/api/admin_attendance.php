@@ -23,12 +23,14 @@ $students = [];
 $class_name = '';
 if ($selected_class) {
     $stmt = $pdo->prepare("SELECT name FROM classes WHERE id = ?");
-    $stmt->execute([$selected_class]);
-    $class_name = $stmt->fetchColumn();
+    $stmt->execute([(int)$selected_class]);
+    $class_name = $stmt->fetchColumn() ?: '';
     
-    $stmt = $pdo->prepare("SELECT id, full_name, admission_number FROM students WHERE class_name = ? ORDER BY full_name ASC");
-    $stmt->execute([$class_name]);
-    $students = $stmt->fetchAll();
+    if ($class_name !== '') {
+        $stmt = $pdo->prepare("SELECT id, full_name, admission_number FROM students WHERE class_name = ? ORDER BY full_name ASC");
+        $stmt->execute([$class_name]);
+        $students = $stmt->fetchAll();
+    }
 }
 
 // Handle Save Attendance
@@ -67,20 +69,18 @@ if ($selected_class && $selected_date) {
     }
 }
 
-// Attendance statistics
+// Attendance statistics (bridge drops complex aggregation — compute in PHP)
 $stats = [];
 if ($selected_class) {
-    $stmt = $pdo->prepare("
-        SELECT 
-            COUNT(*) as total_records,
-            SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present,
-            SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent,
-            SUM(CASE WHEN status = 'late' THEN 1 ELSE 0 END) as late
-        FROM student_attendance 
-        WHERE class_id = ? AND attendance_date = ?
-    ");
-    $stmt->execute([$selected_class, $selected_date]);
-    $stats = $stmt->fetch();
+    $all_att = $pdo->query("SELECT * FROM student_attendance")->fetchAll();
+    $dateStr = substr($selected_date, 0, 10);
+    $classRecs = array_filter($all_att, fn($r) => (int)($r['class_id'] ?? 0) === (int)$selected_class && substr($r['attendance_date'], 0, 10) === $dateStr);
+    $stats = [
+        'total_records' => count($classRecs),
+        'present' => count(array_filter($classRecs, fn($r) => ($r['status'] ?? '') === 'present')),
+        'absent'  => count(array_filter($classRecs, fn($r) => ($r['status'] ?? '') === 'absent')),
+        'late'    => count(array_filter($classRecs, fn($r) => ($r['status'] ?? '') === 'late')),
+    ];
 }
 ?>
 

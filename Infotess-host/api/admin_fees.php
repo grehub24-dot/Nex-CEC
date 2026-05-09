@@ -29,10 +29,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
     if ($_POST['action'] === 'add_fee') {
         try {
-            // Check for duplicate
-            $stmt = $pdo->prepare("SELECT id FROM fee_structures WHERE title = ? AND academic_year = ? AND term = ? AND COALESCE(class_id, 0) = COALESCE(?, 0)");
-            $stmt->execute([$fee_title, $year, $term, $class_id]);
-            if ($stmt->fetch()) {
+            // Check for duplicate (bridge drops COALESCE — do PHP-side filter instead)
+            $all_fees = $pdo->query("SELECT * FROM fee_structures")->fetchAll();
+            $duplicate = false;
+            foreach ($all_fees as $f) {
+                if ($f['title'] === $fee_title && $f['academic_year'] === $year && $f['term'] === $term) {
+                    $fClassId = !empty($f['class_id']) ? (int)$f['class_id'] : 0;
+                    $cClassId = !empty($class_id) ? (int)$class_id : 0;
+                    if ($fClassId === $cClassId) { $duplicate = true; break; }
+                }
+            }
+            if ($duplicate) {
                 $error = "This fee already exists for the selected class and term.";
             } else {
                 $stmt = $pdo->prepare("INSERT INTO fee_structures (title, fee_type, amount, academic_year, term, class_id, is_mandatory) VALUES (?, ?, ?, ?, ?, ?, ?)");
@@ -80,33 +87,33 @@ $filter_year = $_GET['year'] ?? $current_year;
 $filter_term = $_GET['term'] ?? $current_term;
 $filter_class = isset($_GET['class_id']) && $_GET['class_id'] !== '' ? (int)$_GET['class_id'] : null;
 
-$fees_query = "SELECT * FROM fee_structures WHERE academic_year = ? AND term = ?";
-$fees_params = [$filter_year, $filter_term];
-if ($filter_class !== null) {
-    $fees_query .= " AND class_id = ?";
-    $fees_params[] = $filter_class;
-}
-$fees_query .= " ORDER BY COALESCE(class_id, 999), is_mandatory DESC, title ASC";
-
-$fees = [];
-try {
-    $stmt = $pdo->prepare($fees_query);
-    $stmt->execute($fees_params);
-    $fees = $stmt->fetchAll();
-    
-    // Enrich with class name
-    foreach ($fees as &$fee) {
-        if (!empty($fee['class_id'])) {
-            $cs = $pdo->prepare("SELECT name FROM classes WHERE id = ?");
-            $cs->execute([$fee['class_id']]);
-            $cname = $cs->fetch();
-            $fee['class_name'] = $cname ? $cname['name'] : 'All Classes';
-        } else {
-            $fee['class_name'] = 'All Classes';
-        }
+// Fetch All Fees (bridge drops complex WHERE — filter in PHP)
+$fees = array_filter($pdo->query("SELECT * FROM fee_structures")->fetchAll(), function($f) use ($filter_year, $filter_term, $filter_class) {
+    if ($f['academic_year'] !== $filter_year || $f['term'] !== $filter_term) return false;
+    if ($filter_class !== null) {
+        $fClassId = !empty($f['class_id']) ? (int)$f['class_id'] : 0;
+        if ($fClassId !== (int)$filter_class) return false;
     }
-} catch (Exception $e) {
-    $fees = [];
+    return true;
+});
+// Sort in PHP (bridge can't handle ORDER BY with COALESCE)
+usort($fees, function($a, $b) {
+    $aCid = (int)($a['class_id'] ?? 0); $bCid = (int)($b['class_id'] ?? 0);
+    if ($aCid !== $bCid) return $aCid - $bCid;
+    if (($b['is_mandatory'] ?? false) !== ($a['is_mandatory'] ?? false)) return $b['is_mandatory'] ? 1 : -1;
+    return strcmp($a['title'], $b['title']);
+});
+
+// Enrich with class name
+foreach ($fees as &$fee) {
+    if (!empty($fee['class_id'])) {
+        $cs = $pdo->prepare("SELECT name FROM classes WHERE id = ?");
+        $cs->execute([$fee['class_id']]);
+        $cname = $cs->fetch();
+        $fee['class_name'] = $cname ? $cname['name'] : 'All Classes';
+    } else {
+        $fee['class_name'] = 'All Classes';
+    }
 }
 
 // Calculate totals

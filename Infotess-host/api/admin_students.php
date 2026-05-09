@@ -182,10 +182,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $enrollmentId = sanitize($_POST['enrollment_id']);
 
     // Generate admission number after payment
+    // Bridge can't handle LIKE with param — find next counter in PHP instead
     $today = date('ymd');
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM students WHERE admission_number LIKE ?");
-    $stmt->execute(["CEC-{$today}-%"]);
-    $counter = str_pad($stmt->fetchColumn() + 1, 3, '0', STR_PAD_LEFT);
+    $allForCount = $pdo->query("SELECT * FROM students")->fetchAll();
+    $counter = 0;
+    foreach ($allForCount as $s) {
+        $adm = $s['admission_number'] ?? '';
+        if (strpos($adm, "CEC-{$today}-") === 0) $counter++;
+    }
     $admissionNumber = "CEC-{$today}-{$counter}";
 
     // Generate receipt number
@@ -244,30 +248,27 @@ $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 if ($page < 1) $page = 1;
 $offset = ($page - 1) * $limit;
 
-// Fetch Students
-$search = $_GET['search'] ?? '';
-$query = "SELECT * FROM students";
-$params = [];
-if ($search) {
-    $query .= " WHERE full_name LIKE ? OR admission_number LIKE ?";
-    $params = ["%$search%", "%$search%"];
-}
-$query .= " ORDER BY created_at DESC LIMIT $limit OFFSET $offset";
-$stmt = $pdo->prepare($query);
-$stmt->execute($params);
-$students = $stmt->fetchAll();
+// Fetch all students (bridge only handles simple WHERE col = ?)
+// Complex search filtering is done in PHP.
+$all_students = $pdo->query("SELECT * FROM students")->fetchAll();
 
-// Get total count
-$total_query = "SELECT COUNT(*) FROM students";
-$total_params = [];
-if ($search) {
-    $total_query .= " WHERE full_name LIKE ? OR admission_number LIKE ?";
-    $total_params = ["%$search%", "%$search%"];
+// Apply search filter in PHP (matches both full_name and admission_number)
+$search = $_GET['search'] ?? '';
+if ($search !== '') {
+    $students = array_filter($all_students, function($s) use ($search) {
+        $term = strtolower($search);
+        return stripos($s['full_name'] ?? '', $search) !== false
+            || stripos($s['admission_number'] ?? '', $search) !== false;
+    });
+} else {
+    $students = $all_students;
 }
-$total_stmt = $pdo->prepare($total_query);
-$total_stmt->execute($total_params);
-$total_rows = (int)$total_stmt->fetchColumn();
-$total_pages = ceil($total_rows / $limit);
+
+// Sort by created_at DESC and apply pagination in PHP
+usort($students, fn($a, $b) => strcmp($b['created_at'] ?? '', $a['created_at'] ?? ''));
+$total_rows = count($students);
+$students = array_slice($students, $offset, $limit);
+$total_pages = $total_rows > 0 ? (int)ceil($total_rows / $limit) : 1;
 ?>
 
 <!DOCTYPE html>

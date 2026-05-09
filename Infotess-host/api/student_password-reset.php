@@ -50,10 +50,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $phone_number = null;
             $student_name = $_SESSION['name'] ?? '';
             try {
-                $stmt_s = $pdo->prepare("SELECT phone_number FROM students WHERE user_id = :uid");
+                $stmt_s = $pdo->prepare("SELECT guardian_phone_primary, guardian_phone_emergency FROM students WHERE user_id = :uid");
                 $stmt_s->execute(['uid' => $user_id]);
                 $student_row = $stmt_s->fetch();
-                $phone_number = $student_row['phone_number'] ?? null;
+                $phone_number = $student_row['guardian_phone_primary'] ?? null;
+                if (!$phone_number) {
+                    $phone_number = $student_row['guardian_phone_emergency'] ?? null;
+                }
             } catch (PDOException $e) {
                 // Silently ignore SMS fetch error - password is already saved
             }

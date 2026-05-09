@@ -43,28 +43,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
-// Get all active staff
-$staff_list = $pdo->query("SELECT id, staff_id, full_name, position FROM staff WHERE status = 'active' ORDER BY full_name ASC")->fetchAll();
+// Get all staff (filter active in PHP — bridge drops WHERE status = 'active')
+$all_staff = $pdo->query("SELECT id, staff_id, full_name, position FROM staff")->fetchAll();
+$staff_list = array_filter($all_staff, fn($s) => ($s['status'] ?? '') === 'active');
+usort($staff_list, fn($a, $b) => strcmp($a['full_name'], $b['full_name']));
 
 // Get existing attendance for selected date
 $existing_attendance = [];
 $stmt = $pdo->prepare("SELECT staff_id, status, check_in, check_out, notes FROM staff_attendance WHERE attendance_date = ?");
 $stmt->execute([$selected_date]);
 while ($row = $stmt->fetch()) {
-    $existing_attendance[$row['staff_id']] = $row;
+    $existing_attendance[(int)$row['staff_id']] = $row;
 }
 
-// Stats for selected date
-$stmt = $pdo->prepare("
-    SELECT 
-        COUNT(*) as total,
-        SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present,
-        SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent,
-        SUM(CASE WHEN status = 'late' THEN 1 ELSE 0 END) as late
-    FROM staff_attendance WHERE attendance_date = ?
-");
-$stmt->execute([$selected_date]);
-$stats = $stmt->fetch();
+// Stats for selected date — build in PHP (bridge drops complex aggregation)
+$all_attendance = $pdo->query("SELECT * FROM staff_attendance")->fetchAll();
+$date_records = array_filter($all_attendance, fn($r) => $r['attendance_date'] === $selected_date);
+$stats = [
+    'total'   => count($date_records),
+    'present' => count(array_filter($date_records, fn($r) => ($r['status'] ?? '') === 'present')),
+    'absent'  => count(array_filter($date_records, fn($r) => ($r['status'] ?? '') === 'absent')),
+    'late'    => count(array_filter($date_records, fn($r) => ($r['status'] ?? '') === 'late')),
+];
 ?>
 
 <!DOCTYPE html>

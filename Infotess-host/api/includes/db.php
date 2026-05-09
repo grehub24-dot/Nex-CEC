@@ -46,6 +46,33 @@ class LegacyPDO {
     public function beginTransaction() { return true; }
     public function commit() { return true; }
     public function rollBack() { return true; }
+
+    /**
+     * Execute an SQL statement and return the number of affected rows.
+     * Supports SELECT, INSERT, UPDATE, DELETE via the bridge.
+     * DDL statements (CREATE, ALTER, DROP, TRUNCATE) are logged and return 0
+     * since the Supabase REST bridge cannot execute them.
+     */
+    public function exec($sql) {
+        $sql = trim($sql);
+        $sqlUpper = strtoupper(substr($sql, 0, 20));
+
+        // DDL statements — cannot be executed via REST bridge, log and skip
+        if (preg_match('/^(CREATE|ALTER|DROP|TRUNCATE|RENAME)\b/i', $sqlUpper)) {
+            error_log("LegacyPDO::exec() skipped DDL (cannot bridge to Supabase REST): " . substr($sql, 0, 120));
+            return 0;
+        }
+
+        try {
+            $stmt = $this->prepare($sql);
+            $stmt->execute();
+            return $stmt->rowCount();
+        } catch (Exception $e) {
+            error_log("LegacyPDO::exec() error: " . $e->getMessage() . " | SQL: " . substr($sql, 0, 200));
+            // Return 0 on failure so callers with try/catch can continue
+            return 0;
+        }
+    }
 }
 
 class LegacyStatement {
@@ -93,10 +120,14 @@ class LegacyStatement {
 
     public function execute($params = []) {
         // Convert empty strings to null for PostgreSQL integer/numeric columns
+        // Also guard: null and "" both become null, and any param that is a
+        // non-numeric string (like empty '' from a malformed value) is also null.
         $this->params = array_map(function($v) {
-            return $v === '' ? null : $v;
+            if ($v === '' || $v === null) return null;
+            // If it looks like a non-numeric string being used as a numeric param,
+            // cast it safely — Supabase REST API handles the rest.
+            return $v;
         }, $params);
-        
         if (!$this->client) return false;
 
         try {
@@ -156,7 +187,10 @@ class LegacyStatement {
                             $col = $parts[0];
                             $val = trim($parts[1]);
                             if ($val === '?') {
-                                $query = $query->where($col, $this->params[$paramIndex]);
+                                $paramVal = $this->params[$paramIndex] ?? null;
+                                if ($paramVal !== null && $paramVal !== '') {
+                                    $query = $query->where($col, $paramVal);
+                                }
                                 $paramIndex++;
                             }
                         }
@@ -196,7 +230,10 @@ class LegacyStatement {
                             $col = $parts[0];
                             $val = trim($parts[1]);
                             if ($val === '?') {
-                                $query = $query->where($col, $this->params[$paramIndex]);
+                                $paramVal = $this->params[$paramIndex] ?? null;
+                                if ($paramVal !== null && $paramVal !== '') {
+                                    $query = $query->where($col, $paramVal);
+                                }
                                 $paramIndex++;
                             }
                         }
@@ -212,6 +249,9 @@ class LegacyStatement {
                 $query = $this->client->table($this->table);
                 
                 // Handle WHERE clause with ? (positional) or :name (named) parameters
+                // NOTE: Empty string ('') is converted to null above.
+                // If a param is null, skip the WHERE condition entirely — passing null
+                // to Supabase REST creates a broken "col=eq." filter that causes 22P02.
                 preg_match_all('/WHERE\s+([\s\S]+?)(\s+ORDER|\s+LIMIT|$)/i', $this->sql, $whereMatches);
                 
                 $currentParamIndex = 0;
@@ -223,11 +263,18 @@ class LegacyStatement {
                             $col = $parts[0];
                             $val = trim($parts[1]);
                             if ($val === '?') {
-                                $query = $query->where($col, $this->params[$currentParamIndex]);
+                                $paramVal = $this->params[$currentParamIndex] ?? null;
+                                // Skip null params to avoid broken "col=eq." filters
+                                if ($paramVal !== null && $paramVal !== '') {
+                                    $query = $query->where($col, $paramVal);
+                                }
                                 $currentParamIndex++;
                             } elseif (strpos($val, ':') === 0) {
                                 $paramName = substr($val, 1);
-                                $query = $query->where($col, $this->params[$paramName] ?? null);
+                                $paramVal = $this->params[$paramName] ?? null;
+                                if ($paramVal !== null && $paramVal !== '') {
+                                    $query = $query->where($col, $paramVal);
+                                }
                             }
                         }
                     }

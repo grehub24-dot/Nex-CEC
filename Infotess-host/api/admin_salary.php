@@ -26,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $stmt = $pdo->prepare("SELECT id FROM salary_structures WHERE staff_id = ?");
         $stmt->execute([$staff_id]);
         if ($stmt->fetch()) {
-            $stmt = $pdo->prepare("UPDATE salary_structures SET basic_salary=?, housing_allowance=?, transport_allowance=?, other_allowances=?, ssnit_rate=?, tax_rate=?, updated_at=NOW() WHERE staff_id=?");
+            $stmt = $pdo->prepare("UPDATE salary_structures SET basic_salary=?, housing_allowance=?, transport_allowance=?, other_allowances=?, ssnit_rate=?, tax_rate=? WHERE staff_id=?");
             $stmt->execute([$basic_salary, $housing_allowance, $transport_allowance, $other_allowances, $ssnit_rate, $tax_rate, $staff_id]);
         } else {
             $stmt = $pdo->prepare("INSERT INTO salary_structures (staff_id, basic_salary, housing_allowance, transport_allowance, other_allowances, ssnit_rate, tax_rate) VALUES (?, ?, ?, ?, ?, ?, ?)");
@@ -65,8 +65,10 @@ if (isset($_GET['delete_deduction']) && is_numeric($_GET['delete_deduction'])) {
     }
 }
 
-// Get all staff for dropdown
-$staff_list = $pdo->query("SELECT id, staff_id, full_name, position FROM staff WHERE status = 'active' ORDER BY full_name ASC")->fetchAll();
+// Get all staff for dropdown (bridge drops literal WHERE — filter active in PHP)
+$all_staff = $pdo->query("SELECT id, staff_id, full_name, position, status FROM staff")->fetchAll();
+$staff_list = array_filter($all_staff, fn($s) => ($s['status'] ?? '') === 'active');
+usort($staff_list, fn($a, $b) => strcmp($a['full_name'] ?? '', $b['full_name'] ?? ''));
 
 // Selected staff
 $selected_staff_id = (int)($_GET['staff_id'] ?? ($_POST['staff_id'] ?? 0));

@@ -14,22 +14,19 @@ $school_name = $settings['school_name'] ?? 'Nex CEC';
 $message = '';
 $error = '';
 
-$selected_date = $_GET['date'] ?? date('Y-m-d');
-
-// Handle Save Staff Attendance
+// After a successful POST, redirect to a GET URL to avoid re-submission on refresh
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'save_staff_attendance') {
     $attendance_date = sanitize($_POST['attendance_date']);
-    
     try {
         $pdo->beginTransaction();
         $saved = 0;
-        
+
         foreach ($_POST['staff_attendance'] as $staff_id => $data) {
             $status = sanitize($data['status'] ?? 'present');
             $check_in = isset($data['check_in']) && !empty($data['check_in']) ? $attendance_date . ' ' . $data['check_in'] : null;
             $check_out = isset($data['check_out']) && !empty($data['check_out']) ? $attendance_date . ' ' . $data['check_out'] : null;
             $notes = sanitize($data['notes'] ?? '');
-            
+
             // Bridge doesn't support ON CONFLICT — use SELECT-then-UPDATE-or-INSERT
             $existing = $pdo->prepare("SELECT id FROM staff_attendance WHERE staff_id = ? AND attendance_date = ?");
             $existing->execute([$staff_id, $attendance_date]);
@@ -42,14 +39,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             }
             $saved++;
         }
-        
+
         $pdo->commit();
-        $message = "Staff attendance saved for $saved members on $attendance_date.";
+        header("Location: staff_attendance.php?date=" . urlencode($attendance_date) . "&msg=" . urlencode("Staff attendance saved for $saved members on $attendance_date."));
+        exit;
     } catch (Exception $e) {
         $pdo->rollBack();
-        $error = "Error: " . $e->getMessage();
+        header("Location: staff_attendance.php?date=" . urlencode($attendance_date) . "&err=" . urlencode("Error: " . $e->getMessage()));
+        exit;
     }
 }
+
+$selected_date = $_GET['date'] ?? date('Y-m-d');
+$message = $_GET['msg'] ?? '';
+$error = $_GET['err'] ?? '';
+
+
 
 // Get all staff (filter active in PHP — bridge drops WHERE status = 'active')
 $all_staff = $pdo->query("SELECT id, staff_id, full_name, position FROM staff")->fetchAll();
@@ -87,6 +92,10 @@ $stats = [
         .status-btn.present { border-color: #27ae60; background: #d4edda; color: #155724; }
         .status-btn.absent { border-color: #e74c3c; background: #f8d7da; color: #721c24; }
         .status-btn.late { border-color: #f39c12; background: #fff3cd; color: #856404; }
+        .status-btn.active { box-shadow: 0 0 0 2px #333; transform: scale(1.05); font-weight: bold; }
+        .status-btn.present.active { border-color: #1e8449; background: #28a745; color: #fff; }
+        .status-btn.absent.active { border-color: #c0392b; background: #dc3545; color: #fff; }
+        .status-btn.late.active { border-color: #d68910; background: #e67e22; color: #fff; }
     </style>
 </head>
 <body>
@@ -99,10 +108,10 @@ $stats = [
             </div>
 
             <?php if ($message): ?>
-                <div class="alert alert-success"><?php echo $message; ?></div>
+                <div class="alert alert-success"><?php echo htmlspecialchars($message); ?></div>
             <?php endif; ?>
             <?php if ($error): ?>
-                <div class="alert alert-danger"><?php echo $error; ?></div>
+                <div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
             <?php endif; ?>
 
             <!-- Date Selector -->
@@ -166,10 +175,11 @@ $stats = [
                                 </thead>
                                 <tbody>
                                     <?php foreach ($staff_list as $staff):
-                                        $att = $existing_attendance[$staff['id']] ?? null;
-                                        $status = $att ? $att['status'] : 'present';
-                                        $check_in = $att && $att['check_in'] ? date('H:i', strtotime($att['check_in'])) : '';
-                                        $check_out = $att && $att['check_out'] ? date('H:i', strtotime($att['check_out'])) : '';
+                                        $staffId = (int)($staff['id'] ?? 0);
+                                        $att = $existing_attendance[$staffId] ?? null;
+                                        $status = $att ? ($att['status'] ?? 'present') : 'present';
+                                        $check_in = $att && !empty($att['check_in']) ? date('H:i', strtotime($att['check_in'])) : '';
+                                        $check_out = $att && !empty($att['check_out']) ? date('H:i', strtotime($att['check_out'])) : '';
                                         $notes = $att ? ($att['notes'] ?? '') : '';
                                     ?>
                                     <tr>
@@ -178,15 +188,15 @@ $stats = [
                                         <td><?php echo htmlspecialchars($staff['position']); ?></td>
                                         <td>
                                             <div style="display: flex; gap: 5px;">
-                                                <button type="button" class="status-btn present <?php echo $status === 'present' ? 'active' : ''; ?>" onclick="setStatus(this, 'present', <?php echo $staff['id']; ?>)">Present</button>
-                                                <button type="button" class="status-btn absent <?php echo $status === 'absent' ? 'active' : ''; ?>" onclick="setStatus(this, 'absent', <?php echo $staff['id']; ?>)">Absent</button>
-                                                <button type="button" class="status-btn late <?php echo $status === 'late' ? 'active' : ''; ?>" onclick="setStatus(this, 'late', <?php echo $staff['id']; ?>)">Late</button>
+                                                <button type="button" class="status-btn present <?php echo $status === 'present' ? 'active' : ''; ?>" onclick="setStatus(this, 'present', <?php echo $staffId; ?>)">Present</button>
+                                                <button type="button" class="status-btn absent <?php echo $status === 'absent' ? 'active' : ''; ?>" onclick="setStatus(this, 'absent', <?php echo $staffId; ?>)">Absent</button>
+                                                <button type="button" class="status-btn late <?php echo $status === 'late' ? 'active' : ''; ?>" onclick="setStatus(this, 'late', <?php echo $staffId; ?>)">Late</button>
                                             </div>
-                                            <input type="hidden" name="staff_attendance[<?php echo $staff['id']; ?>][status]" value="<?php echo $status; ?>" id="status_<?php echo $staff['id']; ?>">
+                                            <input type="hidden" name="staff_attendance[<?php echo $staffId; ?>][status]" value="<?php echo $status; ?>" id="status_<?php echo $staffId; ?>">
                                         </td>
-                                        <td><input type="time" name="staff_attendance[<?php echo $staff['id']; ?>][check_in]" class="form-control" value="<?php echo htmlspecialchars($check_in); ?>" style="width: 100px;"></td>
-                                        <td><input type="time" name="staff_attendance[<?php echo $staff['id']; ?>][check_out]" class="form-control" value="<?php echo htmlspecialchars($check_out); ?>" style="width: 100px;"></td>
-                                        <td><input type="text" name="staff_attendance[<?php echo $staff['id']; ?>][notes]" class="form-control" value="<?php echo htmlspecialchars($notes); ?>" placeholder="Optional"></td>
+                                        <td><input type="time" name="staff_attendance[<?php echo $staffId; ?>][check_in]" class="form-control" value="<?php echo htmlspecialchars($check_in); ?>" style="width: 100px;"></td>
+                                        <td><input type="time" name="staff_attendance[<?php echo $staffId; ?>][check_out]" class="form-control" value="<?php echo htmlspecialchars($check_out); ?>" style="width: 100px;"></td>
+                                        <td><input type="text" name="staff_attendance[<?php echo $staffId; ?>][notes]" class="form-control" value="<?php echo htmlspecialchars($notes); ?>" placeholder="Optional"></td>
                                     </tr>
                                     <?php endforeach; ?>
                                 </tbody>

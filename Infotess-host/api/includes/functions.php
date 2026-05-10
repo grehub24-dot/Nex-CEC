@@ -198,9 +198,9 @@ function renderSidebar($currentPage = '', $schoolName = 'Nex CEC') {
     
     // Sidebar
     $html .= '<aside class="sidebar" id="sidebar">';
-    $html .= '<div class="sidebar-header" style="text-align: center; padding: 20px 10px; position: relative;">';
+    $html .= '<div class="sidebar-header position-relative" style="padding: 20px 10px;">';
     $html .= '<button class="sidebar-close-btn" id="sidebarCloseBtn" aria-label="Close menu"><i class="fas fa-times"></i></button>';
-    $html .= '<img src="../images/school-logo.png" alt="Logo" style="width: 80px; height: 80px; margin-bottom: 10px; border-radius: 50%; background: #fff; padding: 5px;" onerror="this.src=\'../images/aamusted.jpg\'">';
+    $html .= '<img src="../images/school-logo.png" alt="Logo" class="rounded-full mb-10" style="width: 80px; height: 80px; background: #fff; padding: 5px;" onerror="this.src=\'../images/aamusted.jpg\'">';
     $html .= '<h3>' . htmlspecialchars($schoolName) . ' ' . $roleLabel . '</h3>';
     $html .= '</div>';
     $html .= '<ul class="sidebar-menu">';

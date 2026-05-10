@@ -3,45 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>INFOTESS - SDMS</title>
+    <title>SDMS — School Management System</title>
     <!-- CSS -->
         <link rel="stylesheet" href="/css/style.css">
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .skip-link { position: absolute; top: -100%; left: 0; background: #003366; color: #fff; padding: 10px 20px; z-index: 9999; }
+        .skip-link:focus { top: 0; }
+    </style>
 </head>
 <body>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
     <!-- Navigation -->
-    <nav class="navbar">
+    <nav class="navbar" role="navigation" aria-label="Main navigation">
         <div class="container">
-            <a href="/index.php" class="logo">
-                <img src="/images/infotess.png" alt="INFOTESS Logo" height="40"> INFOTESS
+            <a href="/index.php" class="logo" aria-label="SDMS Home">
+                <img src="/images/infotess.png" alt="School Logo" height="40"> SDMS
             </a>
             <ul class="nav-links">
                 <li><a href="/index.php">Home</a></li>
                 <li class="dropdown">
-                    <a href="#" class="dropbtn">About <i class="fas fa-caret-down"></i></a>
-                    <div class="dropdown-content">
-                        <a href="/about.php">About INFOTESS</a>
-                        <a href="/department.php">Department</a>
-                        <a href="/executives.php">Executives</a>
-                        <a href="/alumni.php">Alumni</a>
+                    <a href="#" class="dropbtn" aria-haspopup="true" aria-expanded="false">About <i class="fas fa-caret-down"></i></a>
+                    <div class="dropdown-content" role="menu">
+                        <a href="/about.php" role="menuitem">About INFOTESS</a>
+                        <a href="/department.php" role="menuitem">Department</a>
+                        <a href="/executives.php" role="menuitem">Executives</a>
+                        <a href="/alumni.php" role="menuitem">Alumni</a>
                     </div>
                 </li>
                 <li class="dropdown">
-                    <a href="#" class="dropbtn">Activities <i class="fas fa-caret-down"></i></a>
-                    <div class="dropdown-content">
-                        <a href="/activities.php">Activities</a>
-                        <a href="/events.php">Events</a>
-                        <a href="/projects.php">Projects</a>
-                        <a href="/gallery.php">Gallery</a>
+                    <a href="#" class="dropbtn" aria-haspopup="true" aria-expanded="false">Activities <i class="fas fa-caret-down"></i></a>
+                    <div class="dropdown-content" role="menu">
+                        <a href="/activities.php" role="menuitem">Activities</a>
+                        <a href="/events.php" role="menuitem">Events</a>
+                        <a href="/projects.php" role="menuitem">Projects</a>
+                        <a href="/gallery.php" role="menuitem">Gallery</a>
                     </div>
                 </li>
                 <li class="dropdown">
-                    <a href="#" class="dropbtn">Resources <i class="fas fa-caret-down"></i></a>
-                    <div class="dropdown-content">
-                        <a href="/fees.php">Fees & Payments</a>
-                        <a href="/resources.php">Student Resources</a>
-                        <a href="/membership.php">Membership</a>
+                    <a href="#" class="dropbtn" aria-haspopup="true" aria-expanded="false">Resources <i class="fas fa-caret-down"></i></a>
+                    <div class="dropdown-content" role="menu">
+                        <a href="/fees.php" role="menuitem">Fees & Payments</a>
+                        <a href="/resources.php" role="menuitem">Student Resources</a>
+                        <a href="/membership.php" role="menuitem">Membership</a>
                     </div>
                 </li>
                 <li><a href="/news.php">News</a></li>
@@ -49,7 +54,7 @@
                                     <li><a href="/register.php" class="btn-login">Register Now</a></li>
                     <li><a href="/login.php" class="btn-login">Login</a></li>
                             </ul>
-            <div class="hamburger">
+            <div class="hamburger" aria-label="Toggle navigation menu" role="button" tabindex="0">
                 <i class="fas fa-bars"></i>
             </div>
         </div>
@@ -79,12 +84,12 @@
     }
 </style>
 
-<div class="section">
-    <div class="form-container" style="text-align: center;">
-        <img src="images/infotess.png" alt="INFOTESS Logo" style="width: 100px; margin-bottom: 20px;">
+    <div id="main-content" class="section">
+    <div class="form-container text-center">
+        <img src="images/infotess.png" alt="INFOTESS Logo" class="mb-20" style="width: 100px;">
         <h2 class="section-title">Login to SDMS</h2>
                 
-        <form action="login.php" method="POST" style="text-align: left;">
+        <form action="login.php" method="POST" class="text-left">
             <div class="form-group">
                 <label for="identifier">Email or Index Number</label>
                 <input type="text" name="identifier" id="identifier" class="form-control" required placeholder="Enter Email (Admin) or Index No. (Student)">
@@ -100,8 +105,8 @@
             
             <button type="submit" class="btn-submit">Login</button>
             
-            <div style="margin-top: 15px; text-align: center;">
-                <a href="forgot-password.php" style="color: var(--primary-color);">Forgot Password?</a>
+            <div class="mt-15 text-center">
+                <a href="forgot-password.php" class="color-primary">Forgot Password?</a>
             </div>
         </form>
     </div>
@@ -128,8 +133,8 @@
         <div class="container">
             <div class="footer-content">
                 <div class="footer-section">
-                    <h3>About INFOTESS</h3>
-                    <p>The Information Technology Students’ Society (INFOTESS) of USTED is dedicated to promoting technology education and student welfare.</p>
+                    <h3>About Us</h3>
+                    <p>School Management System — Streamlining administration, fees, attendance, and student records.</p>
                 </div>
                 <div class="footer-section">
                                         <h3>Quick Links</h3>
@@ -148,7 +153,7 @@
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>&copy; 2026 INFOTESS. All Rights Reserved.</p>
+                <p>&copy; 2026 SDMS. All Rights Reserved.</p>
             </div>
         </div>
     </footer>

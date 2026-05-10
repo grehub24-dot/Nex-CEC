@@ -72,11 +72,13 @@ $status_text = $outstanding <= 0 ? 'Fully Paid' : 'Outstanding';
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
+    <a href="#main-content" class="skip-link" style="position: absolute; top: -100%; left: 0; background: var(--primary-color); color: #fff; padding: 10px 20px; z-index: 9999; transition: top 0.2s;">Skip to main content</a>
+    <style>.skip-link:focus { top: 0; }</style>
     <div class="dashboard-container">
         <!-- Sidebar -->
         <aside class="sidebar">
-            <div class="sidebar-header" style="text-align:center; padding: 20px 10px;">
-                <img src="../images/school-logo.png" alt="Logo" style="width: 60px; height: 60px; margin-bottom: 8px; border-radius: 50%; background: #fff; padding: 5px;" onerror="this.src='../images/aamusted.jpg'">
+            <div class="sidebar-header text-center" style="padding: 20px 10px;">
+                <img src="../images/school-logo.png" alt="Logo" class="rounded-full mb-10" style="width: 60px; height: 60px; background: #fff; padding: 5px;" onerror="this.src='../images/aamusted.jpg'">
                 <h3 style="font-size:15px;">My Portal</h3>
             </div>
                         <ul class="sidebar-menu">
@@ -92,13 +94,13 @@ $status_text = $outstanding <= 0 ? 'Fully Paid' : 'Outstanding';
             </ul>
         </aside>
 
-        <main class="main-content">
+        <main class="main-content" id="main-content">
             <div class="top-bar">
-                <div style="display: flex; align-items: center; gap: 15px;">
-                    <img src="../<?php echo !empty($student['profile_picture']) ? htmlspecialchars($student['profile_picture']) : 'images/aamusted.jpg'; ?>" alt="Profile" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+                <div class="flex items-center gap-15">
+                    <img src="../<?php echo !empty($student['profile_picture']) ? htmlspecialchars($student['profile_picture']) : 'images/aamusted.jpg'; ?>" alt="Profile" class="rounded-full object-cover" style="width: 60px; height: 60px; border: 2px solid #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
                     <div>
                         <h2>Welcome, <?php echo htmlspecialchars($student['full_name']); ?></h2>
-                        <div style="color: #666;"><?php echo htmlspecialchars($student['admission_number']); ?> &bull; <?php echo htmlspecialchars($student['class_name'] ?? 'N/A'); ?></div>
+                        <div class="color-muted"><?php echo htmlspecialchars($student['admission_number']); ?> &bull; <?php echo htmlspecialchars($student['class_name'] ?? 'N/A'); ?></div>
                     </div>
                 </div>
             </div>
@@ -187,9 +189,9 @@ $status_text = $outstanding <= 0 ? 'Fully Paid' : 'Outstanding';
                                 <td><?php echo htmlspecialchars($type); ?></td>
                                 <td><?php echo number_format($estimated_per_fee, 2); ?></td>
                                 <td><?php echo number_format($paid, 2); ?></td>
-                                <td style="color: <?php echo $bal > 0 ? 'red' : 'green'; ?>; font-weight:bold;"><?php echo number_format($bal, 2); ?></td>
+                                <td class="<?php echo $bal > 0 ? 'color-danger' : 'color-success'; ?> fw-bold"><?php echo number_format($bal, 2); ?></td>
                                 <td>
-                                    <span style="color: <?php echo $is_paid ? 'green' : 'red'; ?>; font-weight:bold;">
+                                    <span class="<?php echo $is_paid ? 'color-success' : 'color-danger'; ?> fw-bold">
                                         <?php echo $is_paid ? '&#10003; Paid' : 'Pending'; ?>
                                     </span>
                                 </td>
@@ -201,10 +203,10 @@ $status_text = $outstanding <= 0 ? 'Fully Paid' : 'Outstanding';
             </div>
 
             <!-- Notifications Section -->
-            <div class="section" style="margin-bottom: 30px;">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div class="section mb-30">
+                <div class="flex justify-between items-center">
                     <h3>Recent Notifications</h3>
-                    <a href="messages.php" style="font-size: 0.9rem; color: var(--primary-color);">View all notifications</a>
+                    <a href="messages.php" class="fs-small color-primary">View all notifications</a>
                 </div>
                 <?php
                 $recent_notifications = [];
@@ -223,18 +225,18 @@ $status_text = $outstanding <= 0 ? 'Fully Paid' : 'Outstanding';
 
                 if (empty($recent_notifications)):
                 ?>
-                    <div class="card" style="padding: 15px; color: #666;">No new notifications.</div>
+                    <div class="card p-15 color-muted">No new notifications.</div>
                 <?php else: ?>
                     <?php foreach ($recent_notifications as $item): ?>
-                        <div class="card" style="padding: 15px; margin-bottom: 10px; border-left: 4px solid var(--primary-color);">
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div class="card p-15 mb-10" style="border-left: 4px solid var(--primary-color);">
+                            <div class="flex justify-between items-center">
                                 <strong><?php echo htmlspecialchars((string)$item['title']); ?></strong>
-                                <small style="color: #888;"><?php echo date('M d, H:i', strtotime((string)$item['created_at'])); ?></small>
+                                <small class="color-muted"><?php echo date('M d, H:i', strtotime((string)$item['created_at'])); ?></small>
                             </div>
-                            <p style="margin-top: 5px; font-size: 0.95rem; color: #444;">
+                            <p class="mt-5" style="font-size: 0.95rem; color: #444;">
                                 <?php echo htmlspecialchars(substr((string)$item['message'], 0, 120)) . (strlen((string)$item['message']) > 120 ? '...' : ''); ?>
                             </p>
-                            <a href="messages.php" style="font-size: 0.85rem; color: var(--secondary-color); font-weight: bold; margin-top: 5px; display: inline-block;">Read Full Message &rarr;</a>
+                            <a href="messages.php" class="color-secondary fw-bold mt-5 inline-block" style="font-size: 0.85rem;">Read Full Message &rarr;</a>
                         </div>
                     <?php endforeach; ?>
                 <?php endif; ?>
@@ -264,9 +266,9 @@ $status_text = $outstanding <= 0 ? 'Fully Paid' : 'Outstanding';
                                 <td><?php echo htmlspecialchars($payment['fee_type'] ?? 'General'); ?></td>
                                 <td>GHS <?php echo number_format($payment['amount'], 2); ?></td>
                                 <td><?php echo htmlspecialchars($payment['academic_year'] . ' — Term ' . $payment['semester']); ?></td>
-                                <td><span style="color:green; font-weight:bold;">Paid</span></td>
+                                <td><span class="color-success fw-bold">Paid</span></td>
                                 <td>
-                                    <a href="../receipts/receipt_<?php echo htmlspecialchars($payment['receipt_number']); ?>.html" target="_blank" class="btn-login" style="padding: 5px 10px;">View Receipt</a>
+                                    <a href="../receipts/receipt_<?php echo htmlspecialchars($payment['receipt_number']); ?>.html" target="_blank" class="btn-login btn-sm">View Receipt</a>
                                 </td>
                             </tr>
                             <?php endforeach; ?>

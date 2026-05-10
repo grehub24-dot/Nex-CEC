@@ -243,14 +243,10 @@ foreach ($fees as $f) {
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); }
-        .modal-content { background-color: #fefefe; margin: 5% auto; padding: 20px; border: 1px solid #888; width: 90%; max-width: 550px; border-radius: 8px; position: relative; }
-        .close-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .modal { display: none; position: fixed; z-index: var(--z-modal-overlay); left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); animation: fadeIn var(--transition-base); }
+        .modal-content { background-color: #fefefe; margin: 5% auto; padding: 20px; border: 1px solid #888; width: 90%; max-width: 550px; border-radius: 8px; position: relative; animation: scaleIn 0.3s var(--ease-out-expo); }
+        .close-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; line-height: 1; }
         .close-btn:hover { color: black; }
-        .filter-bar { display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 20px; background: #f8f9fa; padding: 15px; border-radius: 8px; }
-        .filter-group { display: flex; flex-direction: column; gap: 4px; }
-        .filter-group label { font-size: 0.85rem; font-weight: 600; color: #555; }
-        .filter-group select, .filter-group input { padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; }
     </style>
 </head>
 <body>
@@ -258,10 +254,10 @@ foreach ($fees as $f) {
         <!-- Sidebar -->
             <?php echo renderSidebar('fees', $school_name); ?>
 
-        <main class="main-content">
+        <main class="main-content" id="main-content">
             <div class="top-bar">
                 <h2>Fee Structure Management</h2>
-                <button id="openAddBtn" class="btn-primary" style="padding: 10px 20px;"><i class="fas fa-plus"></i> Add New Fee</button>
+                <button id="openAddBtn" class="btn-primary" style="padding: 10px 20px;"><i class="fas fa-plus"></i> Add Fee</button>
             </div>
 
             <?php if ($message): ?>
@@ -296,7 +292,7 @@ foreach ($fees as $f) {
                         </select>
                     </div>
                     <div class="filter-group">
-                        <button type="submit" class="btn-login" style="padding: 8px 16px;"><i class="fas fa-filter"></i> Filter</button>
+                        <button type="submit" class="btn-login"><i class="fas fa-filter"></i> Filter</button>
                     </div>
                 </div>
             </form>
@@ -354,13 +350,13 @@ foreach ($fees as $f) {
                                         <?php endif; ?>
                                     </td>
                                     <td>
-                                        <button class="btn-edit" onclick="openEdit(<?php echo htmlspecialchars(json_encode($fee)); ?>)" style="padding: 4px 10px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 5px; font-size: 0.85rem;">Edit</button>
+                                        <button class="btn-admin-sm" onclick="openEdit(<?php echo htmlspecialchars(json_encode($fee)); ?>)" style="background: #3498db; border: none; margin-right: 5px;">Edit</button>
                                         <form action="fees.php" method="POST" style="display:inline;" onsubmit="return confirm('Delete this fee item?');">
                                             <input type="hidden" name="action" value="delete_fee">
                                             <input type="hidden" name="fee_id" value="<?php echo $fee['id']; ?>">
                                             <input type="hidden" name="year" value="<?php echo htmlspecialchars($filter_year); ?>">
                                             <input type="hidden" name="term" value="<?php echo htmlspecialchars($filter_term); ?>">
-                                            <button type="submit" style="padding: 4px 10px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">Delete</button>
+                                            <button type="submit" class="btn-admin-sm" style="background: #e74c3c; border: none;">Delete</button>
                                         </form>
                                     </td>
                                 </tr>
@@ -378,7 +374,7 @@ foreach ($fees as $f) {
         <div class="modal-content">
             <span class="close-btn" onclick="closeAddModal()">&times;</span>
             <h3>Add New Fee</h3>
-            <form action="fees.php" method="POST" style="margin-top: 15px;">
+            <form action="fees.php" method="POST" class="mt-15">
                 <input type="hidden" name="action" value="add_fee">
                 
                 <div class="form-group">
@@ -430,12 +426,12 @@ foreach ($fees as $f) {
                     </select>
                 </div>
                 <div class="form-group">
-                    <label style="display:flex; align-items:center; gap:8px;">
+                    <label class="flex items-center gap-8">
                         <input type="checkbox" name="is_mandatory" value="1" checked>
                         Mandatory fee (required for all students)
                     </label>
                 </div>
-                <button type="submit" class="btn-submit" style="width:100%;">Add Fee</button>
+                <button type="submit" class="btn-submit w-full">Add Fee</button>
             </form>
         </div>
     </div>
@@ -445,7 +441,7 @@ foreach ($fees as $f) {
         <div class="modal-content">
             <span class="close-btn" onclick="closeEditModal()">&times;</span>
             <h3>Edit Fee</h3>
-            <form action="fees.php" method="POST" style="margin-top: 15px;">
+            <form action="fees.php" method="POST" class="mt-15">
                 <input type="hidden" name="action" value="edit_fee">
                 <input type="hidden" name="fee_id" id="edit_fee_id">
                 
@@ -498,12 +494,12 @@ foreach ($fees as $f) {
                     </select>
                 </div>
                 <div class="form-group">
-                    <label style="display:flex; align-items:center; gap:8px;">
+                    <label class="flex items-center gap-8">
                         <input type="checkbox" name="is_mandatory" id="edit_is_mandatory" value="1">
                         Mandatory fee
                     </label>
                 </div>
-                <button type="submit" class="btn-submit" style="width:100%;">Update Fee</button>
+                <button type="submit" class="btn-submit w-full">Update Fee</button>
             </form>
         </div>
     </div>

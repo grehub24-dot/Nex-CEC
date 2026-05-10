@@ -96,11 +96,13 @@ if (empty($chart_labels)) { $chart_labels = [date('M Y')]; $chart_data = [0]; }
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
+    <a href="#main-content" class="skip-link" style="position: absolute; top: -100%; left: 0; background: var(--primary-color); color: #fff; padding: 10px 20px; z-index: 9999; transition: top 0.2s;">Skip to main content</a>
+    <style>.skip-link:focus { top: 0; }</style>
     <div class="dashboard-container">
             <?php echo renderSidebar('dashboard', $school_name); ?>
 
         <!-- Main Content -->
-        <main class="main-content">
+        <main class="main-content" id="main-content">
             <div class="top-bar">
                 <h2>Dashboard Overview</h2>
                 <div class="user-info"><span>Welcome, <?php echo htmlspecialchars($display_name); ?> (<?php echo ucfirst($current_role); ?>)</span></div>
@@ -146,45 +148,45 @@ if (empty($chart_labels)) { $chart_labels = [date('M Y')]; $chart_data = [0]; }
             </div>
 
             <!-- Quick Links -->
-            <div class="section" style="margin-bottom: 30px;">
+            <div class="section mb-30">
                 <h3>Quick Actions</h3>
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;">
-                    <a href="students.php" class="card" style="text-decoration: none; color: inherit;">
-                        <div class="card-content" style="text-align: center;">
-                            <i class="fas fa-user-plus" style="font-size: 2rem; color: var(--primary-color);"></i>
-                            <p style="margin-top: 10px; font-weight: bold;">Add Student</p>
+                    <a href="students.php" class="card quick-action-card">
+                        <div class="card-content text-center">
+                            <i class="fas fa-user-plus color-primary"></i>
+                            <p class="mt-10 fw-bold">Add Student</p>
                         </div>
                     </a>
-                    <a href="payments.php" class="card" style="text-decoration: none; color: inherit;">
-                        <div class="card-content" style="text-align: center;">
-                            <i class="fas fa-money-bill-wave" style="font-size: 2rem; color: #27ae60;"></i>
-                            <p style="margin-top: 10px; font-weight: bold;">Record Payment</p>
+                    <a href="payments.php" class="card quick-action-card">
+                        <div class="card-content text-center">
+                            <i class="fas fa-money-bill-wave color-success"></i>
+                            <p class="mt-10 fw-bold">Record Payment</p>
                         </div>
                     </a>
                     <?php if (isSuperAdmin()): ?>
-                    <a href="bulk_import.php" class="card" style="text-decoration: none; color: inherit;">
-                        <div class="card-content" style="text-align: center;">
-                            <i class="fas fa-file-csv" style="font-size: 2rem; color: #f39c12;"></i>
-                            <p style="margin-top: 10px; font-weight: bold;">Bulk Import</p>
+                    <a href="bulk_import.php" class="card quick-action-card">
+                        <div class="card-content text-center">
+                            <i class="fas fa-file-csv color-warning"></i>
+                            <p class="mt-10 fw-bold">Bulk Import</p>
                         </div>
                     </a>
-                    <a href="attendance.php" class="card" style="text-decoration: none; color: inherit;">
-                        <div class="card-content" style="text-align: center;">
-                            <i class="fas fa-user-check" style="font-size: 2rem; color: #2e86c1;"></i>
-                            <p style="margin-top: 10px; font-weight: bold;">Take Attendance</p>
+                    <a href="attendance.php" class="card quick-action-card">
+                        <div class="card-content text-center">
+                            <i class="fas fa-user-check" style="color: #2e86c1;"></i>
+                            <p class="mt-10 fw-bold">Take Attendance</p>
                         </div>
                     </a>
-                    <a href="payroll.php" class="card" style="text-decoration: none; color: inherit;">
-                        <div class="card-content" style="text-align: center;">
-                            <i class="fas fa-file-invoice-dollar" style="font-size: 2rem; color: #8e44ad;"></i>
-                            <p style="margin-top: 10px; font-weight: bold;">Generate Payroll</p>
+                    <a href="payroll.php" class="card quick-action-card">
+                        <div class="card-content text-center">
+                            <i class="fas fa-file-invoice-dollar" style="color: #8e44ad;"></i>
+                            <p class="mt-10 fw-bold">Generate Payroll</p>
                         </div>
                     </a>
                     <?php endif; ?>
-                    <a href="messaging.php" class="card" style="text-decoration: none; color: inherit;">
-                        <div class="card-content" style="text-align: center;">
-                            <i class="fas fa-envelope" style="font-size: 2rem; color: #e74c3c;"></i>
-                            <p style="margin-top: 10px; font-weight: bold;">Send Message<?php echo $pending_messages > 0 ? " ($pending_messages)" : ""; ?></p>
+                    <a href="messaging.php" class="card quick-action-card">
+                        <div class="card-content text-center">
+                            <i class="fas fa-envelope color-danger"></i>
+                            <p class="mt-10 fw-bold">Send Message<?php echo $pending_messages > 0 ? " ($pending_messages)" : ""; ?></p>
                         </div>
                     </a>
                 </div>
@@ -211,7 +213,7 @@ if (empty($chart_labels)) { $chart_labels = [date('M Y')]; $chart_data = [0]; }
                                     <td><?php echo number_format($payment['amount'], 2); ?></td>
                                     <td><?php echo htmlspecialchars($payment['payment_date']); ?></td>
                                     <td><?php echo htmlspecialchars($payment['payment_method']); ?></td>
-                                    <td><a href="../receipts/receipt_<?php echo $payment['receipt_number']; ?>.html" target="_blank" class="btn-login" style="padding: 5px 10px; font-size: 0.8rem;">View</a></td>
+                                    <td><a href="../receipts/receipt_<?php echo $payment['receipt_number']; ?>.html" target="_blank" class="btn-login btn-sm">View</a></td>
                                 </tr>
                                 <?php endforeach; ?>
                             <?php endif; ?>
@@ -229,6 +231,11 @@ if (empty($chart_labels)) { $chart_labels = [date('M Y')]; $chart_data = [0]; }
     </div>
 
     <script>
+        // Skeleton loading — hide skeleton when content is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            var skeletons = document.querySelectorAll('.skeleton-placeholder');
+            skeletons.forEach(function(el) { el.classList.remove('skeleton-placeholder'); });
+        });
         const ctx = document.getElementById('revenueChart').getContext('2d');
         new Chart(ctx, {
             type: 'bar',

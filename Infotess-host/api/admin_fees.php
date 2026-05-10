@@ -28,23 +28,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     $is_mandatory = isset($_POST['is_mandatory']) ? true : false;
 
     if ($_POST['action'] === 'add_fee') {
+        $fee_group = $_POST['fee_group'] ?? '';
         try {
-            // Check for duplicate (bridge drops COALESCE — do PHP-side filter instead)
+            // Determine which class_ids to insert for
+            $target_class_ids = [];
+            if ($fee_group === '__all__') {
+                // All Classes: one record with null class_id
+                $target_class_ids[] = null;
+            } elseif ($fee_group !== '' && isset($level_groups[$fee_group])) {
+                // Specific group: one record per class in the group
+                foreach ($level_groups[$fee_group]['classes'] as $gc) {
+                    $target_class_ids[] = $gc['id'];
+                }
+            } else {
+                // Single class (or empty = All Classes fallback)
+                $target_class_ids[] = $class_id;
+            }
+
+            // Fetch all existing fee_structures for duplicate check
             $all_fees = $pdo->query("SELECT * FROM fee_structures")->fetchAll();
-            $duplicate = false;
-            foreach ($all_fees as $f) {
-                if ($f['title'] === $fee_title && $f['academic_year'] === $year && $f['term'] === $term) {
-                    $fClassId = !empty($f['class_id']) ? (int)$f['class_id'] : 0;
-                    $cClassId = !empty($class_id) ? (int)$class_id : 0;
-                    if ($fClassId === $cClassId) { $duplicate = true; break; }
+            $inserted = 0;
+            $skipped = 0;
+
+            foreach ($target_class_ids as $tcid) {
+                // Check duplicate
+                $is_dup = false;
+                foreach ($all_fees as $f) {
+                    if ($f['title'] === $fee_title && $f['academic_year'] === $year && $f['term'] === $term) {
+                        $fClassId = !empty($f['class_id']) ? (int)$f['class_id'] : 0;
+                        $tcidInt = !empty($tcid) ? (int)$tcid : 0;
+                        if ($fClassId === $tcidInt) { $is_dup = true; break; }
+                    }
+                }
+                if ($is_dup) {
+                    $skipped++;
+                } else {
+                    $stmt = $pdo->prepare("INSERT INTO fee_structures (title, fee_type, amount, academic_year, term, class_id, is_mandatory) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                    $stmt->execute([$fee_title, $fee_type, $amount, $year, $term, $tcid, $is_mandatory]);
+                    $inserted++;
                 }
             }
-            if ($duplicate) {
-                $error = "This fee already exists for the selected class and term.";
+
+            if ($inserted > 0) {
+                $parts = [];
+                if ($inserted > 0) $parts[] = "$inserted fee(s) added";
+                if ($skipped > 0) $parts[] = "$skipped duplicate(s) skipped";
+                $message = "Fee structure: " . implode(', ', $parts) . ".";
+                $message .= " Group: " . ($fee_group ?: 'single') . ".";
             } else {
-                $stmt = $pdo->prepare("INSERT INTO fee_structures (title, fee_type, amount, academic_year, term, class_id, is_mandatory) VALUES (?, ?, ?, ?, ?, ?, ?)");
-                $stmt->execute([$fee_title, $fee_type, $amount, $year, $term, $class_id, $is_mandatory]);
-                $message = "Fee structure added successfully.";
+                $error = "No fees were added. All records were duplicates.";
             }
         } catch (Exception $e) {
             $error = "Error: " . $e->getMessage();
@@ -119,13 +151,31 @@ usort($fees, function($a, $b) {
 // Enrich with class name
 foreach ($fees as &$fee) {
     if (!empty($fee['class_id'])) {
-        $cs = $pdo->prepare("SELECT name FROM classes WHERE id = ?");
+        $cs = $pdo->prepare("SELECT * FROM classes WHERE id = ?");
         $cs->execute([$fee['class_id']]);
         $cname = $cs->fetch();
         $fee['class_name'] = $cname ? $cname['name'] : 'All Classes';
     } else {
         $fee['class_name'] = 'All Classes';
     }
+}
+
+// Build level_group mapping for group feature
+$level_groups = [];
+$group_names = [
+    'early_childhood' => 'Early Childhood',
+    'primary'         => 'Primary',
+    'jhs'             => 'JHS',
+];
+foreach ($classes as $c) {
+    $g = $c['level_group'] ?? 'other';
+    if (!isset($level_groups[$g])) {
+        $level_groups[$g] = [
+            'label' => $group_names[$g] ?? ucfirst($g),
+            'classes' => [],
+        ];
+    }
+    $level_groups[$g]['classes'][] = $c;
 }
 
 // Calculate totals
@@ -313,6 +363,16 @@ foreach ($fees as $f) {
                     </select>
                 </div>
                 <div class="form-group">
+                    <label>Group (select to assign to all classes in this level)</label>
+                    <select name="fee_group" id="add_fee_group" class="form-control">
+                        <option value="">-- None (single class) --</option>
+                        <option value="__all__">All Classes</option>
+                        <?php foreach ($level_groups as $gKey => $g): ?>
+                            <option value="<?php echo htmlspecialchars($gKey); ?>"><?php echo htmlspecialchars($g['label']); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="form-group" id="add_class_group">
                     <label>Class (leave empty for all classes)</label>
                     <select name="class_id" class="form-control">
                         <option value="">All Classes</option>
@@ -391,13 +451,31 @@ foreach ($fees as $f) {
     </div>
 
     <script>
-        const addModal = document.getElementById('addFeeModal');
-        const editModal = document.getElementById('editFeeModal');
+        var addModal = document.getElementById('addFeeModal');
+        var editModal = document.getElementById('editFeeModal');
+        var groupSelect = document.getElementById('add_fee_group');
+        var classGroup = document.getElementById('add_class_group');
 
         document.getElementById('openAddBtn').onclick = function() { addModal.style.display = 'block'; };
         function closeAddModal() { addModal.style.display = 'none'; }
         function closeEditModal() { editModal.style.display = 'none'; }
         window.onclick = function(e) { if (e.target == addModal) closeAddModal(); if (e.target == editModal) closeEditModal(); };
+
+        // Show/hide class dropdown based on group selection
+        groupSelect.addEventListener('change', function() {
+            var val = this.value;
+            if (val === '') {
+                // None (single class) — show class dropdown
+                classGroup.style.display = 'block';
+            } else {
+                // Group or All Classes — hide class dropdown, class_id will be set by PHP handler
+                classGroup.style.display = 'none';
+            }
+        });
+        // Initialize on page load
+        if (groupSelect.value !== '') {
+            classGroup.style.display = 'none';
+        }
 
         function openEdit(fee) {
             document.getElementById('edit_fee_id').value = fee.id;

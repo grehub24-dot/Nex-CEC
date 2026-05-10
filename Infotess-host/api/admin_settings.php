@@ -269,8 +269,9 @@ $settings = array_merge($defaults, $settings);
 
             <div class="section">
                 <div class="card">
-                    <div class="card-header">
+                    <div class="card-header flex justify-between items-center">
                         <h3>Configuration Summary</h3>
+                        <a href="subjects.php" class="btn-admin-action"><i class="fas fa-book"></i> Manage Subjects</a>
                     </div>
                     <div class="card-content">
                         <p>These settings control various aspects of the SDMS, including the academic year displayed on receipts and the default dues amount for compliance tracking.</p>
@@ -278,6 +279,7 @@ $settings = array_merge($defaults, $settings);
                             <li><strong>Academic Year:</strong> Used for tracking payments and compliance.</li>
                             <li><strong>Dues Amount:</strong> Used to calculate the compliance rate on the dashboard.</li>
                             <li><strong>Payment Modes:</strong> These appear as options when recording a new payment.</li>
+                            <li><strong>Subjects:</strong> <a href="subjects.php" class="color-primary fw-500">Click here to configure subjects</a> by educational level (Creche, Nursery, KG, Primary, JHS).</li>
                         </ul>
                     </div>
                 </div>

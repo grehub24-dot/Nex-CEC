@@ -172,6 +172,7 @@ function getSidebarMenu($currentPage = '') {
     
     if ($isFullAdmin) {
         $menu[] = ['href' => 'module_settings.php', 'icon' => 'fas fa-cogs', 'label' => 'Module Settings'];
+        $menu[] = ['href' => 'subjects.php', 'icon' => 'fas fa-book', 'label' => 'Subjects'];
         $menu[] = ['href' => 'settings.php', 'icon' => 'fas fa-tools', 'label' => 'System Settings'];
     }
     

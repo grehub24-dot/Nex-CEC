@@ -18,14 +18,20 @@ $current_academic_year = $settings['current_academic_year'] ?? date('Y') . '/' .
 $current_term = $settings['current_term'] ?? '1';
 $payment_modes = explode(',', $settings['payment_modes'] ?? 'Cash,Mobile Money,Bank Transfer');
 
-// Basic School fee types
+// Basic School fee types (fallback)
 $fee_types = explode(',', $settings['fee_types'] ?? 'Tuition,PTA Levy,Sports & Culture,ICT,Examination,Development,Feeding,Transport,Uniform,Books & Materials');
+
+// Fetch classes, students, and fee structures for dynamic dropdowns
+$all_classes = $pdo->query("SELECT * FROM classes")->fetchAll();
+$all_students = $pdo->query("SELECT * FROM students")->fetchAll();
+$all_fee_structures = $pdo->query("SELECT * FROM fee_structures")->fetchAll();
 
 $message = '';
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'record_payment') {
-    $admission_number = sanitize($_POST['admission_number']);
+    $student_id_input = (int)($_POST['student_id'] ?? 0);
+    $admission_number = sanitize($_POST['admission_number'] ?? '');
     $class_name = sanitize($_POST['class_name']);
     $amount = floatval($_POST['amount']);
     $year = sanitize($_POST['academic_year']);
@@ -34,10 +40,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $method = sanitize($_POST['payment_method']);
     $date = sanitize($_POST['payment_date']);
 
-    // Find Student (two-step lookup for Supabase compatibility)
-    $stmt = $pdo->prepare("SELECT * FROM students WHERE admission_number = ?");
-    $stmt->execute([$admission_number]);
-    $student = $stmt->fetch();
+    // Find Student by ID (from student dropdown) or fallback to admission_number
+    $student = null;
+    if ($student_id_input > 0) {
+        $stmt = $pdo->prepare("SELECT * FROM students WHERE id = ?");
+        $stmt->execute([$student_id_input]);
+        $student = $stmt->fetch();
+    }
+    if (!$student && $admission_number !== '') {
+        $stmt = $pdo->prepare("SELECT * FROM students WHERE admission_number = ?");
+        $stmt->execute([$admission_number]);
+        $student = $stmt->fetch();
+    }
     if ($student) {
         $u = $pdo->prepare("SELECT email FROM users WHERE id = ?");
         $u->execute([$student['user_id']]);
@@ -46,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 
     if (!$student) {
-        $error = "Student with Admission Number $admission_number not found.";
+        $error = "Student not found. Please select a student from the list.";
     } else {
         try {
             $pdo->beginTransaction();
@@ -360,64 +374,63 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 <div class="modal-content">
                     <span class="close-btn">&times;</span>
                     <h3>Record Payment</h3>
-                    <form action="payments.php" method="POST" style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-top: 15px;">
+                    <form action="/admin/payments.php" method="POST" style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-top: 15px;">
                         <input type="hidden" name="action" value="record_payment">
                         
                         <div style="grid-column: span 2;">
-                            <label>Student Index Number</label>
-                            <input type="text" name="admission_number" class="form-control" required placeholder="e.g. NXC/2026/001">
-                            <small id="indexLookupStatus" style="display:none; margin-top:6px; font-size:0.85rem;"></small>
+                            <label>Class</label>
+                            <select name="class_name" id="pay_class_name" class="form-control" required>
+                                <option value="">-- Select Class --</option>
+                                <?php
+                                $grouped = [];
+                                foreach ($all_classes as $c) {
+                                    $g = $c['level_group'] ?? 'other';
+                                    $grouped[$g][] = $c;
+                                }
+                                foreach ($grouped as $group => $clist):
+                                ?>
+                                    <optgroup label="<?php echo htmlspecialchars(ucfirst($group)); ?>">
+                                        <?php foreach ($clist as $c): ?>
+                                            <option value="<?php echo htmlspecialchars($c['name']); ?>" data-class-id="<?php echo $c['id']; ?>"><?php echo htmlspecialchars($c['name']); ?></option>
+                                        <?php endforeach; ?>
+                                    </optgroup>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <div style="grid-column: span 2;">
+                            <label>Student Name</label>
+                            <select name="student_id" id="pay_student_id" class="form-control" required>
+                                <option value="">-- Select Class First --</option>
+                            </select>
+                            <small id="studentLookupStatus" style="margin-top:6px; font-size:0.85rem; color:#666;"></small>
                         </div>
 
                         <div>
-                            <label>Class</label>
-                            <select name="class_name" class="form-control" required>
-                                <option value="">-- Select Class --</option>
-                                <optgroup label="Early Childhood">
-                                    <option value="Creche">Creche</option>
-                                    <option value="Nursery">Nursery</option>
-                                    <option value="KG 1">KG 1</option>
-                                    <option value="KG 2">KG 2</option>
-                                </optgroup>
-                                <optgroup label="Primary">
-                                    <option value="Basic 1">Basic 1</option>
-                                    <option value="Basic 2">Basic 2</option>
-                                    <option value="Basic 3">Basic 3</option>
-                                    <option value="Basic 4">Basic 4</option>
-                                    <option value="Basic 5">Basic 5</option>
-                                    <option value="Basic 6">Basic 6</option>
-                                </optgroup>
-                                <optgroup label="Junior High School">
-                                    <option value="JHS 1">JHS 1</option>
-                                    <option value="JHS 2">JHS 2</option>
-                                    <option value="JHS 3">JHS 3</option>
-                                </optgroup>
-                            </select>
+                            <label>Student Index Number</label>
+                            <input type="text" name="admission_number" id="pay_admission_number" class="form-control" readonly placeholder="Auto-filled from selection">
                         </div>
 
                         <div>
                             <label>Fee Type</label>
-                            <select name="fee_type" class="form-control" required>
-                                <option value="">-- Select Fee --</option>
-                                <?php foreach ($fee_types as $type): ?>
-                                    <option value="<?php echo htmlspecialchars(trim($type)); ?>"><?php echo htmlspecialchars(trim($type)); ?></option>
-                                <?php endforeach; ?>
+                            <select name="fee_type" id="pay_fee_type" class="form-control" required>
+                                <option value="">-- Select Class &amp; Term First --</option>
                             </select>
                         </div>
 
                         <div>
                             <label>Amount (GHS)</label>
-                            <input type="number" step="0.01" name="amount" class="form-control" required>
+                            <input type="number" step="0.01" name="amount" id="pay_amount" class="form-control" required readonly placeholder="Auto-filled from fee type">
                         </div>
 
                         <div>
                             <label>Academic Year</label>
-                            <input type="text" name="academic_year" class="form-control" value="<?php echo htmlspecialchars($current_academic_year); ?>" required>
+                            <input type="text" name="academic_year" id="pay_academic_year" class="form-control" value="<?php echo htmlspecialchars($current_academic_year); ?>" required>
                         </div>
 
                         <div>
                             <label>Term</label>
-                            <select name="term" class="form-control" required>
+                            <select name="term" id="pay_term" class="form-control" required>
                                 <option value="1" <?php echo $current_term == '1' ? 'selected' : ''; ?>>Term 1</option>
                                 <option value="2" <?php echo $current_term == '2' ? 'selected' : ''; ?>>Term 2</option>
                                 <option value="3" <?php echo $current_term == '3' ? 'selected' : ''; ?>>Term 3</option>
@@ -448,71 +461,127 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     </div>
 
     <script>
-        const modal = document.getElementById("paymentModal");
-        const btn = document.getElementById("openModalBtn");
-        const span = document.getElementsByClassName("close-btn")[0];
-        const indexInput = document.querySelector('input[name="admission_number"]');
-        const classSelect = document.querySelector('select[name="class_name"]');
-        const lookupStatus = document.getElementById('indexLookupStatus');
-        let lookupTimer = null;
-        let lastLookupValue = '';
+        // ====== Data from server ======
+        var CLASSES = <?php echo json_encode($all_classes); ?>;
+        var STUDENTS = <?php echo json_encode($all_students); ?>;
+        var FEE_STRUCTURES = <?php echo json_encode($all_fee_structures); ?>;
 
+        // ====== DOM refs ======
+        var modal = document.getElementById("paymentModal");
+        var btn = document.getElementById("openModalBtn");
+        var span = document.getElementsByClassName("close-btn")[0];
+        var classSelect = document.getElementById("pay_class_name");
+        var studentSelect = document.getElementById("pay_student_id");
+        var admissionInput = document.getElementById("pay_admission_number");
+        var feeTypeSelect = document.getElementById("pay_fee_type");
+        var amountInput = document.getElementById("pay_amount");
+        var academicYearInput = document.getElementById("pay_academic_year");
+        var termSelect = document.getElementById("pay_term");
+
+        // ====== Modal controls ======
         btn.onclick = function() { modal.style.display = "block"; }
         span.onclick = function() { modal.style.display = "none"; }
         window.onclick = function(event) { if (event.target == modal) { modal.style.display = "none"; } }
 
-        function setLookupStatus(message, color) {
-            if (!lookupStatus) return;
-            if (!message) { lookupStatus.style.display = 'none'; lookupStatus.textContent = ''; return; }
-            lookupStatus.style.display = 'block';
-            lookupStatus.style.color = color;
-            lookupStatus.textContent = message;
-        }
+        // ====== Populate student dropdown when class changes ======
+        classSelect.addEventListener('change', function() {
+            var className = this.value;
+            var statusEl = document.getElementById('studentLookupStatus');
+            
+            // Reset downstream fields
+            studentSelect.innerHTML = '<option value="">-- Select Student --</option>';
+            admissionInput.value = '';
+            feeTypeSelect.innerHTML = '<option value="">-- Select Class & Term First --</option>';
+            amountInput.value = '';
 
-        function lookupStudent(force = false) {
-            if (!indexInput) return;
-            const rawValue = indexInput.value || '';
-            const indexNumber = rawValue.replace(/\s+/g, '').toUpperCase();
-            indexInput.value = indexNumber;
-            if (!indexNumber) { lastLookupValue = ''; setLookupStatus('', ''); return; }
-            if (!force && (indexNumber.length < 3 || indexNumber === lastLookupValue)) return;
-            lastLookupValue = indexNumber;
-            setLookupStatus('Fetching student details...', '#0c5fb5');
+            if (!className) {
+                studentSelect.innerHTML = '<option value="">-- Select Class First --</option>';
+                statusEl.textContent = '';
+                return;
+            }
 
-            fetch(`../api/api/admin/get_student_by_index.php?admission_number=${encodeURIComponent(indexNumber)}`, {
-                headers: { 'Accept': 'application/json' }
-            })
-                .then(async response => {
-                    const payload = await response.json().catch(() => ({}));
-                    if (!response.ok || !payload.ok || !payload.student) throw new Error(payload.error || 'Student not found');
-                    return payload.student;
-                })
-                .then(student => {
-                    if (classSelect && student.class_name) {
-                        for (let i = 0; i < classSelect.options.length; i++) {
-                            if (classSelect.options[i].value === student.class_name) {
-                                classSelect.selectedIndex = i;
-                                break;
-                            }
-                        }
-                    }
-                    setLookupStatus(`Loaded: ${student.full_name} (${student.admission_number})`, '#15803d');
-                })
-                .catch(() => {
-                    setLookupStatus('No student found for this admission number.', '#b42333');
-                });
-        }
+            // Filter students by class_name
+            var matching = STUDENTS.filter(function(s) { return (s.class_name || '') === className; });
+            matching.sort(function(a, b) { return (a.full_name || '').localeCompare(b.full_name || ''); });
 
-        if (indexInput) {
-            indexInput.addEventListener('input', function() {
-                if (lookupTimer) clearTimeout(lookupTimer);
-                lookupTimer = setTimeout(function() { lookupStudent(false); }, 300);
+            if (matching.length === 0) {
+                studentSelect.innerHTML = '<option value="">-- No students in this class --</option>';
+                statusEl.textContent = 'No students found for ' + className;
+                return;
+            }
+
+            matching.forEach(function(s) {
+                var opt = document.createElement('option');
+                opt.value = s.id;
+                opt.textContent = s.full_name + ' (' + (s.admission_number || 'no index') + ')';
+                opt.setAttribute('data-admission', s.admission_number || '');
+                studentSelect.appendChild(opt);
             });
-            indexInput.addEventListener('blur', function() { lookupStudent(true); });
-            indexInput.addEventListener('keydown', function(event) {
-                if (event.key === 'Enter') { event.preventDefault(); lookupStudent(true); }
+            statusEl.textContent = matching.length + ' student(s) loaded for ' + className;
+
+            // Also refresh fee types
+            refreshFeeTypes();
+        });
+
+        // ====== Auto-fill admission number when student is selected ======
+        studentSelect.addEventListener('change', function() {
+            var selectedOpt = this.options[this.selectedIndex];
+            admissionInput.value = selectedOpt ? (selectedOpt.getAttribute('data-admission') || '') : '';
+        });
+
+        // ====== Refresh fee types when class, year, or term changes ======
+        function refreshFeeTypes() {
+            var className = classSelect.value;
+            var year = academicYearInput.value;
+            var term = termSelect.value;
+
+            feeTypeSelect.innerHTML = '<option value="">-- Select Fee --</option>';
+            amountInput.value = '';
+
+            if (!className || !year || !term) {
+                feeTypeSelect.innerHTML = '<option value="">-- Select Class, Year & Term --</option>';
+                return;
+            }
+
+            // Find class_id from CLASSES by matching name
+            var classObj = null;
+            for (var i = 0; i < CLASSES.length; i++) {
+                if (CLASSES[i].name === className) { classObj = CLASSES[i]; break; }
+            }
+            if (!classObj) return;
+            var classId = classObj.id;
+
+            // Filter fee_structures by class_id, academic_year, term
+            var matching = FEE_STRUCTURES.filter(function(f) {
+                return String(f.class_id) === String(classId)
+                    && (f.academic_year || '') === year
+                    && String(f.term) === term;
+            });
+
+            if (matching.length === 0) {
+                feeTypeSelect.innerHTML = '<option value="">-- No fees configured --</option>';
+                return;
+            }
+
+            matching.forEach(function(f) {
+                var opt = document.createElement('option');
+                opt.value = f.fee_type || f.title || '';
+                opt.textContent = f.title + ' (GHS ' + parseFloat(f.amount || 0).toFixed(2) + ')';
+                opt.setAttribute('data-amount', f.amount || '0');
+                feeTypeSelect.appendChild(opt);
             });
         }
+
+        // ====== Auto-fill amount when fee type is selected ======
+        feeTypeSelect.addEventListener('change', function() {
+            var selectedOpt = this.options[this.selectedIndex];
+            amountInput.value = selectedOpt ? (selectedOpt.getAttribute('data-amount') || '0') : '0';
+        });
+
+        // ====== Refresh on year/term changes ======
+        academicYearInput.addEventListener('change', refreshFeeTypes);
+        academicYearInput.addEventListener('input', refreshFeeTypes);
+        termSelect.addEventListener('change', refreshFeeTypes);
     </script>
 </body>
 </html>

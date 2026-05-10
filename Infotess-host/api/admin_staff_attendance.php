@@ -192,7 +192,7 @@ $stats = [
                                                 <button type="button" class="status-btn absent <?php echo $status === 'absent' ? 'active' : ''; ?>" onclick="setStatus(this, 'absent', <?php echo $staffId; ?>)">Absent</button>
                                                 <button type="button" class="status-btn late <?php echo $status === 'late' ? 'active' : ''; ?>" onclick="setStatus(this, 'late', <?php echo $staffId; ?>)">Late</button>
                                             </div>
-                                            <input type="hidden" name="staff_attendance[<?php echo $staffId; ?>][status]" value="<?php echo $status; ?>" id="status_<?php echo $staffId; ?>">
+                                            <input type="hidden" class="staff-status-val" name="staff_attendance[<?php echo $staffId; ?>][status]" value="<?php echo $status; ?>" id="status_<?php echo $staffId; ?>">
                                         </td>
                                         <td><input type="time" name="staff_attendance[<?php echo $staffId; ?>][check_in]" class="form-control" value="<?php echo htmlspecialchars($check_in); ?>" style="width: 100px;"></td>
                                         <td><input type="time" name="staff_attendance[<?php echo $staffId; ?>][check_out]" class="form-control" value="<?php echo htmlspecialchars($check_out); ?>" style="width: 100px;"></td>
@@ -217,22 +217,29 @@ $stats = [
 
     <script>
     function setStatus(btn, status, staffId) {
-        const row = btn.closest('tr');
-        row.querySelectorAll('.status-btn').forEach(b => b.classList.remove('active'));
+        // Find the row and update visual active state
+        var row = btn.closest('tr');
+        var btns = row.querySelectorAll('.status-btn');
+        for (var i = 0; i < btns.length; i++) { btns[i].classList.remove('active'); }
         btn.classList.add('active');
+        // Update the hidden input value
         document.getElementById('status_' + staffId).value = status;
     }
 
     function markAll(status) {
-        document.querySelectorAll('.status-btn').forEach(btn => {
-            btn.classList.remove('active');
-            if (btn.textContent.trim().toLowerCase() === status) {
-                btn.classList.add('active');
+        // Update visual active state on all status buttons
+        var allBtns = document.querySelectorAll('.status-btn');
+        for (var i = 0; i < allBtns.length; i++) {
+            allBtns[i].classList.remove('active');
+            if (allBtns[i].textContent.trim().toLowerCase() === status) {
+                allBtns[i].classList.add('active');
             }
-        });
-        document.querySelectorAll('input[name^="staff_attendance["][name$="][status]"]').forEach(input => {
-            input.value = status;
-        });
+        }
+        // Update all hidden status input values using class selector
+        var hiddenInputs = document.querySelectorAll('.staff-status-val');
+        for (var i = 0; i < hiddenInputs.length; i++) {
+            hiddenInputs[i].value = status;
+        }
     }
     </script>
 </body>

@@ -41,11 +41,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         }
 
         $pdo->commit();
-        header("Location: staff_attendance.php?date=" . urlencode($attendance_date) . "&msg=" . urlencode("Staff attendance saved for $saved members on $attendance_date."));
+        header("Location: admin/staff_attendance.php?date=" . urlencode($attendance_date) . "&msg=" . urlencode("Staff attendance saved for $saved members on $attendance_date."));
         exit;
     } catch (Exception $e) {
         $pdo->rollBack();
-        header("Location: staff_attendance.php?date=" . urlencode($attendance_date) . "&err=" . urlencode("Error: " . $e->getMessage()));
+        header("Location: admin/staff_attendance.php?date=" . urlencode($attendance_date) . "&err=" . urlencode("Error: " . $e->getMessage()));
         exit;
     }
 }
@@ -63,21 +63,30 @@ usort($staff_list, fn($a, $b) => strcmp($a['full_name'], $b['full_name']));
 
 // Get existing attendance for selected date
 $existing_attendance = [];
-$stmt = $pdo->prepare("SELECT staff_id, status, check_in, check_out, notes FROM staff_attendance WHERE attendance_date = ?");
-$stmt->execute([$selected_date]);
-while ($row = $stmt->fetch()) {
-    $existing_attendance[(int)$row['staff_id']] = $row;
+try {
+    $stmt = $pdo->prepare("SELECT staff_id, status, check_in, check_out, notes FROM staff_attendance WHERE attendance_date = ?");
+    $stmt->execute([$selected_date]);
+    while ($row = $stmt->fetch()) {
+        $existing_attendance[(int)$row['staff_id']] = $row;
+    }
+} catch (Exception $e) {
+    // staff_attendance table may not exist yet
 }
 
 // Stats for selected date — build in PHP (bridge drops complex aggregation)
-$all_attendance = $pdo->query("SELECT * FROM staff_attendance")->fetchAll();
-$date_records = array_filter($all_attendance, fn($r) => $r['attendance_date'] === $selected_date);
-$stats = [
-    'total'   => count($date_records),
-    'present' => count(array_filter($date_records, fn($r) => ($r['status'] ?? '') === 'present')),
-    'absent'  => count(array_filter($date_records, fn($r) => ($r['status'] ?? '') === 'absent')),
-    'late'    => count(array_filter($date_records, fn($r) => ($r['status'] ?? '') === 'late')),
-];
+$stats = ['total' => 0, 'present' => 0, 'absent' => 0, 'late' => 0];
+try {
+    $all_attendance = $pdo->query("SELECT * FROM staff_attendance")->fetchAll();
+    $date_records = array_filter($all_attendance, fn($r) => $r['attendance_date'] === $selected_date);
+    $stats = [
+        'total'   => count($date_records),
+        'present' => count(array_filter($date_records, fn($r) => ($r['status'] ?? '') === 'present')),
+        'absent'  => count(array_filter($date_records, fn($r) => ($r['status'] ?? '') === 'absent')),
+        'late'    => count(array_filter($date_records, fn($r) => ($r['status'] ?? '') === 'late')),
+    ];
+} catch (Exception $e) {
+    // staff_attendance table may not exist yet
+}
 ?>
 
 <!DOCTYPE html>
@@ -117,7 +126,7 @@ $stats = [
             <!-- Date Selector -->
             <div class="card" style="margin-bottom: 30px;">
                 <div class="card-content">
-                    <form method="GET" action="staff_attendance.php" style="display: flex; gap: 15px; align-items: flex-end;">
+                    <form method="GET" action="admin/staff_attendance.php" style="display: flex; gap: 15px; align-items: flex-end;">
                         <div>
                             <label><strong>Date</strong></label>
                             <input type="date" name="date" class="form-control" value="<?php echo htmlspecialchars($selected_date); ?>" required>
@@ -156,7 +165,7 @@ $stats = [
                         <button type="button" class="btn-login" onclick="markAll('absent')" style="background: #e74c3c;"><i class="fas fa-times"></i> All Absent</button>
                     </div>
 
-                    <form method="POST" action="staff_attendance.php">
+                    <form method="POST" action="admin/staff_attendance.php">
                         <input type="hidden" name="action" value="save_staff_attendance">
                         <input type="hidden" name="attendance_date" value="<?php echo htmlspecialchars($selected_date); ?>">
                         
@@ -216,6 +225,7 @@ $stats = [
     </div>
 
     <script>
+    console.log('Staff Attendance JS loaded');
     function setStatus(btn, status, staffId) {
         // Find the row and update visual active state
         var row = btn.closest('tr');

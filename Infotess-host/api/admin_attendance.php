@@ -115,6 +115,10 @@ if ($selected_class) {
         .status-btn.present { border-color: #27ae60; background: #d4edda; color: #155724; }
         .status-btn.absent { border-color: #e74c3c; background: #f8d7da; color: #721c24; }
         .status-btn.late { border-color: #f39c12; background: #fff3cd; color: #856404; }
+        .status-btn.active { box-shadow: 0 0 0 2px #333; transform: scale(1.05); font-weight: bold; }
+        .status-btn.present.active { border-color: #1e8449; background: #28a745; color: #fff; }
+        .status-btn.absent.active { border-color: #c0392b; background: #dc3545; color: #fff; }
+        .status-btn.late.active { border-color: #d68910; background: #e67e22; color: #fff; }
         .status-btn:hover { opacity: 0.8; }
         .quick-actions { display: flex; gap: 10px; margin-bottom: 15px; }
     </style>
@@ -203,21 +207,22 @@ if ($selected_class) {
                                 </thead>
                                 <tbody>
                                     <?php foreach ($students as $student):
-                                        $status = $existing_attendance[$student['id']]['status'] ?? 'present';
-                                        $reason = $existing_attendance[$student['id']]['reason'] ?? '';
+                                        $sid = (int)($student['id'] ?? 0);
+                                        $status = $existing_attendance[$sid]['status'] ?? 'present';
+                                        $reason = $existing_attendance[$sid]['reason'] ?? '';
                                     ?>
                                     <tr>
                                         <td><?php echo htmlspecialchars($student['admission_number'] ?? ''); ?></td>
                                         <td><strong><?php echo htmlspecialchars($student['full_name'] ?? ''); ?></strong></td>
                                         <td>
                                             <div style="display: flex; gap: 5px;">
-                                                <button type="button" class="status-btn present <?php echo $status === 'present' ? 'active' : ''; ?>" onclick="setStatus(this, 'present', <?php echo $student['id']; ?>)">Present</button>
-                                                <button type="button" class="status-btn absent <?php echo $status === 'absent' ? 'active' : ''; ?>" onclick="setStatus(this, 'absent', <?php echo $student['id']; ?>)">Absent</button>
-                                                <button type="button" class="status-btn late <?php echo $status === 'late' ? 'active' : ''; ?>" onclick="setStatus(this, 'late', <?php echo $student['id']; ?>)">Late</button>
+                                                <button type="button" class="status-btn present <?php echo $status === 'present' ? 'active' : ''; ?>" onclick="setStatus(this, 'present', <?php echo $sid; ?>)">Present</button>
+                                                <button type="button" class="status-btn absent <?php echo $status === 'absent' ? 'active' : ''; ?>" onclick="setStatus(this, 'absent', <?php echo $sid; ?>)">Absent</button>
+                                                <button type="button" class="status-btn late <?php echo $status === 'late' ? 'active' : ''; ?>" onclick="setStatus(this, 'late', <?php echo $sid; ?>)">Late</button>
                                             </div>
-                                            <input type="hidden" name="attendance[<?php echo $student['id']; ?>]" value="<?php echo $status; ?>" id="status_<?php echo $student['id']; ?>">
+                                            <input type="hidden" class="attendance-status-val" name="attendance[<?php echo $sid; ?>]" value="<?php echo $status; ?>" id="status_<?php echo $sid; ?>">
                                         </td>
-                                        <td><input type="text" name="reasons[<?php echo $student['id']; ?>]" class="form-control" value="<?php echo htmlspecialchars($reason); ?>" placeholder="Optional"></td>
+                                        <td><input type="text" name="reasons[<?php echo $sid; ?>]" class="form-control" value="<?php echo htmlspecialchars($reason); ?>" placeholder="Optional"></td>
                                     </tr>
                                     <?php endforeach; ?>
                                 </tbody>
@@ -237,23 +242,27 @@ if ($selected_class) {
     </div>
 
     <script>
+    console.log('Student Attendance JS loaded');
     function setStatus(btn, status, studentId) {
-        const row = btn.closest('tr');
-        row.querySelectorAll('.status-btn').forEach(b => b.classList.remove('active'));
+        var row = btn.closest('tr');
+        var btns = row.querySelectorAll('.status-btn');
+        for (var i = 0; i < btns.length; i++) { btns[i].classList.remove('active'); }
         btn.classList.add('active');
         document.getElementById('status_' + studentId).value = status;
     }
 
     function markAll(status) {
-        document.querySelectorAll('.status-btn').forEach(btn => {
-            btn.classList.remove('active');
-            if (btn.textContent.trim().toLowerCase() === status) {
-                btn.classList.add('active');
+        var allBtns = document.querySelectorAll('.status-btn');
+        for (var i = 0; i < allBtns.length; i++) {
+            allBtns[i].classList.remove('active');
+            if (allBtns[i].textContent.trim().toLowerCase() === status) {
+                allBtns[i].classList.add('active');
             }
-        });
-        document.querySelectorAll('input[name^="attendance["]').forEach(input => {
-            input.value = status;
-        });
+        }
+        var hiddenInputs = document.querySelectorAll('.attendance-status-val');
+        for (var i = 0; i < hiddenInputs.length; i++) {
+            hiddenInputs[i].value = status;
+        }
     }
     </script>
 </body>

@@ -51,10 +51,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $skipped = 0;
 
             foreach ($target_class_ids as $tcid) {
-                // Check duplicate
+                // Check duplicate (normalize term — seed data has "Term 1", form uses "1")
                 $is_dup = false;
                 foreach ($all_fees as $f) {
-                    if ($f['title'] === $fee_title && $f['academic_year'] === $year && $f['term'] === $term) {
+                    $fTitle = $f['title'] ?? '';
+                    $fYear  = $f['academic_year'] ?? '';
+                    $fTerm  = preg_replace('/[^0-9]/', '', (string)($f['term'] ?? ''));
+                    $formTerm = preg_replace('/[^0-9]/', '', (string)$term);
+                    if ($fTitle === $fee_title && $fYear === $year && $fTerm === $formTerm) {
                         $fClassId = !empty($f['class_id']) ? (int)$f['class_id'] : 0;
                         $tcidInt = !empty($tcid) ? (int)$tcid : 0;
                         if ($fClassId === $tcidInt) { $is_dup = true; break; }
@@ -83,10 +87,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         }
     } elseif ($_POST['action'] === 'edit_fee') {
         $fee_id = $_POST['fee_id']; // UUID string, do NOT cast to int
+        $fee_group = $_POST['fee_group'] ?? '';
         try {
-            $stmt = $pdo->prepare("UPDATE fee_structures SET title = ?, fee_type = ?, amount = ?, academic_year = ?, term = ?, class_id = ?, is_mandatory = ? WHERE id = ?");
-            $stmt->execute([$fee_title, $fee_type, $amount, $year, $term, $class_id, $is_mandatory, $fee_id]);
-            $message = "Fee structure updated successfully.";
+            if ($fee_group !== '' && $fee_group !== '__all__' && isset($level_groups[$fee_group])) {
+                // Group edit: replace ALL records with same title+year+term
+                // with new records for all classes in this group.
+                // First, find existing records with same title+year+term (normalized)
+                $formTermNum = preg_replace('/[^0-9]/', '', (string)$term);
+                $all_existing = $pdo->query("SELECT * FROM fee_structures")->fetchAll();
+                $to_delete = [];
+                foreach ($all_existing as $ex) {
+                    $exTermNum = preg_replace('/[^0-9]/', '', (string)($ex['term'] ?? ''));
+                    if ($ex['title'] === $fee_title && $ex['academic_year'] === $year && $exTermNum === $formTermNum) {
+                        $to_delete[] = $ex['id'];
+                    }
+                }
+                // Delete them
+                foreach ($to_delete as $did) {
+                    $pdo->prepare("DELETE FROM fee_structures WHERE id = ?")->execute([$did]);
+                }
+                // Insert new records for all classes in the group
+                $inserted = 0;
+                foreach ($level_groups[$fee_group]['classes'] as $gc) {
+                    $stmt = $pdo->prepare("INSERT INTO fee_structures (title, fee_type, amount, academic_year, term, class_id, is_mandatory) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                    $stmt->execute([$fee_title, $fee_type, $amount, $year, $term, $gc['id'], $is_mandatory]);
+                    $inserted++;
+                }
+                $message = "Fee structure updated: $inserted record(s) replaced for group '" . $level_groups[$fee_group]['label'] . "'.";
+            } elseif ($fee_group === '__all__') {
+                // "All Classes" group: replace with a single null-class_id record
+                $formTermNum = preg_replace('/[^0-9]/', '', (string)$term);
+                $all_existing = $pdo->query("SELECT * FROM fee_structures")->fetchAll();
+                foreach ($all_existing as $ex) {
+                    $exTermNum = preg_replace('/[^0-9]/', '', (string)($ex['term'] ?? ''));
+                    if ($ex['title'] === $fee_title && $ex['academic_year'] === $year && $exTermNum === $formTermNum) {
+                        $pdo->prepare("DELETE FROM fee_structures WHERE id = ?")->execute([$ex['id']]);
+                    }
+                }
+                $stmt = $pdo->prepare("INSERT INTO fee_structures (title, fee_type, amount, academic_year, term, class_id, is_mandatory) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$fee_title, $fee_type, $amount, $year, $term, null, $is_mandatory]);
+                $message = "Fee structure updated: record replaced for All Classes.";
+            } else {
+                // Single class edit: just update the one record
+                $stmt = $pdo->prepare("UPDATE fee_structures SET title = ?, fee_type = ?, amount = ?, academic_year = ?, term = ?, class_id = ?, is_mandatory = ? WHERE id = ?");
+                $stmt->execute([$fee_title, $fee_type, $amount, $year, $term, $class_id, $is_mandatory, $fee_id]);
+                $message = "Fee structure updated successfully.";
+            }
         } catch (Exception $e) {
             $error = "Error: " . $e->getMessage();
         }

@@ -29,21 +29,25 @@ class SupabaseClient {
 
     public function where($column, $value) {
         $newClient = clone $this;
-        $newClient->filters[] = "$column=eq.$value";
+        // URL-encode value so that spaces and special chars are handled correctly
+        $newClient->filters[] = "$column=eq." . rawurlencode($value);
         return $newClient;
     }
 
     public function in($column, $values) {
         $newClient = clone $this;
         // PostgREST uses in.(val1,val2,val3) syntax
-        $valStr = implode(',', (array)$values);
+        $valStr = implode(',', array_map('rawurlencode', (array)$values));
         $newClient->filters[] = "$column=in.($valStr)";
         return $newClient;
     }
 
     public function like($column, $pattern) {
         $newClient = clone $this;
-        $newClient->filters[] = "$column=like.$pattern";
+        // URL-encode so that spaces and special chars are handled correctly;
+        // rawurlencode preserves the % wildcard by encoding it as %25,
+        // which PostgREST decodes back to % before applying the LIKE filter
+        $newClient->filters[] = "$column=like." . rawurlencode($pattern);
         return $newClient;
     }
 

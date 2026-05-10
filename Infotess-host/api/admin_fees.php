@@ -160,22 +160,25 @@ foreach ($fees as &$fee) {
     }
 }
 
-// Build level_group mapping for group feature
-$level_groups = [];
-$group_names = [
-    'early_childhood' => 'Early Childhood',
-    'primary'         => 'Primary',
-    'jhs'             => 'JHS',
+// Build group mapping for group feature (name-based groups as requested)
+$group_defs = [
+    'creche'       => ['label' => 'Creche',       'names' => ['Creche']],
+    'pre_school'   => ['label' => 'Pre-school',    'names' => ['Nursery', 'KG 1', 'KG 2']],
+    'lower_primary' => ['label' => 'Lower Primary', 'names' => ['Basic 1', 'Basic 2', 'Basic 3']],
+    'upper_primary' => ['label' => 'Upper Primary', 'names' => ['Basic 4', 'Basic 5', 'Basic 6']],
+    'jhs'          => ['label' => 'JHS',           'names' => ['JHS 1', 'JHS 2', 'JHS 3']],
 ];
-foreach ($classes as $c) {
-    $g = $c['level_group'] ?? 'other';
-    if (!isset($level_groups[$g])) {
-        $level_groups[$g] = [
-            'label' => $group_names[$g] ?? ucfirst($g),
-            'classes' => [],
-        ];
+$level_groups = [];
+foreach ($group_defs as $gKey => $gDef) {
+    $level_groups[$gKey] = [
+        'label'   => $gDef['label'],
+        'classes' => [],
+    ];
+    foreach ($classes as $c) {
+        if (in_array($c['name'], $gDef['names'])) {
+            $level_groups[$gKey]['classes'][] = $c;
+        }
     }
-    $level_groups[$g]['classes'][] = $c;
 }
 
 // Calculate totals

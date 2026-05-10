@@ -76,7 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $message = "Fee structure: " . implode(', ', $parts) . ".";
                 $message .= " Group: " . ($fee_group ?: 'single') . ".";
             } else {
-                $error = "No fees were added. All records were duplicates.";
+                $message = "No new fees were added — a fee with this title already exists for the selected group/class.";
             }
         } catch (Exception $e) {
             $error = "Error: " . $e->getMessage();

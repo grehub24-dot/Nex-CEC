@@ -90,9 +90,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ]);
 
         // Update User Email (guardian email)
-        $stmt = $pdo->prepare("SELECT user_id FROM students WHERE id = ?");
+        // NOTE: bridge ignores column list — use SELECT * and access by key.
+        $stmt = $pdo->prepare("SELECT * FROM students WHERE id = ?");
         $stmt->execute([$id]);
-        $user_id = $stmt->fetchColumn();
+        $stu_row = $stmt->fetch();
+        $user_id = $stu_row ? ($stu_row['user_id'] ?? null) : null;
 
         if ($user_id && $guardian_email) {
             $stmt = $pdo->prepare("UPDATE users SET email = ? WHERE id = ?");

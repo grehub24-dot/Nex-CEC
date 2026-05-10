@@ -76,8 +76,12 @@ $fee_types_list = explode(',', $settings['fee_types'] ?? 'Tuition,PTA Levy,Sport
 // Fetch Classes
 $classes = [];
 try {
-    $stmt = $pdo->query("SELECT * FROM classes ORDER BY sort_order ASC");
+    $stmt = $pdo->query("SELECT * FROM classes");
     $classes = $stmt->fetchAll();
+    // NOTE: bridge ignores ORDER BY — sort in PHP.
+    usort($classes, function($a, $b) {
+        return ((int)($a['sort_order'] ?? 0)) - ((int)($b['sort_order'] ?? 0));
+    });
 } catch (Exception $e) {
     $classes = [];
 }
@@ -92,7 +96,10 @@ $filter_class = isset($_GET['class_id']) && $_GET['class_id'] !== '' ? $_GET['cl
 // Cast all filter values to strings for safe comparison.
 $fees = array_filter($pdo->query("SELECT * FROM fee_structures")->fetchAll(), function($f) use ($filter_year, $filter_term, $filter_class) {
     if ((string)($f['academic_year'] ?? '') !== (string)$filter_year) return false;
-    if ((string)($f['term'] ?? '') !== (string)$filter_term) return false;
+    // NOTE: term may be stored as 'Term 1' (seed data) or '1' (fee form). Normalize by extracting number.
+    $fTerm = preg_replace('/[^0-9]/', '', (string)($f['term'] ?? ''));
+    $filterTerm = preg_replace('/[^0-9]/', '', (string)$filter_term);
+    if ($fTerm !== $filterTerm) return false;
     if ($filter_class !== null) {
         $fClassId = !empty($f['class_id']) ? (string)$f['class_id'] : '';
         if ($fClassId !== (string)$filter_class) return false;

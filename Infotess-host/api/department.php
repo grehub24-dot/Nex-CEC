@@ -3,9 +3,11 @@ require_once 'includes/db.php';
 require_once 'includes/header.php';
 
 // Fetch department info from scraped data
-$stmt = $pdo->prepare("SELECT content FROM department_info WHERE key_name = ?");
+// NOTE: bridge ignores column list — use SELECT * and access by key.
+$stmt = $pdo->prepare("SELECT * FROM department_info WHERE key_name = ?");
 $stmt->execute(['dite_overview']);
-$overview = $stmt->fetchColumn();
+$row = $stmt->fetch();
+$overview = $row ? ($row['content'] ?? '') : '';
 
 // Staff Images Array (Based on provided files)
 $staff_members = [

@@ -19,8 +19,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     
     // Find an admin user to receive the message (or just send to all admins if preferred, but usually there's a system admin)
     // For simplicity, we'll find the first admin
-    $stmt = $pdo->query("SELECT id FROM users WHERE role = 'admin' LIMIT 1");
-    $admin_id = $stmt->fetchColumn();
+    // NOTE: bridge ignores literal WHERE and LIMIT — fetch all, filter in PHP.
+    $admin_id = null;
+    $allUsers = $pdo->query("SELECT * FROM users")->fetchAll();
+    foreach ($allUsers as $u) {
+        if (isset($u['role']) && $u['role'] === 'admin') {
+            $admin_id = $u['id'];
+            break;
+        }
+    }
 
     if ($admin_id) {
         $stmt = $pdo->prepare("INSERT INTO messages (sender_id, receiver_id, title, content, is_broadcast) VALUES (?, ?, ?, ?, 0)");
@@ -35,12 +42,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 }
 
 // Fetch Broadcast Messages
-$broadcasts = $pdo->query("SELECT * FROM messages WHERE is_broadcast = true ORDER BY created_at DESC LIMIT 10")->fetchAll();
+// NOTE: bridge ignores literal WHERE, ORDER BY, LIMIT — fetch all, filter & sort in PHP.
+$all_messages = $pdo->query("SELECT * FROM messages")->fetchAll();
+$broadcasts = array_filter($all_messages, function($m) {
+    return !empty($m['is_broadcast']);
+});
+usort($broadcasts, function($a, $b) {
+    $ta = $a['created_at'] ?? '';
+    $tb = $b['created_at'] ?? '';
+    return strcmp($tb, $ta); // DESC
+});
+$broadcasts = array_slice($broadcasts, 0, 10);
 
 // Fetch Direct Messages for this student
-$direct_messages = $pdo->prepare("SELECT * FROM messages WHERE receiver_id = ? AND is_broadcast = 0 ORDER BY created_at DESC");
-$direct_messages->execute([$user_id]);
-$direct_messages = $direct_messages->fetchAll();
+// NOTE: bridge ignores literal WHERE values and ORDER BY — filter & sort in PHP.
+$all_direct = $pdo->prepare("SELECT * FROM messages WHERE receiver_id = ?");
+$all_direct->execute([$user_id]);
+$all_direct = $all_direct->fetchAll();
+$direct_messages = array_filter($all_direct, function($m) {
+    return empty($m['is_broadcast']);
+});
+usort($direct_messages, function($a, $b) {
+    $ta = $a['created_at'] ?? '';
+    $tb = $b['created_at'] ?? '';
+    return strcmp($tb, $ta); // DESC
+});
 ?>
 
 <!DOCTYPE html>

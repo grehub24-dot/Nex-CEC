@@ -221,9 +221,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
     try {
         // Get user_id before deleting student
-        $stmt = $pdo->prepare("SELECT user_id FROM students WHERE id = ?");
+        // NOTE: bridge ignores column list — use SELECT * and access by key.
+        $stmt = $pdo->prepare("SELECT * FROM students WHERE id = ?");
         $stmt->execute([$studentId]);
-        $userId = $stmt->fetchColumn();
+        $stu_row = $stmt->fetch();
+        $userId = $stu_row ? ($stu_row['user_id'] ?? null) : null;
 
         $pdo->beginTransaction();
         // Delete the student record

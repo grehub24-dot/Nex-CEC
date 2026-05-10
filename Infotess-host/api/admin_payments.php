@@ -82,10 +82,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $all_payments_for_year = $stmt_paid->fetchAll();
             $total_paid = array_sum(array_map(fn($r) => (float)($r['amount'] ?? 0), $all_payments_for_year));
             
-            // Fetch required dues from settings
-            $stmt_settings = $pdo->query("SELECT setting_value FROM system_settings WHERE setting_key = 'annual_dues_amount'");
-            $settings_dues = $stmt_settings->fetchColumn();
-            $required_dues = $settings_dues !== false ? (float)$settings_dues : 500.00;
+            // Fetch required dues from already-loaded settings
+            $required_dues = (float)($settings['annual_dues_amount'] ?? 500.00);
             
             $current_balance = max(0, $required_dues - $total_paid);
 
@@ -268,9 +266,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             <div class="section">
                 <h3>Recent Payments</h3>
                 <?php
-                $stmt_settings = $pdo->query("SELECT setting_value FROM system_settings WHERE setting_key = 'annual_dues_amount'");
-                $settings_dues = $stmt_settings->fetchColumn();
-                $required_dues = $settings_dues !== false ? (float)$settings_dues : 500.00;
+                $required_dues = (float)($settings['annual_dues_amount'] ?? 500.00);
                 
                 $limit = 10;
                 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
@@ -552,10 +548,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             var classId = classObj.id;
 
             // Filter fee_structures by class_id, academic_year, term
+            // NOTE: term may be stored as 'Term 1' (seed data) or '1' (fee form).
+            // Normalize: extract just the numeric part.
+            var termNum = term.replace(/[^0-9]/g, '');
             var matching = FEE_STRUCTURES.filter(function(f) {
-                return String(f.class_id) === String(classId)
+                var ft = String(f.term || '');
+                var ftNum = ft.replace(/[^0-9]/g, '');
+                return ftNum === termNum
                     && (f.academic_year || '') === year
-                    && String(f.term) === term;
+                    && (f.class_id === null || f.class_id === '' || String(f.class_id) === String(classId));
             });
 
             if (matching.length === 0) {

@@ -32,13 +32,19 @@ if ($selected_class) {
 $students = [];
 if ($selected_class) {
     // Two-step lookup: bridge can't handle subquery in WHERE
-    $stmt = $pdo->prepare("SELECT name FROM classes WHERE id = ?");
+    // NOTE: bridge ignores column list in SELECT; always use SELECT * and access by key.
+    $stmt = $pdo->prepare("SELECT * FROM classes WHERE id = ?");
     $stmt->execute([(int)$selected_class]);
-    $className = $stmt->fetchColumn();
+    $classRow = $stmt->fetch();
+    $className = $classRow ? ($classRow['name'] ?? '') : '';
     if ($className) {
-        $stmt = $pdo->prepare("SELECT id, full_name, admission_number FROM students WHERE class_name = ? ORDER BY full_name ASC");
+        // NOTE: bridge ignores column list and ORDER BY; sort in PHP after fetch.
+        $stmt = $pdo->prepare("SELECT * FROM students WHERE class_name = ?");
         $stmt->execute([$className]);
         $students = $stmt->fetchAll();
+        usort($students, function($a, $b) {
+            return strcmp($a['full_name'] ?? '', $b['full_name'] ?? '');
+        });
     }
 }
 
@@ -126,9 +132,10 @@ if ($selected_class && $selected_term && $selected_subject) {
 // Get class name for bulk form
 $class_name = '';
 if ($selected_class) {
-    $stmt = $pdo->prepare("SELECT name FROM classes WHERE id = ?");
+    $stmt = $pdo->prepare("SELECT * FROM classes WHERE id = ?");
     $stmt->execute([$selected_class]);
-    $class_name = $stmt->fetchColumn();
+    $class_row = $stmt->fetch();
+    $class_name = $class_row ? ($class_row['name'] ?? '') : '';
 }
 ?>
 

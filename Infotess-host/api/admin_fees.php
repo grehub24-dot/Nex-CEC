@@ -82,7 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $error = "Error: " . $e->getMessage();
         }
     } elseif ($_POST['action'] === 'edit_fee') {
-        $fee_id = (int)$_POST['fee_id'];
+        $fee_id = $_POST['fee_id']; // UUID string, do NOT cast to int
         try {
             $stmt = $pdo->prepare("UPDATE fee_structures SET title = ?, fee_type = ?, amount = ?, academic_year = ?, term = ?, class_id = ?, is_mandatory = ? WHERE id = ?");
             $stmt->execute([$fee_title, $fee_type, $amount, $year, $term, $class_id, $is_mandatory, $fee_id]);
@@ -91,7 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $error = "Error: " . $e->getMessage();
         }
     } elseif ($_POST['action'] === 'delete_fee') {
-        $fee_id = (int)$_POST['fee_id'];
+        $fee_id = $_POST['fee_id']; // UUID string, do NOT cast to int
         try {
             $stmt = $pdo->prepare("DELETE FROM fee_structures WHERE id = ?");
             $stmt->execute([$fee_id]);

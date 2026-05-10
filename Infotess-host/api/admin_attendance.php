@@ -12,28 +12,37 @@ $school_name = $settings['school_name'] ?? 'Nex CEC';
 $message = '';
 $error = '';
 
-// Get classes
-$classes = $pdo->query("SELECT * FROM classes ORDER BY sort_order ASC")->fetchAll();
+// Get classes — bridge ignores ORDER BY, so sort in PHP
+$classes = $pdo->query("SELECT * FROM classes")->fetchAll();
+usort($classes, fn($a, $b) => ((int)($a['sort_order'] ?? 0)) - ((int)($b['sort_order'] ?? 0)));
 
 $selected_class = $_GET['class_id'] ?? '';
 $selected_date = $_GET['date'] ?? date('Y-m-d');
+
+// Handle message/error from POST-Redirect-GET
+$message = $_GET['msg'] ?? $message;
+$error   = $_GET['err'] ?? $error;
 
 // Get students in selected class
 $students = [];
 $class_name = '';
 if ($selected_class) {
-    $stmt = $pdo->prepare("SELECT name FROM classes WHERE id = ?");
+    // Bridge ignores column list; fetch full row and access by key
+    $stmt = $pdo->prepare("SELECT * FROM classes WHERE id = ?");
     $stmt->execute([(int)$selected_class]);
-    $class_name = $stmt->fetchColumn() ?: '';
+    $classRow = $stmt->fetch();
+    $class_name = $classRow ? ($classRow['name'] ?? '') : '';
     
     if ($class_name !== '') {
-        $stmt = $pdo->prepare("SELECT id, full_name, admission_number FROM students WHERE class_name = ? ORDER BY full_name ASC");
+        $stmt = $pdo->prepare("SELECT * FROM students WHERE class_name = ?");
         $stmt->execute([$class_name]);
         $students = $stmt->fetchAll();
+        // Bridge ignores ORDER BY, so sort in PHP
+        usort($students, fn($a, $b) => strcmp($a['full_name'] ?? '', $b['full_name'] ?? ''));
     }
 }
 
-// Handle Save Attendance
+// Handle Save Attendance — use POST-Redirect-GET
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'save_attendance') {
     $class_id = (int)$_POST['class_id'];
     $attendance_date = sanitize($_POST['attendance_date']);
@@ -60,10 +69,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         }
         
         $pdo->commit();
-        $message = "Attendance saved for $saved students on $attendance_date.";
+        header("Location: /admin/attendance.php?class_id=" . urlencode($class_id) . "&date=" . urlencode($attendance_date) . "&msg=" . urlencode("Attendance saved for $saved students on $attendance_date."));
+        exit;
     } catch (Exception $e) {
         $pdo->rollBack();
-        $error = "Error: " . $e->getMessage();
+        header("Location: /admin/attendance.php?class_id=" . urlencode($class_id) . "&date=" . urlencode($attendance_date) . "&err=" . urlencode("Error: " . $e->getMessage()));
+        exit;
     }
 }
 
@@ -118,22 +129,22 @@ if ($selected_class) {
             </div>
 
             <?php if ($message): ?>
-                <div class="alert alert-success"><?php echo $message; ?></div>
+                <div class="alert alert-success"><?php echo htmlspecialchars($message); ?></div>
             <?php endif; ?>
             <?php if ($error): ?>
-                <div class="alert alert-danger"><?php echo $error; ?></div>
+                <div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
             <?php endif; ?>
 
             <!-- Selection -->
             <div class="card" style="margin-bottom: 30px;">
                 <div class="card-content">
-                    <form method="GET" action="attendance.php" style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
+                    <form method="GET" action="/admin/attendance.php" style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
                         <div>
                             <label><strong>Class</strong></label>
                             <select name="class_id" class="form-control" style="width: 200px;" required>
                                 <option value="">-- Select Class --</option>
                                 <?php foreach ($classes as $c): ?>
-                                    <option value="<?php echo $c['id']; ?>" <?php echo $selected_class == $c['id'] ? 'selected' : ''; ?>><?php echo htmlspecialchars($c['name']); ?></option>
+                                    <option value="<?php echo $c['id']; ?>" <?php echo $selected_class == $c['id'] ? 'selected' : ''; ?>><?php echo htmlspecialchars($c['name'] ?? ''); ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -175,9 +186,9 @@ if ($selected_class) {
                         <button type="button" class="btn-login" onclick="markAll('absent')" style="background: #e74c3c;"><i class="fas fa-times"></i> Mark All Absent</button>
                     </div>
 
-                    <form method="POST" action="attendance.php">
+                    <form method="POST" action="/admin/attendance.php">
                         <input type="hidden" name="action" value="save_attendance">
-                        <input type="hidden" name="class_id" value="<?php echo $selected_class; ?>">
+                        <input type="hidden" name="class_id" value="<?php echo htmlspecialchars($selected_class); ?>">
                         <input type="hidden" name="attendance_date" value="<?php echo htmlspecialchars($selected_date); ?>">
                         
                         <div class="table-responsive" style="margin-top: 15px;">
@@ -196,8 +207,8 @@ if ($selected_class) {
                                         $reason = $existing_attendance[$student['id']]['reason'] ?? '';
                                     ?>
                                     <tr>
-                                        <td><?php echo htmlspecialchars($student['admission_number']); ?></td>
-                                        <td><strong><?php echo htmlspecialchars($student['full_name']); ?></strong></td>
+                                        <td><?php echo htmlspecialchars($student['admission_number'] ?? ''); ?></td>
+                                        <td><strong><?php echo htmlspecialchars($student['full_name'] ?? ''); ?></strong></td>
                                         <td>
                                             <div style="display: flex; gap: 5px;">
                                                 <button type="button" class="status-btn present <?php echo $status === 'present' ? 'active' : ''; ?>" onclick="setStatus(this, 'present', <?php echo $student['id']; ?>)">Present</button>

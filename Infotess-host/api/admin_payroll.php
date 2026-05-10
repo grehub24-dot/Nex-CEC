@@ -59,10 +59,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $taxable_income = $gross - $ssnit_deduction;
             $tax_deduction = round($taxable_income * $tax_rate, 2);
             
-            // Other deductions
-            $stmt = $pdo->prepare("SELECT COALESCE(SUM(amount), 0) FROM deductions WHERE staff_id = ? AND is_recurring = true");
+            // Other deductions (bridge doesn't support SUM(), COALESCE, or literal `= true` — fetch rows, filter & sum in PHP)
+            $stmt = $pdo->prepare("SELECT * FROM deductions WHERE staff_id = ?");
             $stmt->execute([$staff['id']]);
-            $other_deductions = (float)$stmt->fetchColumn();
+            $all_deductions_for_staff = $stmt->fetchAll();
+            $other_deductions = array_sum(
+                array_map(
+                    fn($d) => ($d['is_recurring'] ?? false) ? (float)($d['amount'] ?? 0) : 0,
+                    $all_deductions_for_staff
+                )
+            );
             
             $total_deductions = $ssnit_deduction + $tax_deduction + $other_deductions;
             $net_pay = $gross - $total_deductions;
@@ -85,8 +91,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'approve_payroll') {
     $payroll_id = (int)$_POST['payroll_id'];
     try {
-        $stmt = $pdo->prepare("UPDATE payroll SET status = 'approved', pay_date = NOW() WHERE id = ?");
-        $stmt->execute([$payroll_id]);
+        // Bridge doesn't support literal values or NOW() in SET — use ? params for everything
+        $stmt = $pdo->prepare("UPDATE payroll SET status = ?, pay_date = ? WHERE id = ?");
+        $stmt->execute(['approved', date('Y-m-d H:i:s'), $payroll_id]);
         $message = "Payroll approved successfully.";
     } catch (Exception $e) {
         $error = "Error: " . $e->getMessage();

@@ -46,8 +46,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $student_id = (int)$student_id;
             $reason = sanitize($_POST['reasons'][$student_id] ?? '');
             
-            $stmt = $pdo->prepare("INSERT INTO student_attendance (student_id, class_id, attendance_date, status, reason, recorded_by) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT (student_id, attendance_date) DO UPDATE SET status=?, reason=?, recorded_by=?");
-            $stmt->execute([$student_id, $class_id, $attendance_date, $status, $reason, $_SESSION['user_id'], $status, $reason, $_SESSION['user_id']]);
+            // Bridge doesn't support ON CONFLICT — use SELECT-then-UPDATE-or-INSERT
+            $existing = $pdo->prepare("SELECT id FROM student_attendance WHERE student_id = ? AND attendance_date = ?");
+            $existing->execute([$student_id, $attendance_date]);
+            if ($existing->fetch()) {
+                $stmt = $pdo->prepare("UPDATE student_attendance SET status=?, reason=?, recorded_by=? WHERE student_id=? AND attendance_date=?");
+                $stmt->execute([$status, $reason, $_SESSION['user_id'], $student_id, $attendance_date]);
+            } else {
+                $stmt = $pdo->prepare("INSERT INTO student_attendance (student_id, class_id, attendance_date, status, reason, recorded_by) VALUES (?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$student_id, $class_id, $attendance_date, $status, $reason, $_SESSION['user_id']]);
+            }
             $saved++;
         }
         

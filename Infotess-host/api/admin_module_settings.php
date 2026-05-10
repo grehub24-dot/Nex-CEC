@@ -91,8 +91,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'respond_contact') {
         $sub_id = intval($_POST['submission_id']);
         $response = sanitize($_POST['response']);
-        $stmt = $pdo->prepare("UPDATE contact_submissions SET response = ?, responded_at = NOW() WHERE id = ?");
-        $stmt->execute([$response, $sub_id]);
+        // Bridge doesn't support NOW() in SET — use PHP timestamp
+        $stmt = $pdo->prepare("UPDATE contact_submissions SET response = ?, responded_at = ? WHERE id = ?");
+        $stmt->execute([$response, date('Y-m-d H:i:s'), $sub_id]);
         $message = "Response saved successfully!";
     } elseif ($action === 'update_contact_submission') {
         $id = intval($_POST['id']);

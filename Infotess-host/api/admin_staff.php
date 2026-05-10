@@ -48,10 +48,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 
     if (!isset($error)) {
-        // Auto-generate staff ID
-        $stmt = $pdo->prepare("SELECT COUNT(*) as cnt FROM staff");
-        $stmt->execute();
-        $count = (int)$stmt->fetchColumn();
+        // Auto-generate staff ID (bridge doesn't support COUNT(*) — count in PHP)
+        $allStaffForCount = $pdo->query("SELECT id FROM staff");
+        $allStaffForCount = $allStaffForCount ? $allStaffForCount->fetchAll() : [];
+        $count = count($allStaffForCount);
         $staff_id = 'NXC-STF-' . str_pad($count + 1, 4, '0', STR_PAD_LEFT);
 
         $stmt = $pdo->prepare("SELECT id FROM staff WHERE staff_id = ?");

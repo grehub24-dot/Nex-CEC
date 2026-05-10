@@ -36,16 +36,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $limit = 10;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 if ($page < 1) $page = 1;
-$offset = ($page - 1) * $limit;
 
-// Fetch Users
-$stmt = $pdo->prepare("SELECT * FROM users ORDER BY created_at DESC LIMIT ? OFFSET ?");
-$stmt->execute([$limit, $offset]);
-$users = $stmt->fetchAll();
-
-$total_stmt = $pdo->query("SELECT COUNT(*) FROM users");
-$total_rows = (int)$total_stmt->fetchColumn();
+// Fetch ALL users (bridge does not support COUNT(*)) then paginate in PHP
+$allUsers = $pdo->query("SELECT * FROM users ORDER BY created_at DESC");
+$allUsers = $allUsers ? $allUsers->fetchAll() : [];
+$total_rows = count($allUsers);
 $total_pages = ceil($total_rows / $limit);
+$offset = ($page - 1) * $limit;
+$users = array_slice($allUsers, $offset, $limit);
 ?>
 
 <!DOCTYPE html>
@@ -89,7 +87,7 @@ $total_pages = ceil($total_rows / $limit);
                         <?php foreach ($users as $user): ?>
                             <tr>
                                 <td><?php echo $user['id']; ?></td>
-                                <td><?php echo htmlspecialchars($user['email']); ?></td>
+                                <td><?php echo htmlspecialchars($user['email'] ?? ''); ?></td>
                                 <td>
                                     <span class="badge <?php echo $user['role'] === 'admin' ? 'badge-primary' : 'badge-secondary'; ?>">
                                         <?php echo ucfirst($user['role'] ?? 'unknown'); ?>

@@ -23,9 +23,14 @@ try {
         'institution_name' => 'USTED'
     ];
 
-    $stmt = $pdo->prepare("INSERT INTO system_settings (setting_key, setting_value) VALUES (?, ?) ON CONFLICT (setting_key) DO NOTHING");
+    // Bridge doesn't support ON CONFLICT — check existence before insert
+    $checkStmt = $pdo->prepare("SELECT setting_key FROM system_settings WHERE setting_key = ?");
+    $stmt = $pdo->prepare("INSERT INTO system_settings (setting_key, setting_value) VALUES (?, ?)");
     foreach ($defaultSettings as $key => $value) {
-        $stmt->execute([$key, $value]);
+        $checkStmt->execute([$key]);
+        if (!$checkStmt->fetch()) {
+            $stmt->execute([$key, $value]);
+        }
     }
     echo "Default settings initialized successfully.";
 

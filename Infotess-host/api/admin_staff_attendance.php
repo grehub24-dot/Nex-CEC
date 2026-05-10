@@ -30,8 +30,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $check_out = isset($data['check_out']) && !empty($data['check_out']) ? $attendance_date . ' ' . $data['check_out'] : null;
             $notes = sanitize($data['notes'] ?? '');
             
-            $stmt = $pdo->prepare("INSERT INTO staff_attendance (staff_id, attendance_date, check_in, check_out, status, notes) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT (staff_id, attendance_date) DO UPDATE SET check_in=?, check_out=?, status=?, notes=?");
-            $stmt->execute([$staff_id, $attendance_date, $check_in, $check_out, $status, $notes, $check_in, $check_out, $status, $notes]);
+            // Bridge doesn't support ON CONFLICT — use SELECT-then-UPDATE-or-INSERT
+            $existing = $pdo->prepare("SELECT id FROM staff_attendance WHERE staff_id = ? AND attendance_date = ?");
+            $existing->execute([$staff_id, $attendance_date]);
+            if ($existing->fetch()) {
+                $stmt = $pdo->prepare("UPDATE staff_attendance SET check_in=?, check_out=?, status=?, notes=? WHERE staff_id=? AND attendance_date=?");
+                $stmt->execute([$check_in, $check_out, $status, $notes, $staff_id, $attendance_date]);
+            } else {
+                $stmt = $pdo->prepare("INSERT INTO staff_attendance (staff_id, attendance_date, check_in, check_out, status, notes) VALUES (?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$staff_id, $attendance_date, $check_in, $check_out, $status, $notes]);
+            }
             $saved++;
         }
         

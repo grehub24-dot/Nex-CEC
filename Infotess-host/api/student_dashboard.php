@@ -50,9 +50,11 @@ $required_dues = (float)($settings['annual_dues_amount'] ?? 500.00);
 
 $paid_this_year = 0;
 try {
-    $stmt = $pdo->prepare("SELECT COALESCE(SUM(amount),0) FROM payments WHERE student_id = ? AND academic_year = ?");
+    // Bridge doesn't support SUM() or COALESCE — fetch rows, sum in PHP
+    $stmt = $pdo->prepare("SELECT amount FROM payments WHERE student_id = ? AND academic_year = ?");
     $stmt->execute([$student_id, $current_academic_year]);
-    $paid_this_year = (float)$stmt->fetchColumn();
+    $all_payments_for_year = $stmt->fetchAll();
+    $paid_this_year = array_sum(array_map(fn($r) => (float)($r['amount'] ?? 0), $all_payments_for_year));
 } catch (Exception $e) {
     // payments table may not exist yet
 }

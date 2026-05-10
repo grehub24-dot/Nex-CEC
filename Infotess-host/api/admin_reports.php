@@ -40,20 +40,34 @@ if ($report_type) {
         $data = array_values($class_map);
         $headers = ['Class', 'Payment Count', 'Total Amount'];
     } elseif ($report_type === 'payments_per_year') {
-        $stmt = $pdo->query("
-            SELECT academic_year, COUNT(id) as payment_count, SUM(amount) as total_amount 
-            FROM payments 
-            GROUP BY academic_year
-        ");
-        $data = $stmt->fetchAll();
+        // Bridge doesn't support COUNT/SUM/GROUP BY — fetch all, group & count in PHP
+        $all_payments_for_report = $pdo->query("SELECT * FROM payments");
+        $all_payments_for_report = $all_payments_for_report ? $all_payments_for_report->fetchAll() : [];
+        $year_map = [];
+        foreach ($all_payments_for_report as $p) {
+            $yr = $p['academic_year'] ?? 'Unknown';
+            if (!isset($year_map[$yr])) {
+                $year_map[$yr] = ['academic_year' => $yr, 'payment_count' => 0, 'total_amount' => 0];
+            }
+            $year_map[$yr]['payment_count']++;
+            $year_map[$yr]['total_amount'] += (float)($p['amount'] ?? 0);
+        }
+        $data = array_values($year_map);
         $headers = ['Academic Year', 'Payment Count', 'Total Amount'];
     } elseif ($report_type === 'payments_per_term') {
-        $stmt = $pdo->query("
-            SELECT semester, COUNT(id) as payment_count, SUM(amount) as total_amount 
-            FROM payments 
-            GROUP BY semester
-        ");
-        $data = $stmt->fetchAll();
+        // Bridge doesn't support COUNT/SUM/GROUP BY — fetch all, group & count in PHP
+        $all_payments_for_report = $pdo->query("SELECT * FROM payments");
+        $all_payments_for_report = $all_payments_for_report ? $all_payments_for_report->fetchAll() : [];
+        $term_map = [];
+        foreach ($all_payments_for_report as $p) {
+            $sem = $p['semester'] ?? 'Unknown';
+            if (!isset($term_map[$sem])) {
+                $term_map[$sem] = ['semester' => $sem, 'payment_count' => 0, 'total_amount' => 0];
+            }
+            $term_map[$sem]['payment_count']++;
+            $term_map[$sem]['total_amount'] += (float)($p['amount'] ?? 0);
+        }
+        $data = array_values($term_map);
         $headers = ['Term', 'Payment Count', 'Total Amount'];
     }
 }

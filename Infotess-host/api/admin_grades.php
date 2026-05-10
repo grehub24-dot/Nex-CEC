@@ -55,8 +55,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $interest = sanitize($_POST['interest'] ?? '');
 
     try {
-        $stmt = $pdo->prepare("INSERT INTO sba_scores (student_id, subject_id, term_id, class_test, mid_term, end_term, project, attitude, interest) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (student_id, subject_id, term_id) DO UPDATE SET class_test=?, mid_term=?, end_term=?, project=?, attitude=?, interest=?, updated_at=NOW()");
-        $stmt->execute([$student_id, $subject_id, $term_id, $class_test, $mid_term, $end_term, $project, $attitude, $interest, $class_test, $mid_term, $end_term, $project, $attitude, $interest]);
+        // Bridge doesn't support ON CONFLICT ... DO UPDATE SET — use SELECT-then-UPDATE-or-INSERT pattern
+        $now = date('Y-m-d H:i:s');
+        $existing = $pdo->prepare("SELECT id FROM sba_scores WHERE student_id = ? AND subject_id = ? AND term_id = ?");
+        $existing->execute([$student_id, $subject_id, $term_id]);
+        if ($existing->fetch()) {
+            $stmt = $pdo->prepare("UPDATE sba_scores SET class_test=?, mid_term=?, end_term=?, project=?, attitude=?, interest=?, updated_at=? WHERE student_id=? AND subject_id=? AND term_id=?");
+            $stmt->execute([$class_test, $mid_term, $end_term, $project, $attitude, $interest, $now, $student_id, $subject_id, $term_id]);
+        } else {
+            $stmt = $pdo->prepare("INSERT INTO sba_scores (student_id, subject_id, term_id, class_test, mid_term, end_term, project, attitude, interest, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt->execute([$student_id, $subject_id, $term_id, $class_test, $mid_term, $end_term, $project, $attitude, $interest, $now]);
+        }
         $message = "Scores saved successfully.";
     } catch (Exception $e) {
         $error = "Error: " . $e->getMessage();
@@ -73,6 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $pdo->beginTransaction();
         $saved = 0;
         
+        $now = date('Y-m-d H:i:s');
         foreach ($_POST['scores'] as $student_id => $data) {
             $student_id = (int)$student_id;
             $class_test = (float)($data['class_test'] ?? 0);
@@ -82,8 +92,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $attitude = sanitize($data['attitude'] ?? '');
             $interest = sanitize($data['interest'] ?? '');
             
-            $stmt = $pdo->prepare("INSERT INTO sba_scores (student_id, subject_id, term_id, class_test, mid_term, end_term, project, attitude, interest) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (student_id, subject_id, term_id) DO UPDATE SET class_test=?, mid_term=?, end_term=?, project=?, attitude=?, interest=?");
-            $stmt->execute([$student_id, $subject_id, $term_id, $class_test, $mid_term, $end_term, $project, $attitude, $interest, $class_test, $mid_term, $end_term, $project, $attitude, $interest]);
+            // Bridge doesn't support ON CONFLICT — use SELECT-then-UPDATE-or-INSERT
+            $existing = $pdo->prepare("SELECT id FROM sba_scores WHERE student_id = ? AND subject_id = ? AND term_id = ?");
+            $existing->execute([$student_id, $subject_id, $term_id]);
+            if ($existing->fetch()) {
+                $stmt = $pdo->prepare("UPDATE sba_scores SET class_test=?, mid_term=?, end_term=?, project=?, attitude=?, interest=?, updated_at=? WHERE student_id=? AND subject_id=? AND term_id=?");
+                $stmt->execute([$class_test, $mid_term, $end_term, $project, $attitude, $interest, $now, $student_id, $subject_id, $term_id]);
+            } else {
+                $stmt = $pdo->prepare("INSERT INTO sba_scores (student_id, subject_id, term_id, class_test, mid_term, end_term, project, attitude, interest, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$student_id, $subject_id, $term_id, $class_test, $mid_term, $end_term, $project, $attitude, $interest, $now]);
+            }
             $saved++;
         }
         

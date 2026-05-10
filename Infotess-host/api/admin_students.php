@@ -197,13 +197,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
     $pdo->beginTransaction();
     try {
-        // Update student with admission number and status
-        $pdo->prepare("UPDATE students SET admission_number = ?, payment_status = 'paid', status = 'enrolled' WHERE id = ?")
-            ->execute([$admissionNumber, $studentId]);
+        // Update student with admission number and status (bridge doesn't support literals in SET — use ? for all values)
+        $pdo->prepare("UPDATE students SET admission_number = ?, payment_status = ?, status = ? WHERE id = ?")
+            ->execute([$admissionNumber, 'paid', 'enrolled', $studentId]);
 
-        // Record payment
-        $pdo->prepare("INSERT INTO payments (student_id, amount, payment_method, payment_date, receipt_number, status, enrollment_id) VALUES (?, ?, ?, NOW(), ?, 'completed', ?)")
-            ->execute([$studentId, 150.00, $method, $receiptNumber, $enrollmentId]);
+        // Record payment (bridge doesn't support NOW() in VALUES — use PHP timestamp and ? for literal status)
+        $pdo->prepare("INSERT INTO payments (student_id, amount, payment_method, payment_date, receipt_number, status, enrollment_id) VALUES (?, ?, ?, ?, ?, ?, ?)")
+            ->execute([$studentId, 150.00, $method, date('Y-m-d H:i:s'), $receiptNumber, 'completed', $enrollmentId]);
 
         $pdo->commit();
         $message = "Payment confirmed! Admission Number: $admissionNumber. Receipt: $receiptNumber";

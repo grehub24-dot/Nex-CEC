@@ -62,10 +62,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             // Generate Receipt
             $generator = new ReceiptGenerator();
             
-            // Fetch student total paid for the year
-            $stmt_paid = $pdo->prepare("SELECT SUM(amount) FROM payments WHERE student_id = ? AND academic_year = ?");
+            // Fetch student total paid for the year (bridge doesn't support SUM() — fetch rows, sum in PHP)
+            $stmt_paid = $pdo->prepare("SELECT amount FROM payments WHERE student_id = ? AND academic_year = ?");
             $stmt_paid->execute([$student['id'], $year]);
-            $total_paid = (float)$stmt_paid->fetchColumn();
+            $all_payments_for_year = $stmt_paid->fetchAll();
+            $total_paid = array_sum(array_map(fn($r) => (float)($r['amount'] ?? 0), $all_payments_for_year));
             
             // Fetch required dues from settings
             $stmt_settings = $pdo->query("SELECT setting_value FROM system_settings WHERE setting_key = 'annual_dues_amount'");
@@ -262,9 +263,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 if ($page < 1) $page = 1;
                 $offset = ($page - 1) * $limit;
 
-                $stmt = $pdo->prepare("SELECT * FROM payments ORDER BY created_at DESC LIMIT $limit OFFSET $offset");
-                $stmt->execute();
-                $recent_payments = $stmt->fetchAll();
+                // Bridge doesn't support COUNT(*) or SUM() — fetch all, count & sum in PHP
+                $allPayments = $pdo->query("SELECT * FROM payments ORDER BY created_at DESC");
+                $allPayments = $allPayments ? $allPayments->fetchAll() : [];
+                $total_rows = count($allPayments);
+                $total_pages = ceil($total_rows / $limit);
+                $recent_payments = array_slice($allPayments, $offset, $limit);
+
+                // Pre-compute per-student totals for the current academic year (used for balance display)
+                $studentTotals = [];
+                foreach ($allPayments as $p) {
+                    if (($p['academic_year'] ?? '') === $current_academic_year) {
+                        $sid = $p['student_id'] ?? null;
+                        if ($sid) {
+                            $studentTotals[(string)$sid] = ($studentTotals[(string)$sid] ?? 0) + (float)($p['amount'] ?? 0);
+                        }
+                    }
+                }
 
                 foreach ($recent_payments as &$payment) {
                     $s = $pdo->prepare("SELECT full_name, admission_number FROM students WHERE id = ?");
@@ -277,14 +292,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         $payment['full_name'] = 'Unknown';
                         $payment['admission_number'] = '-';
                     }
-                    $tp = $pdo->prepare("SELECT SUM(amount) FROM payments WHERE student_id = ? AND academic_year = ?");
-                    $tp->execute([$payment['student_id'], $current_academic_year]);
-                    $payment['total_paid'] = (float)$tp->fetchColumn();
+                    $payment['total_paid'] = $studentTotals[(string)$payment['student_id']] ?? 0;
                 }
-
-                $total_stmt = $pdo->query("SELECT COUNT(*) FROM payments");
-                $total_rows = (int)$total_stmt->fetchColumn();
-                $total_pages = ceil($total_rows / $limit);
                 ?>
                 <div class="table-responsive">
                     <table class="table">

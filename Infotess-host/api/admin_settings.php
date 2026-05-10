@@ -19,11 +19,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             'payment_modes', 'fee_types'
         ];
 
-        $stmt = $pdo->prepare("INSERT INTO system_settings (setting_key, setting_value) VALUES (?, ?) ON CONFLICT (setting_key) DO UPDATE SET setting_value = EXCLUDED.setting_value");
-        
+        // Bridge doesn't support ON CONFLICT — use separate update/insert per key
         foreach ($settings_keys as $key) {
             if (isset($_POST[$key])) {
-                $stmt->execute([$key, sanitize($_POST[$key])]);
+                $val = sanitize($_POST[$key]);
+                $existing = $pdo->prepare("SELECT setting_key FROM system_settings WHERE setting_key = ?");
+                $existing->execute([$key]);
+                if ($existing->fetch()) {
+                    $stmt = $pdo->prepare("UPDATE system_settings SET setting_value = ? WHERE setting_key = ?");
+                    $stmt->execute([$val, $key]);
+                } else {
+                    $stmt = $pdo->prepare("INSERT INTO system_settings (setting_key, setting_value) VALUES (?, ?)");
+                    $stmt->execute([$key, $val]);
+                }
             }
         }
 

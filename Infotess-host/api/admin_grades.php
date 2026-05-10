@@ -12,16 +12,26 @@ $school_name = $settings['school_name'] ?? 'Nex CEC';
 $message = '';
 $error = '';
 
-// Get classes, terms, subjects
-$classes = $pdo->query("SELECT * FROM classes ORDER BY sort_order ASC")->fetchAll();
-$terms = $pdo->query("SELECT * FROM terms ORDER BY id ASC")->fetchAll();
+// Get classes, terms, subjects (bridge ignores ORDER BY — sort in PHP)
+$classes = $pdo->query("SELECT * FROM classes");
+$classes = $classes ? $classes->fetchAll() : [];
+usort($classes, function($a, $b) {
+    return ((int)($a['sort_order'] ?? 0)) - ((int)($b['sort_order'] ?? 0));
+});
+
+$terms = $pdo->query("SELECT * FROM terms");
+$terms = $terms ? $terms->fetchAll() : [];
 
 $selected_class = $_GET['class_id'] ?? '';
 $selected_term = $_GET['term_id'] ?? '';
 $selected_subject = $_GET['subject_id'] ?? '';
 
 // Get all subjects (bridge drops OR conditions in WHERE)
-$all_subjects = $pdo->query("SELECT * FROM subjects ORDER BY name ASC")->fetchAll();
+$all_subjects = $pdo->query("SELECT * FROM subjects");
+$all_subjects = $all_subjects ? $all_subjects->fetchAll() : [];
+usort($all_subjects, function($a, $b) {
+    return strcmp($a['name'] ?? '', $b['name'] ?? '');
+});
 if ($selected_class) {
     $subjects = array_filter($all_subjects, fn($s) => empty($s['class_id']) || (int)$s['class_id'] === (int)$selected_class);
 } else {
@@ -48,36 +58,6 @@ if ($selected_class) {
     }
 }
 
-// Handle Save SBA Scores
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'save_sba') {
-    $student_id = (int)$_POST['student_id'];
-    $subject_id = (int)$_POST['subject_id'];
-    $term_id = (int)$_POST['term_id'];
-    $class_test = (float)($_POST['class_test'] ?? 0);
-    $mid_term = (float)($_POST['mid_term'] ?? 0);
-    $end_term = (float)($_POST['end_term'] ?? 0);
-    $project = (float)($_POST['project'] ?? 0);
-    $attitude = sanitize($_POST['attitude'] ?? '');
-    $interest = sanitize($_POST['interest'] ?? '');
-
-    try {
-        // Bridge doesn't support ON CONFLICT ... DO UPDATE SET — use SELECT-then-UPDATE-or-INSERT pattern
-        $now = date('Y-m-d H:i:s');
-        $existing = $pdo->prepare("SELECT id FROM sba_scores WHERE student_id = ? AND subject_id = ? AND term_id = ?");
-        $existing->execute([$student_id, $subject_id, $term_id]);
-        if ($existing->fetch()) {
-            $stmt = $pdo->prepare("UPDATE sba_scores SET class_test=?, mid_term=?, end_term=?, project=?, attitude=?, interest=?, updated_at=? WHERE student_id=? AND subject_id=? AND term_id=?");
-            $stmt->execute([$class_test, $mid_term, $end_term, $project, $attitude, $interest, $now, $student_id, $subject_id, $term_id]);
-        } else {
-            $stmt = $pdo->prepare("INSERT INTO sba_scores (student_id, subject_id, term_id, class_test, mid_term, end_term, project, attitude, interest, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-            $stmt->execute([$student_id, $subject_id, $term_id, $class_test, $mid_term, $end_term, $project, $attitude, $interest, $now]);
-        }
-        $message = "Scores saved successfully.";
-    } catch (Exception $e) {
-        $error = "Error: " . $e->getMessage();
-    }
-}
-
 // Handle Bulk Save SBA Scores
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'save_bulk_sba') {
     $subject_id = (int)$_POST['subject_id'];
@@ -88,25 +68,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $pdo->beginTransaction();
         $saved = 0;
         
-        $now = date('Y-m-d H:i:s');
         foreach ($_POST['scores'] as $student_id => $data) {
             $student_id = (int)$student_id;
+            $individual_test = (float)($data['individual_test'] ?? 0);
             $class_test = (float)($data['class_test'] ?? 0);
-            $mid_term = (float)($data['mid_term'] ?? 0);
             $end_term = (float)($data['end_term'] ?? 0);
-            $project = (float)($data['project'] ?? 0);
             $attitude = sanitize($data['attitude'] ?? '');
             $interest = sanitize($data['interest'] ?? '');
             
             // Bridge doesn't support ON CONFLICT — use SELECT-then-UPDATE-or-INSERT
+            // NOTE: sba_scores table has NO updated_at column — do not include it.
             $existing = $pdo->prepare("SELECT id FROM sba_scores WHERE student_id = ? AND subject_id = ? AND term_id = ?");
             $existing->execute([$student_id, $subject_id, $term_id]);
             if ($existing->fetch()) {
-                $stmt = $pdo->prepare("UPDATE sba_scores SET class_test=?, mid_term=?, end_term=?, project=?, attitude=?, interest=?, updated_at=? WHERE student_id=? AND subject_id=? AND term_id=?");
-                $stmt->execute([$class_test, $mid_term, $end_term, $project, $attitude, $interest, $now, $student_id, $subject_id, $term_id]);
+                $stmt = $pdo->prepare("UPDATE sba_scores SET class_test=?, mid_term=?, end_term=?, attitude=?, interest=? WHERE student_id=? AND subject_id=? AND term_id=?");
+                $stmt->execute([$individual_test, $class_test, $end_term, $attitude, $interest, $student_id, $subject_id, $term_id]);
             } else {
-                $stmt = $pdo->prepare("INSERT INTO sba_scores (student_id, subject_id, term_id, class_test, mid_term, end_term, project, attitude, interest, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                $stmt->execute([$student_id, $subject_id, $term_id, $class_test, $mid_term, $end_term, $project, $attitude, $interest, $now]);
+                $stmt = $pdo->prepare("INSERT INTO sba_scores (student_id, subject_id, term_id, class_test, mid_term, end_term, attitude, interest) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$student_id, $subject_id, $term_id, $individual_test, $class_test, $end_term, $attitude, $interest]);
             }
             $saved++;
         }
@@ -126,6 +105,41 @@ if ($selected_class && $selected_term && $selected_subject) {
     $stmt->execute([$selected_subject, $selected_term]);
     while ($row = $stmt->fetch()) {
         $existing_scores[$row['student_id']] = $row;
+    }
+}
+
+// Compute SBA calculations and positions
+$sba_data = [];
+if (!empty($students)) {
+    foreach ($students as $st) {
+        $s = $existing_scores[$st['id']] ?? null;
+        $individual_test = (float)($s['class_test'] ?? 0);
+        $class_test = (float)($s['mid_term'] ?? 0);
+        $end_term = (float)($s['end_term'] ?? 0);
+        
+        $total_class_score = $individual_test + $class_test; // out of 60
+        $scaled_60 = $total_class_score * 50 / 60; // scale 60 to 50%
+        $scaled_100 = $end_term * 50 / 100; // scale 100 to 50%
+        $overall_total = $scaled_60 + $scaled_100;
+        
+        $sba_data[$st['id']] = [
+            'individual_test'    => $individual_test,
+            'class_test'         => $class_test,
+            'total_class_score'  => $total_class_score,
+            'scaled_60'          => round($scaled_60, 1),
+            'end_term'           => $end_term,
+            'scaled_100'         => round($scaled_100, 1),
+            'overall_total'      => round($overall_total, 1),
+        ];
+    }
+    // Sort by overall_total DESC to assign positions
+    $sorted = $sba_data;
+    uasort($sorted, function($a, $b) {
+        return $b['overall_total'] <=> $a['overall_total'];
+    });
+    $pos = 1;
+    foreach ($sorted as $sid => $data) {
+        $sba_data[$sid]['position'] = $pos++;
     }
 }
 
@@ -210,7 +224,7 @@ if ($selected_class) {
                     ?></h3>
                     
                     <div class="alert alert-info" style="margin-top: 15px; font-size: 0.9rem;">
-                        <i class="fas fa-info-circle"></i> <strong>Scoring:</strong> Class Test (30), Mid-Term (20), End-Term (30), Project (20). Total SBA = 100.
+                        <i class="fas fa-info-circle"></i> <strong>Ghana SBA Scoring:</strong> Individual Test (30) + Class Test (30) = Total Class Score (60) → scaled to 50%. End of Term Exams (100) → scaled to 50%. Overall = Scaled Class Score + Scaled Exams.
                     </div>
 
                     <form method="POST" action="grades.php">
@@ -223,45 +237,52 @@ if ($selected_class) {
                             <table class="table">
                                 <thead>
                                     <tr>
-                                        <th>Index Number</th>
+                                        <th>No.</th>
                                         <th>Student Name</th>
-                                        <th style="width: 80px;">Class Test (30)</th>
-                                        <th style="width: 80px;">Mid-Term (20)</th>
-                                        <th style="width: 80px;">End-Term (30)</th>
-                                        <th style="width: 80px;">Project (20)</th>
-                                        <th style="width: 80px;">Total</th>
-                                        <th style="width: 100px;">Attitude</th>
-                                        <th style="width: 100px;">Interest</th>
+                                        <th style="width: 70px;">Individual Test<br><small>(30mks)</small></th>
+                                        <th style="width: 70px;">Class Test<br><small>(30mks)</small></th>
+                                        <th style="width: 70px;">Total Class Score<br><small>(60mks)</small></th>
+                                        <th style="width: 70px;">60 Scaled to<br><small>(50%)</small></th>
+                                        <th style="width: 75px;">End of Term Exams<br><small>(100mks)</small></th>
+                                        <th style="width: 70px;">100 Scaled to<br><small>(50%)</small></th>
+                                        <th style="width: 65px;">Overall Total</th>
+                                        <th style="width: 50px;">Position</th>
+                                        <th style="width: 80px;">Attitude</th>
+                                        <th style="width: 80px;">Interest</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <?php foreach ($students as $i => $student):
-                                        $sba = $existing_scores[$student['id']] ?? null;
+                                        $db = $existing_scores[$student['id']] ?? null;
+                                        $calc = $sba_data[$student['id']] ?? null;
                                     ?>
                                     <tr>
-                                        <td><?php echo htmlspecialchars($student['admission_number']); ?></td>
-                                        <td><strong><?php echo htmlspecialchars($student['full_name']); ?></strong></td>
-                                        <td><input type="number" step="0.5" min="0" max="30" name="scores[<?php echo $student['id']; ?>][class_test]" class="form-control score-input" value="<?php echo $sba ? htmlspecialchars($sba['class_test']) : ''; ?>" onchange="calcTotal(this)" style="width: 70px;"></td>
-                                        <td><input type="number" step="0.5" min="0" max="20" name="scores[<?php echo $student['id']; ?>][mid_term]" class="form-control score-input" value="<?php echo $sba ? htmlspecialchars($sba['mid_term']) : ''; ?>" onchange="calcTotal(this)" style="width: 70px;"></td>
-                                        <td><input type="number" step="0.5" min="0" max="30" name="scores[<?php echo $student['id']; ?>][end_term]" class="form-control score-input" value="<?php echo $sba ? htmlspecialchars($sba['end_term']) : ''; ?>" onchange="calcTotal(this)" style="width: 70px;"></td>
-                                        <td><input type="number" step="0.5" min="0" max="20" name="scores[<?php echo $student['id']; ?>][project]" class="form-control score-input" value="<?php echo $sba ? htmlspecialchars($sba['project']) : ''; ?>" onchange="calcTotal(this)" style="width: 70px;"></td>
-                                        <td><strong class="total-cell">0</strong></td>
+                                        <td><?php echo $i + 1; ?></td>
+                                        <td><strong><?php echo htmlspecialchars($student['full_name'] ?? ''); ?></strong></td>
+                                        <td><input type="number" step="0.5" min="0" max="30" name="scores[<?php echo $student['id']; ?>][individual_test]" class="form-control score-input" data-student="<?php echo $student['id']; ?>" value="<?php echo $db ? htmlspecialchars($db['class_test'] ?? 0) : '0'; ?>" style="width: 60px;"></td>
+                                        <td><input type="number" step="0.5" min="0" max="30" name="scores[<?php echo $student['id']; ?>][class_test]" class="form-control score-input" data-student="<?php echo $student['id']; ?>" value="<?php echo $db ? htmlspecialchars($db['mid_term'] ?? 0) : '0'; ?>" style="width: 60px;"></td>
+                                        <td class="calc-cell" id="total_class_<?php echo $student['id']; ?>"><?php echo $calc ? number_format($calc['total_class_score'], 1) : '0.0'; ?></td>
+                                        <td class="calc-cell" id="scaled60_<?php echo $student['id']; ?>"><?php echo $calc ? number_format($calc['scaled_60'], 1) : '0.0'; ?></td>
+                                        <td><input type="number" step="0.5" min="0" max="100" name="scores[<?php echo $student['id']; ?>][end_term]" class="form-control score-input" data-student="<?php echo $student['id']; ?>" value="<?php echo $db ? htmlspecialchars($db['end_term'] ?? 0) : '0'; ?>" style="width: 60px;"></td>
+                                        <td class="calc-cell" id="scaled100_<?php echo $student['id']; ?>"><?php echo $calc ? number_format($calc['scaled_100'], 1) : '0.0'; ?></td>
+                                        <td class="calc-cell" id="overall_<?php echo $student['id']; ?>" style="font-weight:bold;"><?php echo $calc ? number_format($calc['overall_total'], 1) : '0.0'; ?></td>
+                                        <td class="calc-cell" id="pos_<?php echo $student['id']; ?>"><?php echo $calc ? $calc['position'] : '-'; ?></td>
                                         <td>
-                                            <select name="scores[<?php echo $student['id']; ?>][attitude]" class="form-control" style="width: 90px;">
+                                            <select name="scores[<?php echo $student['id']; ?>][attitude]" class="form-control" style="width: 80px;">
                                                 <option value="">--</option>
-                                                <option value="Excellent" <?php echo ($sba && $sba['attitude'] === 'Excellent') ? 'selected' : ''; ?>>Excellent</option>
-                                                <option value="Good" <?php echo ($sba && $sba['attitude'] === 'Good') ? 'selected' : ''; ?>>Good</option>
-                                                <option value="Satisfactory" <?php echo ($sba && $sba['attitude'] === 'Satisfactory') ? 'selected' : ''; ?>>Satisfactory</option>
-                                                <option value="Needs Improvement" <?php echo ($sba && $sba['attitude'] === 'Needs Improvement') ? 'selected' : ''; ?>>Needs Imp.</option>
+                                                <option value="Excellent" <?php echo ($db && $db['attitude'] === 'Excellent') ? 'selected' : ''; ?>>Excellent</option>
+                                                <option value="Good" <?php echo ($db && $db['attitude'] === 'Good') ? 'selected' : ''; ?>>Good</option>
+                                                <option value="Satisfactory" <?php echo ($db && $db['attitude'] === 'Satisfactory') ? 'selected' : ''; ?>>Satisfactory</option>
+                                                <option value="Needs Improvement" <?php echo ($db && $db['attitude'] === 'Needs Improvement') ? 'selected' : ''; ?>>Needs Imp.</option>
                                             </select>
                                         </td>
                                         <td>
-                                            <select name="scores[<?php echo $student['id']; ?>][interest]" class="form-control" style="width: 90px;">
+                                            <select name="scores[<?php echo $student['id']; ?>][interest]" class="form-control" style="width: 80px;">
                                                 <option value="">--</option>
-                                                <option value="Excellent" <?php echo ($sba && $sba['interest'] === 'Excellent') ? 'selected' : ''; ?>>Excellent</option>
-                                                <option value="Good" <?php echo ($sba && $sba['interest'] === 'Good') ? 'selected' : ''; ?>>Good</option>
-                                                <option value="Satisfactory" <?php echo ($sba && $sba['interest'] === 'Satisfactory') ? 'selected' : ''; ?>>Satisfactory</option>
-                                                <option value="Needs Improvement" <?php echo ($sba && $sba['interest'] === 'Needs Improvement') ? 'selected' : ''; ?>>Needs Imp.</option>
+                                                <option value="Excellent" <?php echo ($db && $db['interest'] === 'Excellent') ? 'selected' : ''; ?>>Excellent</option>
+                                                <option value="Good" <?php echo ($db && $db['interest'] === 'Good') ? 'selected' : ''; ?>>Good</option>
+                                                <option value="Satisfactory" <?php echo ($db && $db['interest'] === 'Satisfactory') ? 'selected' : ''; ?>>Satisfactory</option>
+                                                <option value="Needs Improvement" <?php echo ($db && $db['interest'] === 'Needs Improvement') ? 'selected' : ''; ?>>Needs Imp.</option>
                                             </select>
                                         </td>
                                     </tr>
@@ -283,24 +304,37 @@ if ($selected_class) {
     </div>
 
     <script>
-    function calcTotal(input) {
-        const row = input.closest('tr');
-        const inputs = row.querySelectorAll('.score-input');
-        let total = 0;
-        inputs.forEach(inp => { total += parseFloat(inp.value) || 0; });
-        row.querySelector('.total-cell').textContent = total.toFixed(1);
-        
-        // Color code
-        const totalCell = row.querySelector('.total-cell');
-        if (total >= 80) totalCell.style.color = '#27ae60';
-        else if (total >= 60) totalCell.style.color = '#2e86c1';
-        else if (total >= 50) totalCell.style.color = '#f39c12';
-        else totalCell.style.color = '#e74c3c';
+    function recalcStudent(studentId) {
+        var ind = parseFloat(document.querySelector('input[name="scores[' + studentId + '][individual_test]"]').value) || 0;
+        var cls = parseFloat(document.querySelector('input[name="scores[' + studentId + '][class_test]"]').value) || 0;
+        var end = parseFloat(document.querySelector('input[name="scores[' + studentId + '][end_term]"]').value) || 0;
+
+        var totalClass = ind + cls;
+        var scaled60 = totalClass * 50 / 60;
+        var scaled100 = end * 50 / 100;
+        var overall = scaled60 + scaled100;
+
+        document.getElementById('total_class_' + studentId).textContent = totalClass.toFixed(1);
+        document.getElementById('scaled60_' + studentId).textContent = scaled60.toFixed(1);
+        document.getElementById('scaled100_' + studentId).textContent = scaled100.toFixed(1);
+        document.getElementById('overall_' + studentId).textContent = overall.toFixed(1);
+
+        // Color-code overall total
+        var overallCell = document.getElementById('overall_' + studentId);
+        if (overall >= 80) overallCell.style.color = '#27ae60';
+        else if (overall >= 60) overallCell.style.color = '#2e86c1';
+        else if (overall >= 50) overallCell.style.color = '#f39c12';
+        else overallCell.style.color = '#e74c3c';
     }
-    
-    // Calculate totals on page load
+
+    // Attach event listeners and recalc all on page load
     document.addEventListener('DOMContentLoaded', function() {
-        document.querySelectorAll('.score-input').forEach(input => calcTotal(input));
+        document.querySelectorAll('.score-input').forEach(function(inp) {
+            var sid = inp.getAttribute('data-student');
+            inp.addEventListener('input', function() { recalcStudent(sid); });
+            // Trigger initial calculation
+            recalcStudent(sid);
+        });
     });
     </script>
 </body>

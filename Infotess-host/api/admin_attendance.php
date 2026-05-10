@@ -59,8 +59,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $existing = $pdo->prepare("SELECT id FROM student_attendance WHERE student_id = ? AND attendance_date = ?");
             $existing->execute([$student_id, $attendance_date]);
             if ($existing->fetch()) {
-                $stmt = $pdo->prepare("UPDATE student_attendance SET status=?, reason=?, recorded_by=? WHERE student_id=? AND attendance_date=?");
-                $stmt->execute([$status, $reason, $_SESSION['user_id'], $student_id, $attendance_date]);
+                // Also set class_id to backfill legacy records that have it null
+                $stmt = $pdo->prepare("UPDATE student_attendance SET status=?, reason=?, recorded_by=?, class_id=? WHERE student_id=? AND attendance_date=?");
+                $stmt->execute([$status, $reason, $_SESSION['user_id'], $class_id, $student_id, $attendance_date]);
             } else {
                 $stmt = $pdo->prepare("INSERT INTO student_attendance (student_id, class_id, attendance_date, status, reason, recorded_by) VALUES (?, ?, ?, ?, ?, ?)");
                 $stmt->execute([$student_id, $class_id, $attendance_date, $status, $reason, $_SESSION['user_id']]);
@@ -79,12 +80,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 }
 
 // Get existing attendance for selected class and date
+// NOTE: Some legacy records have class_id = NULL (created by old seed data).
+// Fetch by date first, then filter by students in the current class.
 $existing_attendance = [];
-if ($selected_class && $selected_date) {
-    $stmt = $pdo->prepare("SELECT student_id, status, reason FROM student_attendance WHERE class_id = ? AND attendance_date = ?");
-    $stmt->execute([$selected_class, $selected_date]);
+if ($selected_class && $selected_date && !empty($students)) {
+    $class_student_ids = array_map(fn($s) => (int)($s['id'] ?? 0), $students);
+    $stmt = $pdo->prepare("SELECT * FROM student_attendance WHERE attendance_date = ?");
+    $stmt->execute([$selected_date]);
     while ($row = $stmt->fetch()) {
-        $existing_attendance[$row['student_id']] = $row;
+        $sid = (int)$row['student_id'];
+        if (in_array($sid, $class_student_ids)) {
+            $existing_attendance[$sid] = $row;
+            // Silently backfill legacy null class_id on first encounter
+            if ($row['class_id'] === null || $row['class_id'] === '') {
+                $fix = $pdo->prepare("UPDATE student_attendance SET class_id=? WHERE id=?");
+                $fix->execute([(int)$selected_class, $row['id']]);
+            }
+        }
     }
 }
 

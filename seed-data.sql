@@ -705,12 +705,14 @@ DECLARE
         '2025-11-17','2025-11-18','2025-11-19','2025-11-20','2025-11-21'
     ];
     r INT;
+    cid INT;
 BEGIN
-    FOR s IN SELECT id FROM students LOOP
+    FOR s IN SELECT id, class_name FROM students LOOP
+        cid := (SELECT id FROM classes WHERE name = s.class_name LIMIT 1);
         FOREACH d IN ARRAY dates LOOP
             r := (RANDOM() * 10)::INT;
-            INSERT INTO student_attendance (student_id, attendance_date, status, reason)
-            SELECT s.id, d,
+            INSERT INTO student_attendance (student_id, class_id, attendance_date, status, reason)
+            SELECT s.id, cid, d,
                 CASE WHEN r < 8 THEN 'present' WHEN r < 9 THEN 'late' ELSE 'absent' END,
                 CASE WHEN r >= 9 THEN 'Sick' ELSE NULL END
             WHERE NOT EXISTS (SELECT 1 FROM student_attendance WHERE student_id = s.id AND attendance_date = d);

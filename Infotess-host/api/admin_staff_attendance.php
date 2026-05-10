@@ -41,11 +41,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         }
 
         $pdo->commit();
-        header("Location: admin/staff_attendance.php?date=" . urlencode($attendance_date) . "&msg=" . urlencode("Staff attendance saved for $saved members on $attendance_date."));
+        header("Location: /admin/staff_attendance.php?date=" . urlencode($attendance_date) . "&msg=" . urlencode("Staff attendance saved for $saved members on $attendance_date."));
         exit;
     } catch (Exception $e) {
         $pdo->rollBack();
-        header("Location: admin/staff_attendance.php?date=" . urlencode($attendance_date) . "&err=" . urlencode("Error: " . $e->getMessage()));
+        header("Location: /admin/staff_attendance.php?date=" . urlencode($attendance_date) . "&err=" . urlencode("Error: " . $e->getMessage()));
         exit;
     }
 }
@@ -126,7 +126,7 @@ try {
             <!-- Date Selector -->
             <div class="card" style="margin-bottom: 30px;">
                 <div class="card-content">
-                    <form method="GET" action="admin/staff_attendance.php" style="display: flex; gap: 15px; align-items: flex-end;">
+                    <form method="GET" action="/admin/staff_attendance.php" style="display: flex; gap: 15px; align-items: flex-end;">
                         <div>
                             <label><strong>Date</strong></label>
                             <input type="date" name="date" class="form-control" value="<?php echo htmlspecialchars($selected_date); ?>" required>
@@ -165,7 +165,7 @@ try {
                         <button type="button" class="btn-login" onclick="markAll('absent')" style="background: #e74c3c;"><i class="fas fa-times"></i> All Absent</button>
                     </div>
 
-                    <form method="POST" action="admin/staff_attendance.php">
+                    <form method="POST" action="/admin/staff_attendance.php">
                         <input type="hidden" name="action" value="save_staff_attendance">
                         <input type="hidden" name="attendance_date" value="<?php echo htmlspecialchars($selected_date); ?>">
                         

@@ -434,6 +434,16 @@ foreach ($fees as $f) {
                     </select>
                 </div>
                 <div class="form-group">
+                    <label>Group (select to assign to all classes in this level)</label>
+                    <select name="fee_group" id="edit_fee_group" class="form-control">
+                        <option value="">-- None (single class) --</option>
+                        <option value="__all__">All Classes</option>
+                        <?php foreach ($level_groups as $gKey => $g): ?>
+                            <option value="<?php echo htmlspecialchars($gKey); ?>"><?php echo htmlspecialchars($g['label']); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="form-group" id="edit_class_group">
                     <label>Class (leave empty for all classes)</label>
                     <select name="class_id" id="edit_class_id" class="form-control">
                         <option value="">All Classes</option>
@@ -454,32 +464,50 @@ foreach ($fees as $f) {
     </div>
 
     <script>
+        // Group mapping for JS: groupKey => { label, classIds: [...] }
+        var LEVEL_GROUPS = <?php echo json_encode(array_map(function($g) {
+            return [
+                'label' => $g['label'],
+                'classIds' => array_map(function($c) { return $c['id']; }, $g['classes']),
+            ];
+        }, $level_groups)); ?>;
+
         var addModal = document.getElementById('addFeeModal');
         var editModal = document.getElementById('editFeeModal');
-        var groupSelect = document.getElementById('add_fee_group');
-        var classGroup = document.getElementById('add_class_group');
+        var addGroupSelect = document.getElementById('add_fee_group');
+        var addClassGroup = document.getElementById('add_class_group');
+        var editGroupSelect = document.getElementById('edit_fee_group');
+        var editClassGroup = document.getElementById('edit_class_group');
 
         document.getElementById('openAddBtn').onclick = function() { addModal.style.display = 'block'; };
         function closeAddModal() { addModal.style.display = 'none'; }
         function closeEditModal() { editModal.style.display = 'none'; }
         window.onclick = function(e) { if (e.target == addModal) closeAddModal(); if (e.target == editModal) closeEditModal(); };
 
-        // Show/hide class dropdown based on group selection
-        groupSelect.addEventListener('change', function() {
-            var val = this.value;
-            if (val === '') {
-                // None (single class) — show class dropdown
-                classGroup.style.display = 'block';
-            } else {
-                // Group or All Classes — hide class dropdown, class_id will be set by PHP handler
-                classGroup.style.display = 'none';
-            }
+        // ====== Add form: show/hide class dropdown based on group ======
+        addGroupSelect.addEventListener('change', function() {
+            addClassGroup.style.display = this.value === '' ? 'block' : 'none';
         });
-        // Initialize on page load
-        if (groupSelect.value !== '') {
-            classGroup.style.display = 'none';
+        if (addGroupSelect.value !== '') {
+            addClassGroup.style.display = 'none';
         }
 
+        // ====== Edit form: show/hide class dropdown based on group ======
+        editGroupSelect.addEventListener('change', function() {
+            var val = this.value;
+            if (val === '') {
+                editClassGroup.style.display = 'block';
+            } else {
+                editClassGroup.style.display = 'none';
+                // Auto-select first class in this group into the (hidden) class dropdown
+                var groupData = LEVEL_GROUPS[val];
+                if (groupData && groupData.classIds.length > 0) {
+                    document.getElementById('edit_class_id').value = groupData.classIds[0];
+                }
+            }
+        });
+
+        // ====== Open Edit: auto-detect group from class_id ======
         function openEdit(fee) {
             document.getElementById('edit_fee_id').value = fee.id;
             document.getElementById('edit_fee_title').value = fee.title;
@@ -487,7 +515,30 @@ foreach ($fees as $f) {
             document.getElementById('edit_amount').value = fee.amount;
             document.getElementById('edit_year').value = fee.academic_year;
             document.getElementById('edit_term').value = fee.term || '<?php echo $current_term; ?>';
-            document.getElementById('edit_class_id').value = fee.class_id || '';
+
+            var classId = fee.class_id ? String(fee.class_id) : '';
+            document.getElementById('edit_class_id').value = classId;
+
+            // Detect group from class_id
+            var detectedGroup = '';
+            if (!classId) {
+                detectedGroup = '__all__';
+            } else {
+                for (var gk in LEVEL_GROUPS) {
+                    if (LEVEL_GROUPS[gk].classIds.indexOf(Number(classId)) !== -1) {
+                        detectedGroup = gk;
+                        break;
+                    }
+                }
+            }
+            editGroupSelect.value = detectedGroup;
+            // Apply group show/hide
+            if (detectedGroup === '') {
+                editClassGroup.style.display = 'block';
+            } else {
+                editClassGroup.style.display = 'none';
+            }
+
             document.getElementById('edit_is_mandatory').checked = fee.is_mandatory == true || fee.is_mandatory === 1;
             editModal.style.display = 'block';
         }

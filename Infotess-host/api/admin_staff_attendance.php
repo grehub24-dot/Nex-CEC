@@ -57,7 +57,7 @@ $error = $_GET['err'] ?? '';
 
 
 // Get all staff (filter active in PHP — bridge drops WHERE status = 'active')
-$all_staff = $pdo->query("SELECT id, staff_id, full_name, position FROM staff")->fetchAll();
+$all_staff = $pdo->query("SELECT id, staff_id, full_name, position, status FROM staff")->fetchAll();
 $staff_list = array_filter($all_staff, fn($s) => ($s['status'] ?? '') === 'active');
 usort($staff_list, fn($a, $b) => strcmp($a['full_name'], $b['full_name']));
 

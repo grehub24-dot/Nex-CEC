@@ -17,6 +17,39 @@ $current_term = $settings['current_term'] ?? '1';
 $message = '';
 $error = '';
 
+// === Build $classes and $level_groups BEFORE POST handler (they are needed by add/edit) ===
+$classes = [];
+try {
+    $stmt = $pdo->query("SELECT * FROM classes");
+    $classes = $stmt->fetchAll();
+    // NOTE: bridge ignores ORDER BY — sort in PHP.
+    usort($classes, function($a, $b) {
+        return ((int)($a['sort_order'] ?? 0)) - ((int)($b['sort_order'] ?? 0));
+    });
+} catch (Exception $e) {
+    $classes = [];
+}
+$group_defs = [
+    'creche'        => ['label' => 'Creche',        'names' => ['Creche']],
+    'pre_school'    => ['label' => 'Pre-school',    'names' => ['Nursery', 'KG 1', 'KG 2']],
+    'lower_primary' => ['label' => 'Lower Primary', 'names' => ['Basic 1', 'Basic 2', 'Basic 3']],
+    'upper_primary' => ['label' => 'Upper Primary', 'names' => ['Basic 4', 'Basic 5', 'Basic 6']],
+    'jhs'           => ['label' => 'JHS',           'names' => ['JHS 1', 'JHS 2', 'JHS 3']],
+];
+$level_groups = [];
+foreach ($group_defs as $gKey => $gDef) {
+    $level_groups[$gKey] = [
+        'label'   => $gDef['label'],
+        'classes' => [],
+    ];
+    foreach ($classes as $c) {
+        if (in_array($c['name'], $gDef['names'])) {
+            $level_groups[$gKey]['classes'][] = $c;
+        }
+    }
+}
+// === END early definitions ===
+
 // Handle Add/Edit Fee
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     $fee_title = sanitize($_POST['fee_title']);
@@ -151,19 +184,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 // Fetch Fee Types from settings
 $fee_types_list = explode(',', $settings['fee_types'] ?? 'Tuition,PTA Levy,Sports & Culture,ICT,Examination,Development,Feeding,Transport,Uniform,Books & Materials');
 
-// Fetch Classes
-$classes = [];
-try {
-    $stmt = $pdo->query("SELECT * FROM classes");
-    $classes = $stmt->fetchAll();
-    // NOTE: bridge ignores ORDER BY — sort in PHP.
-    usort($classes, function($a, $b) {
-        return ((int)($a['sort_order'] ?? 0)) - ((int)($b['sort_order'] ?? 0));
-    });
-} catch (Exception $e) {
-    $classes = [];
-}
-
 // Fetch All Fees
 $filter_year = $_GET['year'] ?? $current_year;
 $filter_term = $_GET['term'] ?? $current_term;
@@ -203,27 +223,6 @@ foreach ($fees as &$fee) {
         $fee['class_name'] = $cname ? $cname['name'] : 'All Classes';
     } else {
         $fee['class_name'] = 'All Classes';
-    }
-}
-
-// Build group mapping for group feature (name-based groups as requested)
-$group_defs = [
-    'creche'       => ['label' => 'Creche',       'names' => ['Creche']],
-    'pre_school'   => ['label' => 'Pre-school',    'names' => ['Nursery', 'KG 1', 'KG 2']],
-    'lower_primary' => ['label' => 'Lower Primary', 'names' => ['Basic 1', 'Basic 2', 'Basic 3']],
-    'upper_primary' => ['label' => 'Upper Primary', 'names' => ['Basic 4', 'Basic 5', 'Basic 6']],
-    'jhs'          => ['label' => 'JHS',           'names' => ['JHS 1', 'JHS 2', 'JHS 3']],
-];
-$level_groups = [];
-foreach ($group_defs as $gKey => $gDef) {
-    $level_groups[$gKey] = [
-        'label'   => $gDef['label'],
-        'classes' => [],
-    ];
-    foreach ($classes as $c) {
-        if (in_array($c['name'], $gDef['names'])) {
-            $level_groups[$gKey]['classes'][] = $c;
-        }
     }
 }
 

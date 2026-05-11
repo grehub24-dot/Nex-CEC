@@ -13,14 +13,12 @@ $message = '';
 $error = '';
 
 // ==========================================
-// Ensure level_category column exists
+// Subject-category mapping via system_settings
+// (DDL cannot be used — Supabase REST bridge
+//  skips ALTER TABLE. We store a JSON mapping
+//  of category -> subject IDs in system_settings
+//  under the key "subject_categories".)
 // ==========================================
-try {
-    $pdo->exec("ALTER TABLE subjects ADD COLUMN IF NOT EXISTS level_category VARCHAR(50) DEFAULT 'primary'");
-} catch (Exception $e) {
-    // Column may already exist or table doesn't support ALTER via bridge — silently handle
-    error_log("subjects level_category migration: " . $e->getMessage());
-}
 
 // ==========================================
 // Category definitions
@@ -85,6 +83,76 @@ $default_subjects = [
 ];
 
 // ==========================================
+// Subject-Category Mapping Helpers
+// ==========================================
+
+/**
+ * Read the subject-to-category mapping from system_settings.
+ * Returns an associative array: [ 'creche' => [1,2,3], 'nursery' => [4,5], ... ]
+ */
+function getSubjectCategoryMapping($pdo): array {
+    try {
+        $stmt = $pdo->prepare("SELECT setting_value FROM system_settings WHERE setting_key = ?");
+        $stmt->execute(['subject_categories']);
+        $row = $stmt->fetch();
+        if ($row && !empty($row['setting_value'])) {
+            $decoded = json_decode($row['setting_value'], true);
+            return is_array($decoded) ? $decoded : [];
+        }
+    } catch (Exception $e) {
+        error_log("getSubjectCategoryMapping: " . $e->getMessage());
+    }
+    return [];
+}
+
+/**
+ * Save the subject-to-category mapping to system_settings.
+ * Creates or updates the "subject_categories" key.
+ */
+function saveSubjectCategoryMapping($pdo, array $mapping): bool {
+    $json = json_encode($mapping);
+    try {
+        $existing = $pdo->prepare("SELECT setting_key FROM system_settings WHERE setting_key = ?");
+        $existing->execute(['subject_categories']);
+        if ($existing->fetch()) {
+            $stmt = $pdo->prepare("UPDATE system_settings SET setting_value = ? WHERE setting_key = ?");
+            $stmt->execute([$json, 'subject_categories']);
+        } else {
+            $stmt = $pdo->prepare("INSERT INTO system_settings (setting_key, setting_value) VALUES (?, ?)");
+            $stmt->execute(['subject_categories', $json]);
+        }
+        return true;
+    } catch (Exception $e) {
+        error_log("saveSubjectCategoryMapping: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Remove a subject ID from all categories in the mapping.
+ */
+function removeSubjectIdFromMapping(array &$mapping, int $id): void {
+    foreach ($mapping as $cat => &$ids) {
+        $ids = array_values(array_filter($ids, function($v) use ($id) {
+            return (int)$v !== $id;
+        }));
+    }
+    unset($ids);
+}
+
+/**
+ * Add a subject ID to a specific category in the mapping (no duplicates).
+ */
+function addSubjectIdToMapping(array &$mapping, string $category, int $id): void {
+    if (!isset($mapping[$category])) {
+        $mapping[$category] = [];
+    }
+    if (!in_array($id, $mapping[$category])) {
+        $mapping[$category][] = $id;
+    }
+}
+
+// ==========================================
 // Handle POST Actions
 // ==========================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -99,14 +167,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (empty($name) || empty($category)) {
                 $error = 'Subject name and category are required.';
             } else {
-                // Check for duplicate within the same category
-                $existing = $pdo->prepare("SELECT id FROM subjects WHERE name = ? AND level_category = ?");
-                $existing->execute([$name, $category]);
-                if ($existing->fetch()) {
-                    $error = "Subject '$name' already exists in this category.";
+                // Check for duplicate by name
+                $existing = $pdo->prepare("SELECT id FROM subjects WHERE name = ?");
+                $existing->execute([$name]);
+                $dupRow = $existing->fetch();
+                if ($dupRow) {
+                    $error = "Subject '$name' already exists.";
                 } else {
-                    $stmt = $pdo->prepare("INSERT INTO subjects (name, code, level_category) VALUES (?, ?, ?)");
-                    $stmt->execute([$name, $code, $category]);
+                    $stmt = $pdo->prepare("INSERT INTO subjects (name, code) VALUES (?, ?)");
+                    $stmt->execute([$name, $code]);
+                    $newId = (int)$pdo->lastInsertId();
+
+                    // Add to category mapping
+                    $mapping = getSubjectCategoryMapping($pdo);
+                    addSubjectIdToMapping($mapping, $category, $newId);
+                    saveSubjectCategoryMapping($pdo, $mapping);
+
                     $message = "Subject '$name' added successfully.";
                 }
             }
@@ -120,8 +196,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (empty($name) || empty($category)) {
                 $error = 'Subject name and category are required.';
             } else {
-                $stmt = $pdo->prepare("UPDATE subjects SET name = ?, code = ?, level_category = ? WHERE id = ?");
-                $stmt->execute([$name, $code, $category, $id]);
+                $stmt = $pdo->prepare("UPDATE subjects SET name = ?, code = ? WHERE id = ?");
+                $stmt->execute([$name, $code, $id]);
+
+                // Update category mapping (move subject to new category)
+                $mapping = getSubjectCategoryMapping($pdo);
+                removeSubjectIdFromMapping($mapping, $id);
+                addSubjectIdToMapping($mapping, $category, $id);
+                saveSubjectCategoryMapping($pdo, $mapping);
+
                 $message = "Subject updated successfully.";
             }
 
@@ -129,6 +212,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $id = (int)$_POST['id'];
             $stmt = $pdo->prepare("DELETE FROM subjects WHERE id = ?");
             $stmt->execute([$id]);
+
+            // Remove from category mapping
+            $mapping = getSubjectCategoryMapping($pdo);
+            removeSubjectIdFromMapping($mapping, $id);
+            saveSubjectCategoryMapping($pdo, $mapping);
+
             $message = "Subject deleted successfully.";
 
         } elseif ($action === 'seed_defaults') {
@@ -136,19 +225,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!isset($default_subjects[$category])) {
                 $error = 'Invalid category for seeding.';
             } else {
+                $mapping = getSubjectCategoryMapping($pdo);
                 $inserted = 0;
                 $skipped = 0;
+
                 foreach ($default_subjects[$category] as $subj) {
-                    $existing = $pdo->prepare("SELECT id FROM subjects WHERE name = ? AND level_category = ?");
-                    $existing->execute([$subj['name'], $category]);
-                    if (!$existing->fetch()) {
-                        $stmt = $pdo->prepare("INSERT INTO subjects (name, code, level_category) VALUES (?, ?, ?)");
-                        $stmt->execute([$subj['name'], $subj['code'], $category]);
-                        $inserted++;
+                    // Check if subject already exists by name
+                    $existing = $pdo->prepare("SELECT id FROM subjects WHERE name = ?");
+                    $existing->execute([$subj['name']]);
+                    $row = $existing->fetch();
+
+                    if ($row) {
+                        // Subject exists — ensure it's mapped to this category
+                        $existingId = (int)$row['id'];
+                        if (!in_array($existingId, $mapping[$category] ?? [])) {
+                            addSubjectIdToMapping($mapping, $category, $existingId);
+                            $inserted++;
+                        } else {
+                            $skipped++;
+                        }
                     } else {
-                        $skipped++;
+                        // New subject
+                        $stmt = $pdo->prepare("INSERT INTO subjects (name, code) VALUES (?, ?)");
+                        $stmt->execute([$subj['name'], $subj['code']]);
+                        $newId = (int)$pdo->lastInsertId();
+                        addSubjectIdToMapping($mapping, $category, $newId);
+                        $inserted++;
                     }
                 }
+
+                saveSubjectCategoryMapping($pdo, $mapping);
+
                 $parts = [];
                 if ($inserted > 0) $parts[] = "$inserted subject(s) added";
                 if ($skipped > 0) $parts[] = "$skipped duplicate(s) skipped";
@@ -156,21 +263,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
         } elseif ($action === 'seed_all') {
+            $mapping = getSubjectCategoryMapping($pdo);
             $total_inserted = 0;
             $total_skipped = 0;
+
             foreach ($default_subjects as $cat => $subjects) {
                 foreach ($subjects as $subj) {
-                    $existing = $pdo->prepare("SELECT id FROM subjects WHERE name = ? AND level_category = ?");
-                    $existing->execute([$subj['name'], $cat]);
-                    if (!$existing->fetch()) {
-                        $stmt = $pdo->prepare("INSERT INTO subjects (name, code, level_category) VALUES (?, ?, ?)");
-                        $stmt->execute([$subj['name'], $subj['code'], $cat]);
-                        $total_inserted++;
+                    $existing = $pdo->prepare("SELECT id FROM subjects WHERE name = ?");
+                    $existing->execute([$subj['name']]);
+                    $row = $existing->fetch();
+
+                    if ($row) {
+                        $existingId = (int)$row['id'];
+                        if (!in_array($existingId, $mapping[$cat] ?? [])) {
+                            addSubjectIdToMapping($mapping, $cat, $existingId);
+                            $total_inserted++;
+                        } else {
+                            $total_skipped++;
+                        }
                     } else {
-                        $total_skipped++;
+                        $stmt = $pdo->prepare("INSERT INTO subjects (name, code) VALUES (?, ?)");
+                        $stmt->execute([$subj['name'], $subj['code']]);
+                        $newId = (int)$pdo->lastInsertId();
+                        addSubjectIdToMapping($mapping, $cat, $newId);
+                        $total_inserted++;
                     }
                 }
             }
+
+            saveSubjectCategoryMapping($pdo, $mapping);
             $message = "Seeded all categories: $total_inserted added, $total_skipped skipped.";
         }
     } catch (Exception $e) {
@@ -179,25 +300,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // ==========================================
-// Fetch all subjects
+// Fetch all subjects and group by category
+// using the subject_categories mapping
 // ==========================================
 $all_subjects = [];
 try {
-    $stmt = $pdo->query("SELECT * FROM subjects ORDER BY level_category, name");
+    $stmt = $pdo->query("SELECT * FROM subjects ORDER BY name");
     $all_subjects = $stmt->fetchAll();
 } catch (Exception $e) {
     $all_subjects = [];
 }
 
-// Group subjects by category
+$subject_mapping = getSubjectCategoryMapping($pdo);
+
+// Build ID-based lookup for fast grouping
+$subject_by_id = [];
+foreach ($all_subjects as $s) {
+    $subject_by_id[(int)$s['id']] = $s;
+}
+
+// Group subjects by category using the mapping
 $grouped = [];
+$orphaned_ids = array_keys($subject_by_id); // track which IDs get assigned
+
 foreach ($categories as $key => $cat) {
     $grouped[$key] = [];
+    $ids = $subject_mapping[$key] ?? [];
+    foreach ($ids as $id) {
+        $idInt = (int)$id;
+        if (isset($subject_by_id[$idInt])) {
+            $grouped[$key][] = $subject_by_id[$idInt];
+            // Remove from orphaned set
+            $orphaned_ids = array_values(array_filter($orphaned_ids, function($oid) use ($idInt) {
+                return $oid !== $idInt;
+            }));
+        }
+    }
 }
-foreach ($all_subjects as $s) {
-    $cat = $s['level_category'] ?? 'primary';
-    if (!isset($grouped[$cat])) $grouped[$cat] = [];
-    $grouped[$cat][] = $s;
+
+// Any remaining subjects not in the mapping get assigned to 'primary' as fallback
+foreach ($orphaned_ids as $oid) {
+    if (isset($subject_by_id[$oid])) {
+        $grouped['primary'][] = $subject_by_id[$oid];
+    }
 }
 
 // Get active tab

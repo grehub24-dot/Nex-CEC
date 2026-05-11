@@ -42,6 +42,7 @@ $uri = trim($uri, '/');
 $routes = [
     '' => 'home.php',
     'index.php' => 'home.php',
+    'dashboard.php' => 'login.php',
 ];
 
 // Admin routes

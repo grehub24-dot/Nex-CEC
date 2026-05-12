@@ -90,6 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $pdo->beginTransaction();
             try {
                 // Insert student with status='pending', no admission_number, no user_id
+                $today = date('Y-m-d');
                 $stmt = $pdo->prepare("INSERT INTO students (
                     enrollment_id, full_name, class_name, gender, date_of_birth, 
                     place_of_birth, nationality, address, previous_school, previous_class,
@@ -97,7 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     guardian_name, guardian_relationship, guardian_phone_primary, 
                     guardian_phone_emergency, guardian_email, guardian_occupation, guardian_address,
                     status, academic_year, admission_date
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, CURRENT_DATE)");
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                 
                 $stmt->execute([
                     $enrollment_ref, $full_name, $class_name, $gender, $date_of_birth ?: null,
@@ -105,7 +106,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     $health_insurance_id ?: null, $medical_conditions ?: null, $allergies ?: null, $special_needs ?: null,
                     $guardian_name, $guardian_relationship ?: null, $guardian_phone_primary,
                     $guardian_phone_emergency ?: null, $guardian_email, $guardian_occupation ?: null, $guardian_address ?: null,
-                    $current_year
+                    'pending', $current_year, $today
                 ]);
                 
                 $student_id = $pdo->lastInsertId();

@@ -13,8 +13,18 @@ $message = '';
 $error = '';
 
 // Get classes — bridge ignores ORDER BY, so sort in PHP
-$classes = $pdo->query("SELECT * FROM classes")->fetchAll();
-usort($classes, fn($a, $b) => ((int)($a['sort_order'] ?? 0)) - ((int)($b['sort_order'] ?? 0)));
+$all_classes = $pdo->query("SELECT * FROM classes")->fetchAll();
+usort($all_classes, fn($a, $b) => ((int)($a['sort_order'] ?? 0)) - ((int)($b['sort_order'] ?? 0)));
+
+// Teacher scope: if logged in as teacher, only show assigned classes
+if (isTeacher()) {
+    $teacher_class_ids = getTeacherClassIds($pdo);
+    $classes = array_filter($all_classes, function($c) use ($teacher_class_ids) {
+        return in_array((int)$c['id'], $teacher_class_ids);
+    });
+} else {
+    $classes = $all_classes;
+}
 
 $selected_class = $_GET['class_id'] ?? '';
 $selected_date = $_GET['date'] ?? date('Y-m-d');

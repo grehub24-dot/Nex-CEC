@@ -3,10 +3,14 @@ require_once 'includes/db.php';
 
 // Redirect if already logged in
 if (isLoggedIn()) {
-    if (isAdmin()) {
-        redirect('admin/dashboard.php');
-    } else {
+    $role = $_SESSION['role'] ?? '';
+    if ($role === 'student') {
         redirect('student/dashboard.php');
+    } elseif ($role === 'parent') {
+        redirect('parent/dashboard.php');
+    } else {
+        // Admin, teacher, staff, bursar all go to admin dashboard
+        redirect('admin/dashboard.php');
     }
 }
 
@@ -68,8 +72,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                     
                     redirect('student/dashboard.php');
+                } elseif ($user['role'] === 'parent') {
+                    // Parent login — redirect to parent dashboard
+                    $stmt_s = $pdo->prepare("SELECT ps.student_id, s.full_name, s.admission_number 
+                                              FROM parent_students ps 
+                                              JOIN students s ON s.id = ps.student_id 
+                                              WHERE ps.parent_user_id = :uid 
+                                              LIMIT 1");
+                    $stmt_s->execute(['uid' => $user['id']]);
+                    $child = $stmt_s->fetch();
+                    $_SESSION['name'] = $child ? $child['full_name'] . "'s Parent" : 'Parent';
+                    redirect('parent/dashboard.php');
+                } elseif (in_array($user['role'], ['teacher', 'staff', 'bursar'])) {
+                    $_SESSION['name'] = ucfirst($user['role']);
+                    redirect('admin/dashboard.php');
                 } else {
-                    $_SESSION['name'] = "Admin"; // Can fetch executive name if needed
+                    // Fallback for any other role
+                    $_SESSION['name'] = "User";
                     redirect('admin/dashboard.php');
                 }
             }

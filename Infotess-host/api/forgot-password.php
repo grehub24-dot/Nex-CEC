@@ -5,10 +5,13 @@ require_once 'includes/SMSHelper.php';
 
 // Redirect if already logged in
 if (isLoggedIn()) {
-    if (isAdmin()) {
-        redirect('admin/dashboard.php');
-    } else {
+    $role = $_SESSION['role'] ?? '';
+    if ($role === 'student') {
         redirect('student/dashboard.php');
+    } elseif ($role === 'parent') {
+        redirect('parent/dashboard.php');
+    } else {
+        redirect('admin/dashboard.php');
     }
 }
 

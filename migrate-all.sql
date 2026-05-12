@@ -648,6 +648,51 @@ INSERT INTO system_settings (setting_key, setting_value) VALUES
 ON CONFLICT ON CONSTRAINT system_settings_setting_key_key DO NOTHING;
 
 -- ==========================================
+-- PHASE 5: PARENT-STUDENT RELATIONSHIP
+-- ==========================================
+
+-- Create parent_students junction table for one-to-many parent-to-student
+CREATE TABLE IF NOT EXISTS parent_students (
+    id SERIAL PRIMARY KEY,
+    parent_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+    relationship VARCHAR(50),
+    is_primary BOOLEAN DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(parent_user_id, student_id)
+);
+
+-- Drop the UNIQUE constraint on students.user_id to allow one parent to have multiple children
+-- We use a DO block to make it idempotent
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'students_user_id_key' AND conrelid = 'students'::regclass) THEN
+        ALTER TABLE students DROP CONSTRAINT students_user_id_key;
+    END IF;
+END $$;
+
+-- Create an index on students.user_id (non-unique) for fast lookups
+CREATE INDEX IF NOT EXISTS idx_students_user_id ON students(user_id);
+
+-- Create an index on parent_students for fast queries
+CREATE INDEX IF NOT EXISTS idx_parent_students_parent ON parent_students(parent_user_id);
+CREATE INDEX IF NOT EXISTS idx_parent_students_student ON parent_students(student_id);
+
+-- ==========================================
+-- PHASE 6: DATABASE-BACKED SESSIONS
+-- ==========================================
+
+-- Sessions table for database-backed PHP sessions (Vercel-compatible)
+CREATE TABLE IF NOT EXISTS sessions (
+    id VARCHAR(128) PRIMARY KEY,
+    data TEXT NOT NULL DEFAULT '',
+    last_accessed TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Auto-cleanup expired sessions (runs hourly)
+CREATE INDEX IF NOT EXISTS idx_sessions_last_accessed ON sessions(last_accessed);
+
+-- ==========================================
 -- VERIFICATION
 -- ==========================================
 SELECT 'students' AS tbl, COUNT(*) FROM students
@@ -660,4 +705,6 @@ UNION ALL SELECT 'system_settings', COUNT(*) FROM system_settings
 UNION ALL SELECT 'terms', COUNT(*) FROM terms
 UNION ALL SELECT 'subjects', COUNT(*) FROM subjects
 UNION ALL SELECT 'messages', COUNT(*) FROM messages
-UNION ALL SELECT 'notifications', COUNT(*) FROM notifications;
+UNION ALL SELECT 'notifications', COUNT(*) FROM notifications
+UNION ALL SELECT 'parent_students', COUNT(*) FROM parent_students
+UNION ALL SELECT 'sessions', COUNT(*) FROM sessions;

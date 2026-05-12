@@ -108,6 +108,64 @@ if (empty($chart_labels)) { $chart_labels = [date('M Y')]; $chart_data = [0]; }
                 <div class="user-info"><span>Welcome, <?php echo htmlspecialchars($display_name); ?> (<?php echo ucfirst($current_role); ?>)</span></div>
             </div>
 
+            <?php if (isTeacher()): ?>
+            <?php
+                // Teacher-scoped view: show assigned classes, subjects, and students
+                $teacher_class_ids = getTeacherClassIds($pdo);
+                $teacher_classes = [];
+                $teacher_subjects = [];
+                $teacher_student_count = 0;
+                if (!empty($teacher_class_ids)) {
+                    // Fetch class names
+                    foreach ($teacher_class_ids as $cid) {
+                        $stmt = $pdo->prepare("SELECT * FROM classes WHERE id = ?");
+                        $stmt->execute([$cid]);
+                        $cls = $stmt->fetch();
+                        if ($cls) $teacher_classes[] = $cls['name'];
+                    }
+                    // Count students in these classes
+                    foreach ($teacher_classes as $cname) {
+                        $stmt = $pdo->prepare("SELECT id FROM students WHERE class_name = ? AND status = 'active'");
+                        $stmt->execute([$cname]);
+                        $teacher_student_count += count($stmt->fetchAll());
+                    }
+                    // Fetch assigned subjects
+                    $stmt = $pdo->prepare("SELECT s.*, c.name AS class_name FROM subjects s JOIN classes c ON c.id = s.class_id WHERE s.teacher_id = (SELECT id FROM staff WHERE user_id = ?)");
+                    $stmt->execute([$_SESSION['user_id']]);
+                    $teacher_subjects = $stmt->fetchAll();
+                }
+            ?>
+                <div class="stat-cards" style="margin-bottom: 20px;">
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-chalkboard"></i></div>
+                        <div class="stat-details">
+                            <h3><?php echo count($teacher_classes); ?></h3>
+                            <p>My Classes</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-book"></i></div>
+                        <div class="stat-details">
+                            <h3><?php echo count($teacher_subjects); ?></h3>
+                            <p>My Subjects</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-user-graduate"></i></div>
+                        <div class="stat-details">
+                            <h3><?php echo $teacher_student_count; ?></h3>
+                            <p>My Students</p>
+                        </div>
+                    </div>
+                </div>
+                <?php if (!empty($teacher_classes)): ?>
+                    <div style="margin-bottom: 25px; background: white; padding: 18px 22px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+                        <strong style="font-size:14px; color:#1a5276;">Assigned Classes:</strong>
+                        <span style="margin-left: 10px; color: #555;"><?php echo htmlspecialchars(implode(', ', $teacher_classes)); ?></span>
+                    </div>
+                <?php endif; ?>
+            <?php else: ?>
+
             <?php if (isset($_SESSION['access_denied'])): ?>
                 <div class="alert alert-danger">
                     <i class="fas fa-lock"></i> Access Denied: You do not have permission to view that page.
@@ -229,6 +287,7 @@ if (empty($chart_labels)) { $chart_labels = [date('M Y')]; $chart_data = [0]; }
             </div>
         </main>
     </div>
+    <?php endif; ?>
 
     <script>
         // Skeleton loading — hide skeleton when content is ready

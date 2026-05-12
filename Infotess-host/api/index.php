@@ -44,6 +44,17 @@ $routes = [
     'index.php' => 'home.php',
 ];
 
+// Public pages (accessible without authentication)
+$publicPages = ['register', 'enrollment_confirm', 'enrollment_print', 'enrollment_bill', 'enrollment_blank_form'];
+foreach ($publicPages as $page) {
+    $routes["$page.php"] = "$page.php";
+}
+
+// Auth pages
+$routes['login.php'] = 'login.php';
+$routes['logout.php'] = 'logout.php';
+$routes['forgot-password.php'] = 'forgot-password.php';
+
 // Admin routes
 $adminPages = ['dashboard','students','staff','edit_staff','payments','fees','payroll','pay_slip','salary','grades','attendance','staff_attendance','reports','settings','users','edit_student','inbox','messaging','module_settings','subjects','verify','bulk_import','enrollments'];
 foreach ($adminPages as $page) {
@@ -54,6 +65,12 @@ foreach ($adminPages as $page) {
 $studentPages = ['dashboard','history','messages','password-reset','profile','fees','report_card'];
 foreach ($studentPages as $page) {
     $routes["student/$page.php"] = "student_$page.php";
+}
+
+// Parent routes
+$parentPages = ['dashboard', 'student', 'fees', 'report_card', 'messages'];
+foreach ($parentPages as $page) {
+    $routes["parent/$page.php"] = "parent_$page.php";
 }
 
 $file = $routes[$uri] ?? $uri;

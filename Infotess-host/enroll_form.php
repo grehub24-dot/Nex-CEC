@@ -1,12 +1,12 @@
 <?php
 // enroll_form.php — Online Enrollment Form
-if (session_status() === PHP_SESSION_NONE) session_start();
+// Load DB session handler FIRST, then start session
+require_once __DIR__ . '/api/includes/functions.php';
+require_once __DIR__ . '/api/includes/db.php';
 
 $showConfirmation = isset($_GET['enrolled']) && $_GET['enrolled'] == '1';
 $enrollmentId = $_GET['enrollment_id'] ?? '';
 $studentName = urldecode($_GET['student_name'] ?? '');
-
-require_once __DIR__ . '/api/includes/db.php';
 
 $settings = [];
 try {

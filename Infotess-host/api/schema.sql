@@ -1,11 +1,24 @@
--- Database Schema for INFOTESS SDMS
+-- ============================================================
+-- ⚠️  LEGACY MYSQL SCHEMA — FOR REFERENCE ONLY
+-- ============================================================
+-- This file contains the ORIGINAL MySQL schema used during
+-- initial development. The project now runs on PostgreSQL
+-- via Supabase.
+--
+-- DO NOT use this file for new deployments.
+-- Use migrate-all.sql (PostgreSQL/Supabase-compatible) instead.
+-- 
+-- Last updated: The system_settings table now stores enrollment
+-- fees (admission_fee, prospectus_fee, enrollment_form_fee).
+-- See admin_settings.php + register.php for the new enrollment flow.
+-- ============================================================
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
 SET time_zone = "+00:00";
 
 --
--- Database: `infotess_sdms`
+-- Database: `infotess_sdms` (MySQL — OBSOLETE, use Supabase/PostgreSQL)
 --
 
 -- --------------------------------------------------------

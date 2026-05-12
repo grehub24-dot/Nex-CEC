@@ -1,5 +1,7 @@
 <?php
 require_once 'includes/db.php';
+require_once 'includes/Mailer.php';
+require_once 'includes/SMSHelper.php';
 requireAccess('enrollments');
 
 // Fetch Settings
@@ -9,18 +11,175 @@ while ($row = $stmt->fetch()) {
     $settings[$row['setting_key']] = $row['setting_value'];
 }
 $school_name = $settings['school_name'] ?? 'Nex CEC';
+$school_address = $settings['school_address'] ?? '';
+$school_phone = $settings['school_phone'] ?? '';
 
 $message = '';
 $error = '';
+
+/**
+ * Create a parent user account and link to student.
+ */
+function createParentAccount($pdo, $student, $school_name) {
+    $guardian_email = $student['guardian_email'];
+    $guardian_name  = $student['guardian_name'];
+    $guardian_phone = $student['guardian_phone_primary'] ?? '';
+    $student_id     = $student['id'];
+
+    // Check if parent user already exists
+    $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ?");
+    $stmt->execute([$guardian_email]);
+    $existing = $stmt->fetch();
+
+    $is_new = false;
+    if ($existing) {
+        $parent_user_id = $existing['id'];
+    } else {
+        // Create new parent user account
+        $auto_password = substr(str_shuffle("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"), 0, 8);
+        $password_hash = password_hash($auto_password, PASSWORD_DEFAULT);
+
+        $stmt = $pdo->prepare("INSERT INTO users (email, password, role, status) VALUES (?, ?, 'parent', 'active')");
+        $stmt->execute([$guardian_email, $password_hash]);
+        $parent_user_id = $pdo->lastInsertId();
+        $is_new = true;
+    }
+
+    // Create parent_students link (if not already linked)
+    $stmt = $pdo->prepare("SELECT id FROM parent_students WHERE parent_user_id = ? AND student_id = ?");
+    $stmt->execute([$parent_user_id, $student_id]);
+    if (!$stmt->fetch()) {
+        $stmt = $pdo->prepare("INSERT INTO parent_students (parent_user_id, student_id, relationship, is_primary) VALUES (?, ?, ?, true)");
+        $stmt->execute([$parent_user_id, $student_id, $student['guardian_relationship'] ?? 'Guardian']);
+    }
+
+    // Update student record with user_id (for backward compatibility)
+    $stmt = $pdo->prepare("UPDATE students SET user_id = ? WHERE id = ?");
+    $stmt->execute([$parent_user_id, $student_id]);
+
+    // Send welcome email with credentials (only for new accounts)
+    if ($is_new && !empty($guardian_email)) {
+        try {
+            $appUrl = getAppUrl();
+            $mailer = new Mailer();
+            $subject = "Parent Portal Access — $school_name";
+
+            $email_html = "
+            <!DOCTYPE html>
+            <html>
+            <head><meta charset='UTF-8'><style>
+                body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 20px; }
+                .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; }
+                .header { background: linear-gradient(to right, #1a5276, #2e86c1); color: white; text-align: center; padding: 40px 20px; }
+                .header h1 { margin: 0; font-size: 24px; }
+                .content { padding: 30px; color: #333; font-size: 14px; }
+                .cred-box { background: #f0f7ff; border: 1px solid #b8d9e8; border-radius: 6px; padding: 20px; margin: 20px 0; }
+                .cred-box .label { font-size: 12px; color: #666; }
+                .cred-box .value { font-size: 18px; font-weight: bold; color: #1a5276; }
+                .btn-green { display: inline-block; background: #27ae60; color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: bold; margin-top: 15px; }
+                .footer { text-align: center; padding: 30px; font-size: 12px; color: #666; border-top: 1px solid #eee; }
+            </style></head>
+            <body>
+                <div class='container'>
+                    <div class='header'>
+                        <h1>Parent Portal Access</h1>
+                        <p>" . htmlspecialchars($school_name, ENT_QUOTES, 'UTF-8') . "</p>
+                    </div>
+                    <div class='content'>
+                        <p>Dear <strong>" . htmlspecialchars($guardian_name, ENT_QUOTES, 'UTF-8') . "</strong>,</p>
+                        <p>Your child <strong>" . htmlspecialchars($student['full_name'], ENT_QUOTES, 'UTF-8') . "</strong> has been enrolled at " . htmlspecialchars($school_name, ENT_QUOTES, 'UTF-8') . ".</p>
+                        <p>You now have access to the parent portal where you can:</p>
+                        <ul>
+                            <li>View fees and make payments</li>
+                            <li>Download receipts</li>
+                            <li>View report cards</li>
+                            <li>Check attendance</li>
+                            <li>Receive school messages</li>
+                        </ul>
+                        <div class='cred-box'>
+                            <div class='label'>Login Email</div>
+                            <div class='value'>" . htmlspecialchars($guardian_email, ENT_QUOTES, 'UTF-8') . "</div>
+                            <div style='margin-top: 15px;'></div>
+                            <div class='label'>Temporary Password</div>
+                            <div class='value'>" . htmlspecialchars($auto_password, ENT_QUOTES, 'UTF-8') . "</div>
+                        </div>
+                        <p style='text-align: center;'>
+                            <a href='{$appUrl}/login.php' class='btn-green'>Login to Parent Portal</a>
+                        </p>
+                        <p style='margin-top: 15px; font-size: 12px; color: #888;'>
+                            You will be required to change your password after first login.
+                        </p>
+                    </div>
+                    <div class='footer'>
+                        <p><strong>" . htmlspecialchars($school_name, ENT_QUOTES, 'UTF-8') . "</strong></p>
+                        <p>This is an automated message.</p>
+                    </div>
+                </div>
+            </body></html>";
+
+            $mailer->sendHTML($guardian_email, $subject, $email_html);
+        } catch (Exception $e) {
+            error_log("Parent welcome email error: " . $e->getMessage());
+        }
+
+        // Send SMS
+        try {
+            if (!empty($guardian_phone)) {
+                $smsHelper = new SMSHelper();
+                $smsMsg = "PORTAL ACCESS: Your child " . $student['full_name'] . " has been enrolled at $school_name. Login: $guardian_email / Password: $auto_password. Login at: " . getAppUrl() . "/login.php";
+                $smsHelper->send($guardian_phone, $smsMsg);
+            }
+        } catch (Exception $e) {
+            error_log("Parent welcome SMS error: " . $e->getMessage());
+        }
+    } elseif (!$is_new) {
+        // Notify existing parent that a new child was added
+        try {
+            if (!empty($guardian_email)) {
+                $mailer = new Mailer();
+                $subject = "New Child Enrolled — $school_name";
+                $appUrl = getAppUrl();
+                $email_html = "
+                <!DOCTYPE html>
+                <html>
+                <head><meta charset='UTF-8'><style>
+                    body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 20px; }
+                    .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; }
+                    .header { background: linear-gradient(to right, #1a5276, #2e86c1); color: white; text-align: center; padding: 30px 20px; }
+                    .header h1 { margin: 0; font-size: 22px; }
+                    .content { padding: 30px; }
+                    .footer { text-align: center; padding: 20px; font-size: 12px; color: #666; border-top: 1px solid #eee; }
+                </style></head>
+                <body>
+                    <div class='container'>
+                        <div class='header'><h1>New Child Enrolled</h1></div>
+                        <div class='content'>
+                            <p>Dear <strong>" . htmlspecialchars($guardian_name, ENT_QUOTES, 'UTF-8') . "</strong>,</p>
+                            <p><strong>" . htmlspecialchars($student['full_name'], ENT_QUOTES, 'UTF-8') . "</strong> has been enrolled at " . htmlspecialchars($school_name, ENT_QUOTES, 'UTF-8') . " and added to your parent portal.</p>
+                            <p>Log in to your portal to view your children's information.</p>
+                            <p style='text-align: center;'><a href='{$appUrl}/login.php' style='display: inline-block; background: #1a5276; color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: bold;'>Login to Portal</a></p>
+                        </div>
+                        <div class='footer'><p>" . htmlspecialchars($school_name, ENT_QUOTES, 'UTF-8') . "</p></div>
+                    </div>
+                </body></html>";
+                $mailer->sendHTML($guardian_email, $subject, $email_html);
+            }
+        } catch (Exception $e) {
+            error_log("Existing parent notification error: " . $e->getMessage());
+        }
+    }
+
+    return $parent_user_id;
+}
 
 // Handle actions
 if (isset($_GET['action']) && isset($_GET['id'])) {
     $id = (int)$_GET['id'];
     $action = $_GET['action'];
+
     if ($action === 'approve') {
         // Assign admission number
         $today = date('ymd');
-        // Bridge can't handle LIKE with param — fetch all, find next counter in PHP
         $allStudentsForCount = $pdo->query("SELECT * FROM students")->fetchAll();
         $counter = 0;
         foreach ($allStudentsForCount as $s) {
@@ -30,13 +189,133 @@ if (isset($_GET['action']) && isset($_GET['id'])) {
             }
         }
         $admissionNumber = "CEC-{$today}-{$counter}";
-        $pdo->prepare("UPDATE students SET admission_number = ?, status = 'enrolled' WHERE id = ?")->execute([$admissionNumber, $id]);
-        $message = "Enrollment approved! Admission Number: $admissionNumber";
+        $pdo->prepare("UPDATE students SET admission_number = ?, status = 'active' WHERE id = ?")->execute([$admissionNumber, $id]);
+
+        // Fetch student and create parent account
+        $stmt = $pdo->prepare("SELECT * FROM students WHERE id = ?");
+        $stmt->execute([$id]);
+        $student = $stmt->fetch();
+
+        if ($student) {
+            try {
+                createParentAccount($pdo, $student, $school_name);
+                $message = "Enrollment approved! Admission Number: $admissionNumber. Parent portal credentials sent.";
+            } catch (Exception $e) {
+                $message = "Enrollment approved! Admission Number: $admissionNumber. (Note: parent account creation failed: " . $e->getMessage() . ")";
+            }
+        } else {
+            $message = "Enrollment approved! Admission Number: $admissionNumber";
+        }
+
     } elseif ($action === 'reject') {
         $pdo->prepare("UPDATE students SET status = 'rejected' WHERE id = ?")->execute([$id]);
+
+        // Notify parent
+        $stmt = $pdo->prepare("SELECT * FROM students WHERE id = ?");
+        $stmt->execute([$id]);
+        $student = $stmt->fetch();
+        if ($student && !empty($student['guardian_email'])) {
+            try {
+                $mailer = new Mailer();
+                $subject = "Enrollment Status — $school_name";
+                $email_html = "
+                <!DOCTYPE html>
+                <html>
+                <head><meta charset='UTF-8'><style>
+                    body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 20px; }
+                    .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; }
+                    .header { background: #e74c3c; color: white; text-align: center; padding: 30px 20px; }
+                    .header h1 { margin: 0; font-size: 22px; }
+                    .content { padding: 30px; }
+                    .footer { text-align: center; padding: 20px; font-size: 12px; color: #666; border-top: 1px solid #eee; }
+                </style></head>
+                <body>
+                    <div class='container'>
+                        <div class='header'><h1>Enrollment Update</h1></div>
+                        <div class='content'>
+                            <p>Dear <strong>" . htmlspecialchars($student['guardian_name'] ?? '', ENT_QUOTES, 'UTF-8') . "</strong>,</p>
+                            <p>Regarding the enrollment of <strong>" . htmlspecialchars($student['full_name'], ENT_QUOTES, 'UTF-8') . "</strong> at " . htmlspecialchars($school_name, ENT_QUOTES, 'UTF-8') . ":</p>
+                            <p>We regret to inform you that your enrollment application (Ref: " . htmlspecialchars($student['enrollment_id'] ?? 'N/A', ENT_QUOTES, 'UTF-8') . ") could not be approved at this time.</p>
+                            <p>Please contact the school administration for more information.</p>
+                        </div>
+                        <div class='footer'><p>" . htmlspecialchars($school_name, ENT_QUOTES, 'UTF-8') . "</p></div>
+                    </div>
+                </body></html>";
+                $mailer->sendHTML($student['guardian_email'], $subject, $email_html);
+            } catch (Exception $e) {
+                error_log("Rejection email error: " . $e->getMessage());
+            }
+        }
         $message = "Enrollment rejected.";
+    } elseif ($action === 'pay_approve') {
+        // Record payment & approve in one step
+        $amount = isset($_GET['amount']) ? (float)$_GET['amount'] : 0;
+        $method = isset($_GET['method']) ? sanitize($_GET['method']) : 'Cash';
+
+        $stmt = $pdo->prepare("SELECT * FROM students WHERE id = ?");
+        $stmt->execute([$id]);
+        $student = $stmt->fetch();
+
+        if (!$student) {
+            $error = "Student not found.";
+        } elseif ($amount <= 0) {
+            $error = "Invalid payment amount.";
+        } else {
+            // Assign admission number
+            $today = date('ymd');
+            $allStudentsForCount = $pdo->query("SELECT * FROM students")->fetchAll();
+            $counter = 0;
+            foreach ($allStudentsForCount as $s) {
+                $adm = $s['admission_number'] ?? '';
+                if (strpos($adm, "CEC-{$today}-") === 0) { $counter++; }
+            }
+            $admissionNumber = "CEC-{$today}-{$counter}";
+
+            // Generate receipt number
+            $receiptNumber = "INFO-" . date('md') . "-" . rand(1000, 9999);
+
+            $pdo->beginTransaction();
+            try {
+                // Update student status
+                $pdo->prepare("UPDATE students SET admission_number = ?, status = 'active', payment_status = 'paid' WHERE id = ?")
+                    ->execute([$admissionNumber, $id]);
+
+                // Record payment
+                $stmt = $pdo->prepare("INSERT INTO payments (student_id, amount, academic_year, semester, payment_method, payment_date, receipt_number, recorded_by, status, enrollment_id) VALUES (?, ?, ?, ?, ?, CURRENT_DATE, ?, ?, 'completed', ?)");
+                $semester = $settings['current_term'] ?? '1';
+                $year = $settings['current_academic_year'] ?? date('Y') . '/' . (date('Y') + 1);
+                $stmt->execute([$id, $amount, $year, $semester, $method, $receiptNumber, $_SESSION['user_id'], $student['enrollment_id']]);
+
+                $pdo->commit();
+
+                // Create parent account
+                try {
+                    createParentAccount($pdo, $student, $school_name);
+                } catch (Exception $e) {
+                    error_log("Parent account creation after payment: " . $e->getMessage());
+                }
+
+                // Generate receipt HTML
+                require_once 'includes/ReceiptGenerator.php';
+                try {
+                    $receiptGen = new ReceiptGenerator();
+                    $receiptGen->generate($id, $receiptNumber, $student, $amount, date('Y-m-d'), $student['class_name'] ?? '', 'Admission', $school_name, 0, $year, $semester, $method);
+                } catch (Exception $e) {
+                    error_log("Receipt generation error: " . $e->getMessage());
+                }
+
+                $message = "Payment recorded! Receipt: $receiptNumber. Admission Number: $admissionNumber. Parent portal credentials sent.";
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                $error = "Error processing payment: " . $e->getMessage();
+            }
+        }
     }
-    header("Location: admin/enrollments.php?filter=" . ($_GET['filter'] ?? 'all') . "&search=" . urlencode($_GET['search'] ?? ''));
+
+    // Redirect back to enrollments page
+    $redirectFilter = $_GET['filter'] ?? 'all';
+    $redirectSearch = urlencode($_GET['search'] ?? '');
+    header("Location: enrollments.php?filter={$redirectFilter}&search={$redirectSearch}");
     exit;
 }
 
@@ -104,6 +383,7 @@ usort($enrollments, fn($a, $b) => strcmp($b['admission_date'] ?? '', $a['admissi
         .table-responsive { overflow-x: auto; }
         .btn-approve { background: #27ae60; color: #fff; padding: 5px 12px; border-radius: 4px; text-decoration: none; font-size: 13px; }
         .btn-reject { background: #e74c3c; color: #fff; padding: 5px 12px; border-radius: 4px; text-decoration: none; font-size: 13px; }
+        .btn-pay { background: #8e44ad; color: #fff; padding: 5px 12px; border-radius: 4px; text-decoration: none; font-size: 13px; }
         .btn-view { background: #3498db; color: #fff; padding: 5px 12px; border-radius: 4px; text-decoration: none; font-size: 13px; }
         .status-badge { padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
         .status-badge.pending { background: #fff3cd; color: #856404; }
@@ -203,6 +483,7 @@ usort($enrollments, fn($a, $b) => strcmp($b['admission_date'] ?? '', $a['admissi
                                         <?php if (empty($en['admission_number'])): ?>
                                             <a href="?action=approve&id=<?php echo $en['id']; ?>&filter=<?php echo $filter; ?>&search=<?php echo urlencode($search); ?>" class="btn-approve" onclick="return confirm('Approve this enrollment?')">Approve</a>
                                             <a href="?action=reject&id=<?php echo $en['id']; ?>&filter=<?php echo $filter; ?>&search=<?php echo urlencode($search); ?>" class="btn-reject" onclick="return confirm('Reject this enrollment?')">Reject</a>
+                                            <a href="#" class="btn-pay" onclick="payApprove(<?php echo $en['id']; ?>); return false;">Pay & Approve</a>
                                         <?php endif; ?>
                                         <a href="#" class="btn-view" onclick="showDetails(<?php echo htmlspecialchars(json_encode($en)); ?>); return false;">View</a>
                                     </td>
@@ -225,7 +506,49 @@ usort($enrollments, fn($a, $b) => strcmp($b['admission_date'] ?? '', $a['admissi
         </div>
     </div>
 
+    <!-- Pay & Approve Modal -->
+    <div id="payModal" class="modal">
+        <div class="modal-content" style="max-width: 450px;">
+            <span class="close-btn" onclick="document.getElementById('payModal').style.display='none'">&times;</span>
+            <h3>Pay & Approve Enrollment</h3>
+            <p style="font-size: 13px; color: #888; margin-bottom: 15px;">
+                Record payment and approve this enrollment in one step.
+            </p>
+            <form id="payForm" method="GET" action="enrollments.php">
+                <input type="hidden" name="action" value="pay_approve">
+                <input type="hidden" name="id" id="payStudentId" value="">
+                <input type="hidden" name="filter" value="<?php echo htmlspecialchars($filter); ?>">
+                <input type="hidden" name="search" value="<?php echo htmlspecialchars($search); ?>">
+                <div class="form-group">
+                    <label>Payment Amount (GHS)</label>
+                    <input type="number" step="0.01" name="amount" id="payAmount" class="form-control" required placeholder="e.g. 220.00">
+                </div>
+                <div class="form-group">
+                    <label>Payment Method</label>
+                    <select name="method" class="form-control" required>
+                        <option value="Cash">Cash</option>
+                        <option value="Mobile Money">Mobile Money</option>
+                        <option value="Bank Transfer">Bank Transfer</option>
+                        <option value="Cheque">Cheque</option>
+                    </select>
+                </div>
+                <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 15px;">
+                    <button type="button" class="btn-reject" onclick="document.getElementById('payModal').style.display='none'" style="padding: 8px 20px; border: none; cursor: pointer;">Cancel</button>
+                    <button type="submit" class="btn-approve" style="padding: 8px 20px; border: none; cursor: pointer;">Record Payment & Approve</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
+        function payApprove(studentId) {
+            document.getElementById('payStudentId').value = studentId;
+            // Suggest default amount
+            var amountField = document.getElementById('payAmount');
+            if (amountField) amountField.value = '220.00';
+            document.getElementById('payModal').style.display = 'block';
+        }
+
         function showDetails(en) {
             const statusColors = { pending: '#856404', enrolled: '#155724', rejected: '#721c24' };
             const statusBg = { pending: '#fff3cd', enrolled: '#d4edda', rejected: '#f8d7da' };

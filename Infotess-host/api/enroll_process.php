@@ -1,8 +1,7 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) session_start();
-
-require_once __DIR__ . '/includes/db.php';
+// Load session handler + functions first (handles DB-backed session start)
 require_once __DIR__ . '/includes/functions.php';
+require_once __DIR__ . '/includes/db.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: ../enroll_form.php');

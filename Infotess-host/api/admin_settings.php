@@ -16,7 +16,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $settings_keys = [
             'school_name', 'school_motto', 'school_address', 'school_email', 'school_phone',
             'current_academic_year', 'current_term', 'annual_dues_amount',
-            'payment_modes', 'fee_types'
+            'payment_modes', 'fee_types',
+            'admission_fee', 'prospectus_fee', 'enrollment_form_fee'
         ];
 
         // Bridge doesn't support ON CONFLICT — use separate update/insert per key
@@ -62,7 +63,10 @@ $defaults = [
     'current_term' => '1',
     'annual_dues_amount' => '500.00',
     'fee_types' => 'Tuition,PTA Levy,Sports & Culture,ICT,Examination,Development,Feeding,Transport,Uniform,Books & Materials',
-    'payment_modes' => 'Cash,Mobile Money,Bank Transfer'
+    'payment_modes' => 'Cash,Mobile Money,Bank Transfer',
+    'admission_fee' => '150.00',
+    'prospectus_fee' => '50.00',
+    'enrollment_form_fee' => '20.00'
 ];
 $settings = array_merge($defaults, $settings);
 ?>
@@ -184,6 +188,18 @@ $settings = array_merge($defaults, $settings);
                                 <span class="setting-label">Contact Email</span>
                                 <span class="setting-value"><?php echo htmlspecialchars($settings['school_email'] ?? 'N/A'); ?></span>
                             </div>
+                            <div class="setting-item" style="border-left-color: #e74c3c;">
+                                <span class="setting-label">Admission Fee (Enrollment)</span>
+                                <span class="setting-value">GHS <?php echo htmlspecialchars($settings['admission_fee'] ?? '150.00'); ?></span>
+                            </div>
+                            <div class="setting-item" style="border-left-color: #e74c3c;">
+                                <span class="setting-label">Prospectus Fee (Enrollment)</span>
+                                <span class="setting-value">GHS <?php echo htmlspecialchars($settings['prospectus_fee'] ?? '50.00'); ?></span>
+                            </div>
+                            <div class="setting-item" style="border-left-color: #e74c3c;">
+                                <span class="setting-label">Enrollment Form Fee</span>
+                                <span class="setting-value">GHS <?php echo htmlspecialchars($settings['enrollment_form_fee'] ?? '20.00'); ?></span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -221,6 +237,25 @@ $settings = array_merge($defaults, $settings);
                     <div class="form-group">
                         <label>Contact Phone</label>
                         <input type="text" name="school_phone" class="form-control" value="<?php echo htmlspecialchars($settings['school_phone'] ?? ''); ?>" placeholder="+233 XX XXX XXXX">
+                    </div>
+                </div>
+
+                <h4 style="margin: 20px 0 15px 0; color: #e74c3c; border-top: 1px solid #eee; padding-top: 15px;">Enrollment / Admission Fees</h4>
+                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:20px; margin-bottom: 20px;">
+                    <div class="form-group">
+                        <label>Admission Fee (GHS)</label>
+                        <input type="number" step="0.01" name="admission_fee" class="form-control" value="<?php echo htmlspecialchars($settings['admission_fee'] ?? '150.00'); ?>" required placeholder="e.g. 150.00">
+                        <small style="color: #666;">One-time admission fee</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Prospectus Fee (GHS)</label>
+                        <input type="number" step="0.01" name="prospectus_fee" class="form-control" value="<?php echo htmlspecialchars($settings['prospectus_fee'] ?? '50.00'); ?>" required placeholder="e.g. 50.00">
+                        <small style="color: #666;">Prospectus/information pack</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Enrollment Form Fee (GHS)</label>
+                        <input type="number" step="0.01" name="enrollment_form_fee" class="form-control" value="<?php echo htmlspecialchars($settings['enrollment_form_fee'] ?? '20.00'); ?>" required placeholder="e.g. 20.00">
+                        <small style="color: #666;">Form processing fee</small>
                     </div>
                 </div>
 

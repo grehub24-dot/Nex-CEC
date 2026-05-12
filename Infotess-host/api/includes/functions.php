@@ -1,11 +1,23 @@
 <?php
 // includes/functions.php
 
+// Register database-backed session handler (replaces file-based /tmp sessions)
+require_once __DIR__ . '/SessionHandler.php';
+$sessionHandler = new DatabaseSessionHandler();
+session_set_save_handler($sessionHandler, true);
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
 // Restore getBasePath() which was missing
+function getAppUrl() {
+    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $basePath = defined('BASE_PATH') ? BASE_PATH : getBasePath();
+    return rtrim("$protocol://$host/$basePath", '/');
+}
+
 function getBasePath() {
     // Check BASE_PATH constant first (set by api/index.php)
     if (defined('BASE_PATH')) {
@@ -64,6 +76,18 @@ function isStudent() {
     return isset($_SESSION['role']) && $_SESSION['role'] === 'student';
 }
 
+function isParent() {
+    return isset($_SESSION['role']) && $_SESSION['role'] === 'parent';
+}
+
+function isTeacher() {
+    return isset($_SESSION['role']) && $_SESSION['role'] === 'teacher';
+}
+
+function isStaff() {
+    return isset($_SESSION['role']) && $_SESSION['role'] === 'staff';
+}
+
 /**
  * RBAC: Define page-to-role permissions.
  * 'admin' = admin + super_admin only
@@ -79,26 +103,59 @@ function getAccessControl() {
         'salary' => ['admin', 'super_admin'],
         'payroll' => ['admin', 'super_admin'],
         'pay_slip' => ['admin', 'super_admin'],
-        'grades' => ['admin', 'super_admin'],
-        'attendance' => ['admin', 'super_admin'],
-        'staff_attendance' => ['admin', 'super_admin'],
         'settings' => ['admin', 'super_admin'],
         'module_settings' => ['admin', 'super_admin'],
         'users' => ['admin', 'super_admin'],
         'bulk_import' => ['admin', 'super_admin'],
         
-        // Bursar + Admin
-        'dashboard' => ['admin', 'super_admin', 'bursar'],
-        'students' => ['admin', 'super_admin', 'bursar'],
-        'edit_student' => ['admin', 'super_admin', 'bursar'],
+        // Admin + Teacher
+        'grades' => ['admin', 'super_admin', 'teacher'],
+        'attendance' => ['admin', 'super_admin', 'teacher'],
+        
+        // Admin only (no teacher)
+        'staff_attendance' => ['admin', 'super_admin'],
         'enrollments' => ['admin', 'super_admin'],
+        
+        // Bursar + Admin
+        'dashboard' => ['admin', 'super_admin', 'bursar', 'teacher', 'staff'],
+        'students' => ['admin', 'super_admin', 'bursar', 'teacher'],
+        'edit_student' => ['admin', 'super_admin', 'bursar'],
         'payments' => ['admin', 'super_admin', 'bursar'],
-        'fees' => ['admin', 'super_admin', 'bursar'],
-        'reports' => ['admin', 'super_admin', 'bursar'],
+        'fees' => ['admin', 'super_admin', 'bursar', 'teacher'],
+        'reports' => ['admin', 'super_admin', 'bursar', 'teacher'],
         'verify' => ['admin', 'super_admin', 'bursar'],
-        'messaging' => ['admin', 'super_admin', 'bursar'],
-        'inbox' => ['admin', 'super_admin', 'bursar'],
+        'messaging' => ['admin', 'super_admin', 'bursar', 'teacher', 'staff'],
+        'inbox' => ['admin', 'super_admin', 'bursar', 'teacher', 'staff'],
     ];
+}
+
+/**
+ * Get the list of class IDs assigned to the current teacher.
+ * Returns an empty array if the user is not a teacher or has no classes assigned.
+ */
+function getTeacherClassIds($pdo) {
+    if (!isTeacher()) return [];
+    $user_id = $_SESSION['user_id'] ?? 0;
+    if (!$user_id) return [];
+    
+    try {
+        // Find staff record for this user
+        $stmt = $pdo->prepare("SELECT id FROM staff WHERE user_id = ?");
+        $stmt->execute([$user_id]);
+        $staff = $stmt->fetch();
+        if (!$staff) return [];
+        $staff_id = (int)$staff['id'];
+        
+        // Find subjects where this teacher is assigned, extract unique class IDs
+        $stmt = $pdo->prepare("SELECT DISTINCT class_id FROM subjects WHERE teacher_id = ? AND class_id IS NOT NULL");
+        $stmt->execute([$staff_id]);
+        $rows = $stmt->fetchAll();
+        $class_ids = array_map(fn($r) => (int)$r['class_id'], $rows);
+        return array_unique(array_filter($class_ids));
+    } catch (Exception $e) {
+        error_log("getTeacherClassIds error: " . $e->getMessage());
+        return [];
+    }
 }
 
 /**
@@ -138,47 +195,59 @@ function requireAccess($page) {
 function getSidebarMenu($currentPage = '') {
     $role = $_SESSION['role'] ?? '';
     $isFullAdmin = in_array($role, ['admin', 'super_admin']);
+    $isTeacher = in_array($role, ['teacher']);
+    $isStaff = in_array($role, ['staff']);
     
-    $menu = [
-        ['href' => 'dashboard.php', 'icon' => 'fas fa-home', 'label' => 'Dashboard'],
-        ['href' => 'students.php', 'icon' => 'fas fa-user-graduate', 'label' => 'Students'],
+    // Build all potential items with their ACL page keys
+    $allItems = [
+        ['href' => 'dashboard.php', 'icon' => 'fas fa-home', 'label' => 'Dashboard', 'acl' => 'dashboard'],
+        ['href' => 'students.php', 'icon' => 'fas fa-user-graduate', 'label' => 'Students', 'acl' => 'students'],
     ];
     
     if ($isFullAdmin) {
-        $menu[] = ['href' => 'enrollments.php', 'icon' => 'fas fa-file-signature', 'label' => 'Enrollments'];
-        $menu[] = ['href' => 'staff.php', 'icon' => 'fas fa-chalkboard-teacher', 'label' => 'Staff'];
+        $allItems[] = ['href' => 'enrollments.php', 'icon' => 'fas fa-file-signature', 'label' => 'Enrollments', 'acl' => 'enrollments'];
+        $allItems[] = ['href' => 'staff.php', 'icon' => 'fas fa-chalkboard-teacher', 'label' => 'Staff', 'acl' => 'staff'];
     }
     
-    $menu[] = ['href' => 'payments.php', 'icon' => 'fas fa-money-bill-wave', 'label' => 'Payments'];
-    $menu[] = ['href' => 'fees.php', 'icon' => 'fas fa-list-alt', 'label' => 'Fee Structure'];
+    $allItems[] = ['href' => 'payments.php', 'icon' => 'fas fa-money-bill-wave', 'label' => 'Payments', 'acl' => 'payments'];
+    $allItems[] = ['href' => 'fees.php', 'icon' => 'fas fa-list-alt', 'label' => 'Fee Structure', 'acl' => 'fees'];
+    
+    if ($isFullAdmin || $isTeacher) {
+        $allItems[] = ['href' => 'grades.php', 'icon' => 'fas fa-clipboard-list', 'label' => 'SBA / Grades', 'acl' => 'grades'];
+        $allItems[] = ['href' => 'attendance.php', 'icon' => 'fas fa-user-check', 'label' => 'Student Attendance', 'acl' => 'attendance'];
+    }
     
     if ($isFullAdmin) {
-        $menu[] = ['href' => 'payroll.php', 'icon' => 'fas fa-file-invoice-dollar', 'label' => 'Payroll'];
-        $menu[] = ['href' => 'salary.php', 'icon' => 'fas fa-money-check-alt', 'label' => 'Salary Structures'];
-        $menu[] = ['href' => 'grades.php', 'icon' => 'fas fa-clipboard-list', 'label' => 'SBA / Grades'];
-        $menu[] = ['href' => 'attendance.php', 'icon' => 'fas fa-user-check', 'label' => 'Student Attendance'];
-        $menu[] = ['href' => 'staff_attendance.php', 'icon' => 'fas fa-user-tie', 'label' => 'Staff Attendance'];
+        $allItems[] = ['href' => 'payroll.php', 'icon' => 'fas fa-file-invoice-dollar', 'label' => 'Payroll', 'acl' => 'payroll'];
+        $allItems[] = ['href' => 'salary.php', 'icon' => 'fas fa-money-check-alt', 'label' => 'Salary Structures', 'acl' => 'salary'];
+        $allItems[] = ['href' => 'staff_attendance.php', 'icon' => 'fas fa-user-tie', 'label' => 'Staff Attendance', 'acl' => 'staff_attendance'];
     }
     
-    $menu[] = ['href' => 'reports.php', 'icon' => 'fas fa-chart-bar', 'label' => 'Reports'];
-    $menu[] = ['href' => 'verify.php', 'icon' => 'fas fa-qrcode', 'label' => 'Verify Receipt'];
+    $allItems[] = ['href' => 'reports.php', 'icon' => 'fas fa-chart-bar', 'label' => 'Reports', 'acl' => 'reports'];
+    $allItems[] = ['href' => 'verify.php', 'icon' => 'fas fa-qrcode', 'label' => 'Verify Receipt', 'acl' => 'verify'];
     
     if ($isFullAdmin) {
-        $menu[] = ['href' => 'users.php', 'icon' => 'fas fa-users-cog', 'label' => 'User Management'];
+        $allItems[] = ['href' => 'users.php', 'icon' => 'fas fa-users-cog', 'label' => 'User Management', 'acl' => 'users'];
     }
     
-    $menu[] = ['href' => 'messaging.php', 'icon' => 'fas fa-envelope', 'label' => 'Messaging'];
-    $menu[] = ['href' => 'inbox.php', 'icon' => 'fas fa-inbox', 'label' => 'Inbox'];
+    $allItems[] = ['href' => 'messaging.php', 'icon' => 'fas fa-envelope', 'label' => 'Messaging', 'acl' => 'messaging'];
+    $allItems[] = ['href' => 'inbox.php', 'icon' => 'fas fa-inbox', 'label' => 'Inbox', 'acl' => 'inbox'];
     
     if ($isFullAdmin) {
-        $menu[] = ['href' => 'module_settings.php', 'icon' => 'fas fa-cogs', 'label' => 'Module Settings'];
-        $menu[] = ['href' => 'subjects.php', 'icon' => 'fas fa-book', 'label' => 'Subjects'];
-        $menu[] = ['href' => 'settings.php', 'icon' => 'fas fa-tools', 'label' => 'System Settings'];
+        $allItems[] = ['href' => 'module_settings.php', 'icon' => 'fas fa-cogs', 'label' => 'Module Settings', 'acl' => 'module_settings'];
+        $allItems[] = ['href' => 'subjects.php', 'icon' => 'fas fa-book', 'label' => 'Subjects', 'acl' => 'subjects'];
+        $allItems[] = ['href' => 'settings.php', 'icon' => 'fas fa-tools', 'label' => 'System Settings', 'acl' => 'settings'];
     }
     
-    $menu[] = ['href' => '../logout.php', 'icon' => 'fas fa-sign-out-alt', 'label' => 'Logout'];
+    $allItems[] = ['href' => '../logout.php', 'icon' => 'fas fa-sign-out-alt', 'label' => 'Logout', 'acl' => null];
     
-    return $menu;
+    // Filter by ACL: only show items the user can access (logout always shown)
+    $menu = array_filter($allItems, function($item) {
+        if ($item['acl'] === null) return true; // logout always visible
+        return canAccessPage($item['acl']);
+    });
+    
+    return array_values($menu); // re-index
 }
 
 /**

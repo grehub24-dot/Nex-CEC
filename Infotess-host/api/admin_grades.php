@@ -13,11 +13,21 @@ $message = '';
 $error = '';
 
 // Get classes, terms, subjects (bridge ignores ORDER BY — sort in PHP)
-$classes = $pdo->query("SELECT * FROM classes");
-$classes = $classes ? $classes->fetchAll() : [];
-usort($classes, function($a, $b) {
+$all_classes = $pdo->query("SELECT * FROM classes");
+$all_classes = $all_classes ? $all_classes->fetchAll() : [];
+usort($all_classes, function($a, $b) {
     return ((int)($a['sort_order'] ?? 0)) - ((int)($b['sort_order'] ?? 0));
 });
+
+// Teacher scope: if logged in as teacher, only show assigned classes
+if (isTeacher()) {
+    $teacher_class_ids = getTeacherClassIds($pdo);
+    $classes = array_filter($all_classes, function($c) use ($teacher_class_ids) {
+        return in_array((int)$c['id'], $teacher_class_ids);
+    });
+} else {
+    $classes = $all_classes;
+}
 
 $terms = $pdo->query("SELECT * FROM terms");
 $terms = $terms ? $terms->fetchAll() : [];

@@ -46,12 +46,14 @@
                 <?php if (isset($_SESSION['user_id'])): ?>
                     <?php if ($_SESSION['role'] === 'admin' || $_SESSION['role'] === 'super_admin'): ?>
                         <li role="none"><a href="<?php echo $base_url; ?>admin/dashboard.php" class="btn-login" role="menuitem">Admin Panel</a></li>
+                    <?php elseif ($_SESSION['role'] === 'parent'): ?>
+                        <li role="none"><a href="<?php echo $base_url; ?>parent/dashboard.php" class="btn-login" role="menuitem">Parent Portal</a></li>
                     <?php else: ?>
                         <li role="none"><a href="<?php echo $base_url; ?>student/dashboard.php" class="btn-login" role="menuitem">Dashboard</a></li>
                     <?php endif; ?>
                     <li role="none"><a href="<?php echo $base_url; ?>logout.php" role="menuitem">Logout</a></li>
                 <?php else: ?>
-                    <li role="none"><a href="<?php echo $base_url; ?>enroll.php" class="btn-login" role="menuitem">Enroll Now</a></li>
+                    <li role="none"><a href="<?php echo $base_url; ?>register.php" class="btn-login" role="menuitem">Enroll Now</a></li>
                     <li role="none"><a href="<?php echo $base_url; ?>login.php" class="btn-login" role="menuitem">Login</a></li>
                 <?php endif; ?>
             </ul>

@@ -64,8 +64,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $auto_password = substr(str_shuffle("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"), 0, 8);
                 $password_hash = password_hash($auto_password, PASSWORD_DEFAULT);
                 
-                $stmt = $pdo->prepare("INSERT INTO users (email, password, role) VALUES (?, ?, 'staff')");
-                $stmt->execute([$email, $password_hash]);
+                // Determine role: teaching positions get 'teacher', others get 'staff'
+                $teaching_keywords = ['teacher', 'instructor', 'tutor', 'lecturer', 'facilitator', 'coach'];
+                $position_lower = strtolower($position);
+                $is_teaching = false;
+                foreach ($teaching_keywords as $kw) {
+                    if (strpos($position_lower, $kw) !== false) {
+                        $is_teaching = true;
+                        break;
+                    }
+                }
+                $role = $is_teaching ? 'teacher' : 'staff';
+                $stmt = $pdo->prepare("INSERT INTO users (email, password, role) VALUES (?, ?, ?)");
+                $stmt->execute([$email, $password_hash, $role]);
                 $user_id = $pdo->lastInsertId();
 
                 $stmt = $pdo->prepare("INSERT INTO staff (user_id, staff_id, full_name, position, department, qualification, phone, email, gender, date_of_birth, address, hire_date, bank_name, account_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");

@@ -39,8 +39,8 @@ function createParentAccount($pdo, $student, $school_name) {
         $auto_password = substr(str_shuffle("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"), 0, 8);
         $password_hash = password_hash($auto_password, PASSWORD_DEFAULT);
 
-        $stmt = $pdo->prepare("INSERT INTO users (email, password, role, status) VALUES (?, ?, 'parent', 'active')");
-        $stmt->execute([$guardian_email, $password_hash]);
+        $stmt = $pdo->prepare("INSERT INTO users (email, password, role, status) VALUES (?, ?, ?, ?)");
+        $stmt->execute([$guardian_email, $password_hash, 'parent', 'active']);
         $parent_user_id = $pdo->lastInsertId();
         $is_new = true;
     }
@@ -49,8 +49,8 @@ function createParentAccount($pdo, $student, $school_name) {
     $stmt = $pdo->prepare("SELECT id FROM parent_students WHERE parent_user_id = ? AND student_id = ?");
     $stmt->execute([$parent_user_id, $student_id]);
     if (!$stmt->fetch()) {
-        $stmt = $pdo->prepare("INSERT INTO parent_students (parent_user_id, student_id, relationship, is_primary) VALUES (?, ?, ?, true)");
-        $stmt->execute([$parent_user_id, $student_id, $student['guardian_relationship'] ?? 'Guardian']);
+        $stmt = $pdo->prepare("INSERT INTO parent_students (parent_user_id, student_id, relationship, is_primary) VALUES (?, ?, ?, ?)");
+        $stmt->execute([$parent_user_id, $student_id, $student['guardian_relationship'] ?? 'Guardian', true]);
     }
 
     // Update student record with user_id (for backward compatibility)
@@ -189,7 +189,7 @@ if (isset($_GET['action']) && isset($_GET['id'])) {
             }
         }
         $admissionNumber = "CEC-{$today}-{$counter}";
-        $pdo->prepare("UPDATE students SET admission_number = ?, status = 'active' WHERE id = ?")->execute([$admissionNumber, $id]);
+        $pdo->prepare("UPDATE students SET admission_number = ?, status = ? WHERE id = ?")->execute([$admissionNumber, 'active', $id]);
 
         // Fetch student and create parent account
         $stmt = $pdo->prepare("SELECT * FROM students WHERE id = ?");
@@ -208,7 +208,7 @@ if (isset($_GET['action']) && isset($_GET['id'])) {
         }
 
     } elseif ($action === 'reject') {
-        $pdo->prepare("UPDATE students SET status = 'rejected' WHERE id = ?")->execute([$id]);
+        $pdo->prepare("UPDATE students SET status = ? WHERE id = ?")->execute(['rejected', $id]);
 
         // Notify parent
         $stmt = $pdo->prepare("SELECT * FROM students WHERE id = ?");
@@ -277,14 +277,15 @@ if (isset($_GET['action']) && isset($_GET['id'])) {
             $pdo->beginTransaction();
             try {
                 // Update student status
-                $pdo->prepare("UPDATE students SET admission_number = ?, status = 'active', payment_status = 'paid' WHERE id = ?")
-                    ->execute([$admissionNumber, $id]);
+                $today = date('Y-m-d');
+                $pdo->prepare("UPDATE students SET admission_number = ?, status = ?, payment_status = ? WHERE id = ?")
+                    ->execute([$admissionNumber, 'active', 'paid', $id]);
 
                 // Record payment
-                $stmt = $pdo->prepare("INSERT INTO payments (student_id, amount, academic_year, semester, payment_method, payment_date, receipt_number, recorded_by, status, enrollment_id) VALUES (?, ?, ?, ?, ?, CURRENT_DATE, ?, ?, 'completed', ?)");
+                $stmt = $pdo->prepare("INSERT INTO payments (student_id, amount, academic_year, semester, payment_method, payment_date, receipt_number, recorded_by, status, enrollment_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                 $semester = $settings['current_term'] ?? '1';
                 $year = $settings['current_academic_year'] ?? date('Y') . '/' . (date('Y') + 1);
-                $stmt->execute([$id, $amount, $year, $semester, $method, $receiptNumber, $_SESSION['user_id'], $student['enrollment_id']]);
+                $stmt->execute([$id, $amount, $year, $semester, $method, $today, $receiptNumber, $_SESSION['user_id'], 'completed', $student['enrollment_id']]);
 
                 $pdo->commit();
 

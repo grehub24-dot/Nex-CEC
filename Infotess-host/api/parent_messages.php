@@ -146,7 +146,7 @@ foreach ($messages as $m) {
 </head>
 <body>
     <div class="top-bar">
-        <a href="parent/dashboard.php"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+        <a href="dashboard.php"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
         <span>Parent Portal — <?php echo htmlspecialchars($school_name); ?></span>
     </div>
 
@@ -163,7 +163,7 @@ foreach ($messages as $m) {
                 <i class="fas fa-inbox"></i>
                 <h3>No Messages</h3>
                 <p>You don't have any messages yet. The school will communicate with you here.</p>
-                <a href="parent/dashboard.php" class="btn" style="margin-top: 15px;">Back to Dashboard</a>
+                <a href="dashboard.php" class="btn" style="margin-top: 15px;">Back to Dashboard</a>
             </div>
         <?php else: ?>
             <?php foreach ($messages as $msg):
@@ -192,7 +192,7 @@ foreach ($messages as $m) {
         <?php endif; ?>
 
         <div style="text-align: center; margin-top: 15px;">
-            <a href="parent/dashboard.php" class="btn"><i class="fas fa-home"></i> Back to Dashboard</a>
+            <a href="dashboard.php" class="btn"><i class="fas fa-home"></i> Back to Dashboard</a>
         </div>
     </div>
 

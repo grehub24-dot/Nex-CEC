@@ -9,7 +9,7 @@ $parent_user_id = $_SESSION['user_id'];
 $student_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
 if (!$student_id) {
-    redirect('parent/dashboard.php');
+    redirect('dashboard.php');
 }
 
 // Verify ownership
@@ -17,10 +17,10 @@ try {
     $stmt = $pdo->prepare("SELECT student_id FROM parent_students WHERE parent_user_id = ? AND student_id = ?");
     $stmt->execute([$parent_user_id, $student_id]);
     if (!$stmt->fetch()) {
-        redirect('parent/dashboard.php');
+        redirect('dashboard.php');
     }
 } catch (Exception $e) {
-    redirect('parent/dashboard.php');
+    redirect('dashboard.php');
 }
 
 // Fetch Settings
@@ -38,7 +38,7 @@ $current_academic_year = $settings['current_academic_year'] ?? date('Y') . '/' .
 $stmt = $pdo->prepare("SELECT * FROM students WHERE id = ?");
 $stmt->execute([$student_id]);
 $student = $stmt->fetch();
-if (!$student) redirect('parent/dashboard.php');
+if (!$student) redirect('dashboard.php');
 
 // Fetch report cards (two-step: no JOIN support in bridge)
 $report_cards = [];
@@ -129,13 +129,13 @@ try {
 </head>
 <body>
     <div class="top-bar">
-        <a href="parent/dashboard.php"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+        <a href="dashboard.php"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
         <span>Report Cards — <?php echo htmlspecialchars($student['full_name'] ?? ''); ?></span>
     </div>
 
     <div class="container">
         <div style="margin-bottom: 20px;">
-            <a href="parent/student.php?id=<?php echo $student_id; ?>" class="btn btn-back"><i class="fas fa-eye"></i> View Profile</a>
+            <a href="student.php?id=<?php echo $student_id; ?>" class="btn btn-back"><i class="fas fa-eye"></i> View Profile</a>
         </div>
 
         <div class="card">
@@ -184,8 +184,8 @@ try {
         </div>
 
         <div style="text-align: center; margin-top: 10px;">
-            <a href="parent/student.php?id=<?php echo $student_id; ?>" class="btn btn-back"><i class="fas fa-arrow-left"></i> Back to Student</a>
-            <a href="parent/dashboard.php" class="btn btn-view"><i class="fas fa-home"></i> Dashboard</a>
+            <a href="student.php?id=<?php echo $student_id; ?>" class="btn btn-back"><i class="fas fa-arrow-left"></i> Back to Student</a>
+            <a href="dashboard.php" class="btn btn-view"><i class="fas fa-home"></i> Dashboard</a>
         </div>
     </div>
 </body>

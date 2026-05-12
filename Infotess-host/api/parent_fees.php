@@ -9,7 +9,7 @@ $parent_user_id = $_SESSION['user_id'];
 $student_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
 if (!$student_id) {
-    redirect('parent/dashboard.php');
+    redirect('dashboard.php');
 }
 
 // Verify ownership
@@ -17,10 +17,10 @@ try {
     $stmt = $pdo->prepare("SELECT student_id FROM parent_students WHERE parent_user_id = ? AND student_id = ?");
     $stmt->execute([$parent_user_id, $student_id]);
     if (!$stmt->fetch()) {
-        redirect('parent/dashboard.php');
+        redirect('dashboard.php');
     }
 } catch (Exception $e) {
-    redirect('parent/dashboard.php');
+    redirect('dashboard.php');
 }
 
 // Fetch Settings
@@ -37,7 +37,7 @@ $school_name = $settings['school_name'] ?? 'Nex CEC';
 $stmt = $pdo->prepare("SELECT * FROM students WHERE id = ?");
 $stmt->execute([$student_id]);
 $student = $stmt->fetch();
-if (!$student) redirect('parent/dashboard.php');
+if (!$student) redirect('dashboard.php');
 
 // Fetch all payments for this student
 $payments = [];
@@ -121,13 +121,13 @@ $outstanding = max(0, $total_expected - $total_paid);
 </head>
 <body>
     <div class="top-bar">
-        <a href="parent/dashboard.php"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+        <a href="dashboard.php"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
         <span>Fee Statement — <?php echo htmlspecialchars($student['full_name'] ?? ''); ?></span>
     </div>
 
     <div class="container">
         <div style="margin-bottom: 20px;">
-            <a href="parent/student.php?id=<?php echo $student_id; ?>" class="btn"><i class="fas fa-eye"></i> View Profile</a>
+            <a href="student.php?id=<?php echo $student_id; ?>" class="btn"><i class="fas fa-eye"></i> View Profile</a>
         </div>
 
         <!-- Summary -->
@@ -210,7 +210,7 @@ $outstanding = max(0, $total_expected - $total_paid);
 
         <div style="text-align: center; margin-top: 10px;">
             <a href="javascript:window.print()" class="btn btn-green"><i class="fas fa-print"></i> Print Statement</a>
-            <a href="parent/dashboard.php" class="btn"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+            <a href="dashboard.php" class="btn"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
         </div>
     </div>
 </body>

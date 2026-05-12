@@ -13,14 +13,23 @@ class BillGenerator {
      * @return string            Filename of the generated bill (e.g. "bill_ENR-2026-A1B2C3.html")
      */
     public function generate($enrollment, $fees, $total, $school_name = 'Nex CEC') {
-        $directory = __DIR__ . '/../bills/';
-        if (!is_dir($directory)) {
-            mkdir($directory, 0777, true);
-        }
-
         $enrollmentRef = $enrollment['enrollment_id'] ?? 'ENR-' . strtoupper(substr(md5(uniqid()), 0, 8));
         $filename = "bill_{$enrollmentRef}.html";
-        $filepath = $directory . $filename;
+        
+        // Try to save to bills/ directory (may fail on Vercel read-only filesystem — that's OK)
+        $saved = false;
+        $directory = __DIR__ . '/../bills/';
+        if (is_dir($directory) || @mkdir($directory, 0777, true)) {
+            $filepath = $directory . $filename;
+        } else {
+            // Fallback: try /tmp (Vercel writable temp dir)
+            $directory = sys_get_temp_dir() . '/bills/';
+            if (is_dir($directory) || @mkdir($directory, 0777, true)) {
+                $filepath = $directory . $filename;
+            } else {
+                $filepath = null;
+            }
+        }
 
         // Convert local image to base64 for email compatibility
         $logoPath = __DIR__ . '/../images/school-logo.png';
@@ -374,7 +383,10 @@ class BillGenerator {
         </body>
         </html>";
 
-        file_put_contents($filepath, $html);
+        // Only write to disk if we have a writable path (may fail on Vercel read-only FS)
+        if ($filepath !== null) {
+            @file_put_contents($filepath, $html);
+        }
         return $filename;
     }
 }

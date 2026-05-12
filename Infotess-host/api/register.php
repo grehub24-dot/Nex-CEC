@@ -137,9 +137,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 try {
                     $billGen = new BillGenerator();
                     $billFile = $billGen->generate($enrollment_data, $fees, $total_fees, $school_name);
-                    $billUrl = ($billFile ? 'bills/' . $billFile : '');
+                    // Always link to enrollment_bill.php (on-the-fly generation) for reliability on Vercel
                 } catch (Exception $e) {
-                    $billUrl = '';
                     error_log("Bill generation error: " . $e->getMessage());
                 }
 
@@ -148,11 +147,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     $mailer = new Mailer();
                     $subject = "Enrollment Submitted — $school_name";
                     
-                    $billLink = '';
-                    if (!empty($billUrl)) {
-                        $appUrl = getAppUrl();
-                        $billLink = "<p style='margin-top: 15px;'><a href='{$appUrl}/{$billUrl}' style='display: inline-block; background: #1a5276; color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: bold;'>Download Fee Bill</a></p>";
-                    }
+                    $appUrl = getAppUrl();
+                    $billLink = "<p style='margin-top: 15px;'><a href='{$appUrl}/enrollment_bill.php?ref=" . urlencode($enrollment_ref) . "' style='display: inline-block; background: #1a5276; color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: bold;'>Download Fee Bill</a></p>";
 
                     $email_html = "
                     <!DOCTYPE html>

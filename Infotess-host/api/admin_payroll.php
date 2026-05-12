@@ -73,8 +73,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $total_deductions = $ssnit_deduction + $tax_deduction + $other_deductions;
             $net_pay = $gross - $total_deductions;
             
-            $stmt = $pdo->prepare("INSERT INTO payroll (staff_id, month, year, basic_salary, total_allowances, gross_pay, ssnit_deduction, tax_deduction, other_deductions, total_deductions, net_pay, status, pay_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NULL)");
-            $stmt->execute([$staff['id'], $month, $year, $basic, $total_allowances, $gross, $ssnit_deduction, $tax_deduction, $other_deductions, $total_deductions, $net_pay]);
+            $stmt = $pdo->prepare("INSERT INTO payroll (staff_id, month, year, basic_salary, total_allowances, gross_pay, ssnit_deduction, tax_deduction, other_deductions, total_deductions, net_pay, status, pay_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt->execute([$staff['id'], $month, $year, $basic, $total_allowances, $gross, $ssnit_deduction, $tax_deduction, $other_deductions, $total_deductions, $net_pay, 'pending', null]);
             
             $generated_count++;
         }

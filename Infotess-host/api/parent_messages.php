@@ -19,26 +19,54 @@ $school_name = $settings['school_name'] ?? 'Nex CEC';
 
 // Fetch messages sent to this parent (receiver_id = parent's user_id)
 // Also fetch broadcast messages (is_broadcast = true)
+// Bridge compatibility: separate queries (no JOIN, no mixed literals)
 $messages = [];
 try {
-    $stmt = $pdo->prepare("
-        SELECT m.*, u.email AS sender_email
-        FROM messages m
-        LEFT JOIN users u ON u.id = m.sender_id
-        WHERE m.receiver_id = ? OR m.is_broadcast = true
-        ORDER BY m.created_at DESC
-        LIMIT 50
-    ");
+    // Step 1: Direct messages for this receiver
+    $stmt = $pdo->prepare("SELECT * FROM messages WHERE receiver_id = ?");
     $stmt->execute([$parent_user_id]);
-    $messages = $stmt->fetchAll();
+    $my_messages = $stmt->fetchAll();
+
+    // Step 2: Broadcast messages (parametrized literal)
+    $stmt = $pdo->prepare("SELECT * FROM messages WHERE is_broadcast = ?");
+    $stmt->execute([1]);
+    $broadcast_messages = $stmt->fetchAll();
+
+    // Combine and deduplicate
+    $seen = [];
+    $combined = array_merge($my_messages, $broadcast_messages);
+    foreach ($combined as $m) {
+        if (!isset($seen[$m['id']])) {
+            $seen[$m['id']] = true;
+            $messages[] = $m;
+        }
+    }
+
+    // Sort by created_at DESC (bridge ignores ORDER BY)
+    usort($messages, fn($a, $b) => strcmp($b['created_at'] ?? '', $a['created_at'] ?? ''));
+    $messages = array_slice($messages, 0, 50);
+
+    // Enrich with sender email (two-step lookup)
+    foreach ($messages as &$msg) {
+        if (!empty($msg['sender_id'])) {
+            $stmt = $pdo->prepare("SELECT email FROM users WHERE id = ?");
+            $stmt->execute([$msg['sender_id']]);
+            $user = $stmt->fetch();
+            $msg['sender_email'] = $user ? $user['email'] : 'School';
+        } else {
+            $msg['sender_email'] = 'School';
+        }
+    }
+    unset($msg);
 } catch (Exception $e) {
     error_log("Parent messages fetch error: " . $e->getMessage());
 }
 
-// Mark unread as read
+// Mark unread as read (bridge cannot handle NOW() or IS NULL in SET/WHERE)
 try {
-    $stmt = $pdo->prepare("UPDATE messages SET read_at = NOW() WHERE receiver_id = ? AND read_at IS NULL");
-    $stmt->execute([$parent_user_id]);
+    $now = date('Y-m-d H:i:s');
+    $stmt = $pdo->prepare("UPDATE messages SET read_at = ? WHERE receiver_id = ?");
+    $stmt->execute([$now, $parent_user_id]);
 } catch (Exception $e) {}
 
 // Count unread

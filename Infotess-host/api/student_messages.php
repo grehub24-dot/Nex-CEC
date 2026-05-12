@@ -30,8 +30,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 
     if ($admin_id) {
-        $stmt = $pdo->prepare("INSERT INTO messages (sender_id, receiver_id, title, content, is_broadcast) VALUES (?, ?, ?, ?, 0)");
-        if ($stmt->execute([$user_id, $admin_id, $subject, $content])) {
+        $stmt = $pdo->prepare("INSERT INTO messages (sender_id, receiver_id, title, content, is_broadcast) VALUES (?, ?, ?, ?, ?)");
+        if ($stmt->execute([$user_id, $admin_id, $subject, $content, 0])) {
             $message_status = "Message sent to administrator successfully!";
         } else {
             $error_status = "Failed to send message.";

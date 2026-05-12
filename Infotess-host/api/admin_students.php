@@ -79,8 +79,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
             // 1. Create User Account (email = guardian email for basic school)
             $password_hash = password_hash($auto_password, PASSWORD_DEFAULT);
-            $stmt = $pdo->prepare("INSERT INTO users (email, password, role) VALUES (?, ?, 'student')");
-            $stmt->execute([$guardian_email, $password_hash]);
+            $stmt = $pdo->prepare("INSERT INTO users (email, password, role) VALUES (?, ?, ?)");
+            $stmt->execute([$guardian_email, $password_hash, 'student']);
             $user_id = $pdo->lastInsertId();
 
             // 2. Create Student Record (Basic School schema)

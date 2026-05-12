@@ -38,8 +38,8 @@ if ($staff_id > 0) {
         $payroll['email'] = $s['email'] ?? '';
     }
     // Get deductions for this staff
-    $stmt = $pdo->prepare("SELECT * FROM deductions WHERE staff_id = ? AND is_recurring = true");
-    $stmt->execute([$staff_id]);
+    $stmt = $pdo->prepare("SELECT * FROM deductions WHERE staff_id = ? AND is_recurring = ?");
+    $stmt->execute([$staff_id, 1]);
     $deductions = $stmt->fetchAll();
 } else {
     $deductions = [];

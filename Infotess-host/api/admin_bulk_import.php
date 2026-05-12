@@ -73,8 +73,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     $auto_password = substr(str_shuffle("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"), 0, 6);
                     $password_hash = password_hash($auto_password, PASSWORD_DEFAULT);
                     
-                    $stmt = $pdo->prepare("INSERT INTO users (email, password, role) VALUES (?, ?, 'student')");
-                    $stmt->execute([$email, $password_hash]);
+                    $stmt = $pdo->prepare("INSERT INTO users (email, password, role) VALUES (?, ?, ?)");
+                    $stmt->execute([$email, $password_hash, 'student']);
                     $user_id = $pdo->lastInsertId();
                     
                     $stmt = $pdo->prepare("INSERT INTO students (

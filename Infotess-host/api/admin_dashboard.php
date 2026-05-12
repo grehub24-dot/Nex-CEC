@@ -123,16 +123,30 @@ if (empty($chart_labels)) { $chart_labels = [date('M Y')]; $chart_data = [0]; }
                         $cls = $stmt->fetch();
                         if ($cls) $teacher_classes[] = $cls['name'];
                     }
-                    // Count students in these classes
+                    // Count students in these classes (parametrize all values — bridge rejects mixed literals)
                     foreach ($teacher_classes as $cname) {
-                        $stmt = $pdo->prepare("SELECT id FROM students WHERE class_name = ? AND status = 'active'");
-                        $stmt->execute([$cname]);
+                        $stmt = $pdo->prepare("SELECT id FROM students WHERE class_name = ? AND status = ?");
+                        $stmt->execute([$cname, 'active']);
                         $teacher_student_count += count($stmt->fetchAll());
                     }
-                    // Fetch assigned subjects
-                    $stmt = $pdo->prepare("SELECT s.*, c.name AS class_name FROM subjects s JOIN classes c ON c.id = s.class_id WHERE s.teacher_id = (SELECT id FROM staff WHERE user_id = ?)");
+                    // Fetch assigned subjects (two-step: bridge cannot handle JOINs or subqueries)
+                    $teacher_subjects = [];
+                    $stmt = $pdo->prepare("SELECT id FROM staff WHERE user_id = ?");
                     $stmt->execute([$_SESSION['user_id']]);
-                    $teacher_subjects = $stmt->fetchAll();
+                    $staff_row = $stmt->fetch();
+                    if ($staff_row) {
+                        $staff_id = (int)$staff_row['id'];
+                        $stmt = $pdo->prepare("SELECT * FROM subjects WHERE teacher_id = ?");
+                        $stmt->execute([$staff_id]);
+                        $teacher_subjects_raw = $stmt->fetchAll();
+                        foreach ($teacher_subjects_raw as $subj) {
+                            $stmt2 = $pdo->prepare("SELECT name FROM classes WHERE id = ?");
+                            $stmt2->execute([(int)$subj['class_id']]);
+                            $cls = $stmt2->fetch();
+                            $subj['class_name'] = $cls ? $cls['name'] : 'Unknown';
+                            $teacher_subjects[] = $subj;
+                        }
+                    }
                 }
             ?>
                 <div class="stat-cards" style="margin-bottom: 20px;">

@@ -48,12 +48,23 @@ try {
 } catch (Exception $e) {}
 $total_paid = array_sum(array_map(fn($p) => (float)($p['amount'] ?? 0), $payments));
 
-// Fetch fee structure for the student's class
+// Fetch fee structure for the student's class (two-step: bridge cannot handle subqueries)
 $fee_structure = [];
 try {
-    $stmt = $pdo->prepare("SELECT * FROM fee_structures WHERE class_id = (SELECT id FROM classes WHERE name = ?)");
+    // Step 1: Get class id
+    $class_id = 0;
+    $stmt = $pdo->prepare("SELECT id FROM classes WHERE name = ?");
     $stmt->execute([$student['class_name']]);
-    $fee_structure = $stmt->fetchAll();
+    $class_row = $stmt->fetch();
+    if ($class_row) {
+        $class_id = (int)$class_row['id'];
+    }
+    // Step 2: Fetch fee structures for that class
+    if ($class_id) {
+        $stmt = $pdo->prepare("SELECT * FROM fee_structures WHERE class_id = ?");
+        $stmt->execute([$class_id]);
+        $fee_structure = $stmt->fetchAll();
+    }
 } catch (Exception $e) {}
 $total_expected = array_sum(array_map(fn($f) => (float)($f['amount'] ?? 0), $fee_structure));
 $outstanding = max(0, $total_expected - $total_paid);

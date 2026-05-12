@@ -10,8 +10,8 @@ if (!$adminExists) {
     $email = 'admin@infotess.org';
     $password = password_hash('admin123', PASSWORD_DEFAULT);
     
-    $stmt = $pdo->prepare("INSERT INTO users (email, password, role) VALUES (?, ?, 'admin')");
-    $stmt->execute([$email, $password]);
+    $stmt = $pdo->prepare("INSERT INTO users (email, password, role) VALUES (?, ?, ?)");
+    $stmt->execute([$email, $password, 'admin']);
     echo "Default Admin created. Email: $email, Pass: admin123";
 } else {
     echo "Admin already exists.";

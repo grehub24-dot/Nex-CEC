@@ -65,9 +65,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $existing_user = $stmt->fetch();
 
         // Check duplicate enrollment by guardian email + student name
-        $stmt = $pdo->prepare("SELECT id FROM students WHERE guardian_email = ? AND full_name = ? AND status != 'rejected'");
+        // Bridge cannot handle `!=`, so fetch all matching and filter in PHP
+        $stmt = $pdo->prepare("SELECT id, status FROM students WHERE guardian_email = ? AND full_name = ?");
         $stmt->execute([$guardian_email, $full_name]);
-        if ($stmt->fetch()) {
+        $existing_all = $stmt->fetchAll();
+        $duplicate = false;
+        foreach ($existing_all as $ex) {
+            if ($ex['status'] !== 'rejected') {
+                $duplicate = true;
+                break;
+            }
+        }
+        if ($duplicate) {
             $error = "A pending or active enrollment already exists for $full_name with this guardian email.";
         } else {
             // Generate enrollment reference

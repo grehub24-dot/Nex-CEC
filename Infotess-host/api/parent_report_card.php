@@ -40,25 +40,40 @@ $stmt->execute([$student_id]);
 $student = $stmt->fetch();
 if (!$student) redirect('parent/dashboard.php');
 
-// Fetch report cards
+// Fetch report cards (two-step: no JOIN support in bridge)
 $report_cards = [];
 try {
-    $stmt = $pdo->prepare("
-        SELECT rc.*, t.name AS term_name, t.academic_year
-        FROM report_cards rc
-        JOIN terms t ON t.id = rc.term_id
-        WHERE rc.student_id = ?
-        ORDER BY t.academic_year DESC, t.name DESC
-    ");
+    $stmt = $pdo->prepare("SELECT * FROM report_cards WHERE student_id = ?");
     $stmt->execute([$student_id]);
     $report_cards = $stmt->fetchAll();
-} catch (Exception $e) {}
 
-// Fetch terms for dropdown
-$terms = [];
-try {
-    $stmt = $pdo->query("SELECT * FROM terms ORDER BY academic_year DESC, name ASC");
-    $terms = $stmt->fetchAll();
+    // Fetch terms for enrichment and dropdown
+    $terms_raw = [];
+    $stmt = $pdo->query("SELECT * FROM terms");
+    $terms_raw = $stmt->fetchAll();
+    $terms = $terms_raw; // keep full list for dropdown below
+
+    $term_map = [];
+    foreach ($terms_raw as $t) {
+        $term_map[$t['id']] = $t;
+    }
+
+    // Enrich report cards with term name + academic year
+    foreach ($report_cards as &$rc) {
+        $term = $term_map[$rc['term_id']] ?? null;
+        $rc['term_name'] = $term['name'] ?? 'N/A';
+        $rc['academic_year'] = $term['academic_year'] ?? '';
+    }
+    unset($rc);
+
+    // Sort by academic_year DESC, term_name DESC (bridge ignores ORDER BY)
+    usort($report_cards, function ($a, $b) {
+        $cmp = strcmp($b['academic_year'] ?? '', $a['academic_year'] ?? '');
+        if ($cmp === 0) {
+            return strcmp($b['term_name'] ?? '', $a['term_name'] ?? '');
+        }
+        return $cmp;
+    });
 } catch (Exception $e) {}
 ?>
 <!DOCTYPE html>

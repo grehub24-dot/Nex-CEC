@@ -24,8 +24,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'broadcast') {
         try {
-            $stmt = $pdo->prepare("INSERT INTO messages (sender_id, title, content, is_broadcast) VALUES (?, ?, ?, 1)");
-            $stmt->execute([$_SESSION['user_id'], $title, $content]);
+            $stmt = $pdo->prepare("INSERT INTO messages (sender_id, title, content, is_broadcast) VALUES (?, ?, ?, ?)");
+            $stmt->execute([$_SESSION['user_id'], $title, $content, 1]);
 
             if ($send_sms) {
                 $sms = new SMSHelper();
@@ -106,8 +106,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
                     }
 
-                    $stmt = $pdo->prepare("INSERT INTO messages (sender_id, title, content, is_broadcast) VALUES (?, ?, ?, 1)");
-                    $stmt->execute([$_SESSION['user_id'], "Bulk SMS", $sms_content]);
+                    $stmt = $pdo->prepare("INSERT INTO messages (sender_id, title, content, is_broadcast) VALUES (?, ?, ?, ?)");
+                    $stmt->execute([$_SESSION['user_id'], "Bulk SMS", $sms_content, 1]);
 
                     $message = "SMS sent successfully to $count member(s)";
                     if ($failedCount > 0) {
@@ -125,8 +125,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                     if ($student && !empty($to)) {
                         if ($sms->send($to, $sms_content)) {
-                            $stmt = $pdo->prepare("INSERT INTO messages (sender_id, receiver_id, title, content, is_broadcast) VALUES (?, ?, ?, ?, 0)");
-                            $stmt->execute([$_SESSION['user_id'], $student['user_id'], "Individual SMS", $sms_content]);
+                            $stmt = $pdo->prepare("INSERT INTO messages (sender_id, receiver_id, title, content, is_broadcast) VALUES (?, ?, ?, ?, ?)");
+                            $stmt->execute([$_SESSION['user_id'], $student['user_id'], "Individual SMS", $sms_content, 0]);
                             
                             $message = "SMS sent successfully to " . htmlspecialchars($student['full_name']) . "!";
                         } else {
@@ -209,13 +209,21 @@ $all_students = $pdo->query("SELECT id, full_name, admission_number FROM student
                 <div class="card">
                     <h3>Messages from Students</h3>
                     <?php
-                    $student_msgs = $pdo->query("
-                        SELECT *
-                        FROM messages 
-                        WHERE is_broadcast = 0 AND receiver_id IN (SELECT id FROM users WHERE role = 'admin')
-                        ORDER BY created_at DESC 
-                        LIMIT 15
-                    ")->fetchAll();
+                    // Two-step: get admin user IDs first, then filter messages (bridge cannot handle subqueries)
+                    $admin_ids = [];
+                    $admins = $pdo->prepare("SELECT id FROM users WHERE role = ?");
+                    $admins->execute(['admin']);
+                    $admin_rows = $admins->fetchAll();
+                    foreach ($admin_rows as $r) {
+                        $admin_ids[] = (int)$r['id'];
+                    }
+                    $all_non_broadcast = [];
+                    $stmt = $pdo->prepare("SELECT * FROM messages WHERE is_broadcast = ?");
+                    $stmt->execute([0]);
+                    $all_non_broadcast = $stmt->fetchAll();
+                    $student_msgs = array_filter($all_non_broadcast, fn($m) => in_array((int)$m['receiver_id'], $admin_ids));
+                    usort($student_msgs, fn($a, $b) => strcmp($b['created_at'] ?? '', $a['created_at'] ?? ''));
+                    $student_msgs = array_slice($student_msgs, 0, 15);
                     
                     // Enrich with student names (two-step lookup for Supabase compatibility)
                     foreach ($student_msgs as &$msg) {

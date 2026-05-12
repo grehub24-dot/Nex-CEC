@@ -74,14 +74,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     redirect('student/dashboard.php');
                 } elseif ($user['role'] === 'parent') {
                     // Parent login — redirect to parent dashboard
-                    $stmt_s = $pdo->prepare("SELECT ps.student_id, s.full_name, s.admission_number 
-                                              FROM parent_students ps 
-                                              JOIN students s ON s.id = ps.student_id 
-                                              WHERE ps.parent_user_id = :uid 
-                                              LIMIT 1");
-                    $stmt_s->execute(['uid' => $user['id']]);
-                    $child = $stmt_s->fetch();
-                    $_SESSION['name'] = $child ? $child['full_name'] . "'s Parent" : 'Parent';
+                    // Note: bridge does not support JOINs, so we do two queries
+                    $stmt_s = $pdo->prepare("SELECT student_id FROM parent_students WHERE parent_user_id = ? LIMIT 1");
+                    $stmt_s->execute([$user['id']]);
+                    $link = $stmt_s->fetch();
+                    $child_name = 'Parent';
+                    if ($link && !empty($link['student_id'])) {
+                        $stmt_s2 = $pdo->prepare("SELECT full_name, admission_number FROM students WHERE id = ?");
+                        $stmt_s2->execute([$link['student_id']]);
+                        $child = $stmt_s2->fetch();
+                        if ($child) {
+                            $child_name = $child['full_name'] . "'s Parent";
+                        }
+                    }
+                    $_SESSION['name'] = $child_name;
                     redirect('parent/dashboard.php');
                 } elseif (in_array($user['role'], ['teacher', 'staff', 'bursar'])) {
                     $_SESSION['name'] = ucfirst($user['role']);

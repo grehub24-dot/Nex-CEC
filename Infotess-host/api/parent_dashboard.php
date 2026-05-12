@@ -19,17 +19,22 @@ $school_name = $settings['school_name'] ?? 'Nex CEC';
 $current_academic_year = $settings['current_academic_year'] ?? date('Y') . '/' . (date('Y') + 1);
 
 // Fetch all children linked to this parent via parent_students
+// Two-step for bridge compatibility: bridge cannot handle JOINs
 $children = [];
 try {
-    $stmt = $pdo->prepare("
-        SELECT s.*, ps.relationship, ps.is_primary
-        FROM students s
-        JOIN parent_students ps ON ps.student_id = s.id
-        WHERE ps.parent_user_id = ?
-        ORDER BY s.full_name ASC
-    ");
+    $stmt = $pdo->prepare("SELECT student_id, relationship, is_primary FROM parent_students WHERE parent_user_id = ?");
     $stmt->execute([$parent_user_id]);
-    $children = $stmt->fetchAll();
+    $links = $stmt->fetchAll();
+    foreach ($links as $link) {
+        $stmt = $pdo->prepare("SELECT * FROM students WHERE id = ?");
+        $stmt->execute([(int)$link['student_id']]);
+        $student = $stmt->fetch();
+        if ($student) {
+            $student['relationship'] = $link['relationship'];
+            $student['is_primary'] = $link['is_primary'];
+            $children[] = $student;
+        }
+    }
 } catch (Exception $e) {
     error_log("Parent dashboard fetch error: " . $e->getMessage());
 }

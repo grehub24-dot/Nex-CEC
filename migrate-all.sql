@@ -162,6 +162,9 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'students' AND column_name = 'payment_status') THEN
         ALTER TABLE students ADD COLUMN payment_status VARCHAR(20) DEFAULT 'unpaid';
     END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'students' AND column_name = 'enrollment_type') THEN
+        ALTER TABLE students ADD COLUMN enrollment_type VARCHAR(20) DEFAULT 'online';
+    END IF;
 END $$;
 
 -- ==========================================

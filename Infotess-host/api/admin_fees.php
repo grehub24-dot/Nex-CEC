@@ -14,6 +14,29 @@ $school_name = $settings['school_name'] ?? 'Nex CEC';
 $current_year = $settings['current_academic_year'] ?? date('Y') . '/' . (date('Y') + 1);
 $current_term = $settings['current_term'] ?? '1';
 
+// Deduplicate fee_structures: keep only the earliest entry for each unique combination
+// (title, academic_year, term, class_id) — prevents duplicates regardless of how they were created
+$deduped = 0;
+try {
+    $allFeeRows = $pdo->query("SELECT * FROM fee_structures")->fetchAll();
+    $seen = [];
+    $toDelete = [];
+    foreach ($allFeeRows as $fr) {
+        $key = ($fr['title'] ?? '') . '|' . ($fr['academic_year'] ?? '') . '|' . ($fr['term'] ?? '') . '|' . ($fr['class_id'] ?? 'NULL');
+        if (isset($seen[$key])) {
+            $toDelete[] = $fr['id'];
+        } else {
+            $seen[$key] = true;
+        }
+    }
+    foreach ($toDelete as $did) {
+        $pdo->prepare("DELETE FROM fee_structures WHERE id = ?")->execute([$did]);
+        $deduped++;
+    }
+} catch (Exception $e) {
+    // Dedup is best-effort
+}
+
 $message = '';
 $error = '';
 
@@ -412,7 +435,7 @@ foreach ($fees as $f) {
         <div class="modal-content">
             <span class="close-btn" onclick="closeAddModal()">&times;</span>
             <h3>Add New Fee</h3>
-            <form action="fees.php" method="POST" class="mt-15">
+            <form action="fees.php" method="POST" class="mt-15" onsubmit="document.getElementById('addFeeBtn').disabled=true; document.getElementById('addFeeBtn').innerHTML='<i class=\'fas fa-spinner fa-pulse\'></i> Adding...';">
                 <input type="hidden" name="action" value="add_fee">
                 
                 <div class="form-group">
@@ -469,7 +492,7 @@ foreach ($fees as $f) {
                         Mandatory fee (required for all students)
                     </label>
                 </div>
-                <button type="submit" class="btn-submit w-full">Add Fee</button>
+                <button type="submit" id="addFeeBtn" class="btn-submit w-full">Add Fee</button>
             </form>
         </div>
     </div>
@@ -479,7 +502,7 @@ foreach ($fees as $f) {
         <div class="modal-content">
             <span class="close-btn" onclick="closeEditModal()">&times;</span>
             <h3>Edit Fee</h3>
-            <form action="fees.php" method="POST" class="mt-15">
+            <form action="fees.php" method="POST" class="mt-15" onsubmit="document.getElementById('editFeeBtn').disabled=true; document.getElementById('editFeeBtn').innerHTML='<i class=\'fas fa-spinner fa-pulse\'></i> Updating...';">
                 <input type="hidden" name="action" value="edit_fee">
                 <input type="hidden" name="fee_id" id="edit_fee_id">
                 
@@ -537,7 +560,7 @@ foreach ($fees as $f) {
                         Mandatory fee
                     </label>
                 </div>
-                <button type="submit" class="btn-submit w-full">Update Fee</button>
+                <button type="submit" id="editFeeBtn" class="btn-submit w-full">Update Fee</button>
             </form>
         </div>
     </div>

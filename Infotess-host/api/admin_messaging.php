@@ -256,8 +256,8 @@ $all_students = $pdo->query("SELECT id, full_name, admission_number FROM student
                                             <strong><?php echo htmlspecialchars($msg['sender_name']); ?></strong><br>
                                             <small><?php echo htmlspecialchars($msg['admission_number']); ?></small>
                                         </td>
-                                        <td><?php echo htmlspecialchars($msg['title']); ?></td>
-                                        <td><?php echo htmlspecialchars($msg['content']); ?></td>
+                                        <td><?php echo htmlspecialchars(fix_utf8_encoding($msg['title'])); ?></td>
+                                        <td><?php echo htmlspecialchars(fix_utf8_encoding($msg['content'])); ?></td>
                                         <td>
                                             <form method="POST" onsubmit="return confirm('Are you sure you want to delete this message?');" style="display:inline;">
                                                 <input type="hidden" name="action" value="delete_message">

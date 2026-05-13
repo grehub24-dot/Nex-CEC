@@ -158,12 +158,12 @@ usort($direct_messages, function($a, $b) {
                     <p>No announcements at this time.</p>
                 <?php else: ?>
                     <?php foreach ($broadcasts as $msg): ?>
-                        <div class="card msg-card broadcast" onclick="viewMessage(<?php echo $msg['id']; ?>, '<?php echo addslashes($msg['title']); ?>', '<?php echo addslashes($msg['content']); ?>', '<?php echo $msg['created_at']; ?>')">
+                        <div class="card msg-card broadcast" onclick="viewMessage(<?php echo $msg['id']; ?>, <?php echo json_encode(fix_utf8_encoding($msg['title']), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP); ?>, <?php echo json_encode(fix_utf8_encoding($msg['content']), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP); ?>, '<?php echo $msg['created_at']; ?>')">
                             <div style="display:flex; justify-content:space-between;">
-                                <strong><?php echo htmlspecialchars($msg['title']); ?></strong>
+                                <strong><?php echo htmlspecialchars(fix_utf8_encoding($msg['title'])); ?></strong>
                                 <small><?php echo date('M d, Y', strtotime($msg['created_at'])); ?></small>
                             </div>
-                            <p style="margin-top:5px; color:#666;"><?php echo htmlspecialchars(substr($msg['content'], 0, 100)) . '...'; ?></p>
+                            <p style="margin-top:5px; color:#666;"><?php echo htmlspecialchars(substr(fix_utf8_encoding($msg['content']), 0, 100)) . '...'; ?></p>
                         </div>
                     <?php endforeach; ?>
                 <?php endif; ?>
@@ -175,12 +175,12 @@ usort($direct_messages, function($a, $b) {
                     <p>No direct messages.</p>
                 <?php else: ?>
                     <?php foreach ($direct_messages as $msg): ?>
-                        <div class="card msg-card" onclick="viewMessage(<?php echo $msg['id']; ?>, '<?php echo addslashes($msg['title']); ?>', '<?php echo addslashes($msg['content']); ?>', '<?php echo $msg['created_at']; ?>')">
+                        <div class="card msg-card" onclick="viewMessage(<?php echo $msg['id']; ?>, <?php echo json_encode(fix_utf8_encoding($msg['title']), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP); ?>, <?php echo json_encode(fix_utf8_encoding($msg['content']), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP); ?>, '<?php echo $msg['created_at']; ?>')">
                             <div style="display:flex; justify-content:space-between;">
-                                <strong><?php echo htmlspecialchars($msg['title']); ?></strong>
+                                <strong><?php echo htmlspecialchars(fix_utf8_encoding($msg['title'])); ?></strong>
                                 <small><?php echo date('M d, Y', strtotime($msg['created_at'])); ?></small>
                             </div>
-                            <p style="margin-top:5px; color:#666;"><?php echo htmlspecialchars(substr($msg['content'], 0, 100)) . '...'; ?></p>
+                            <p style="margin-top:5px; color:#666;"><?php echo htmlspecialchars(substr(fix_utf8_encoding($msg['content']), 0, 100)) . '...'; ?></p>
                         </div>
                     <?php endforeach; ?>
                 <?php endif; ?>

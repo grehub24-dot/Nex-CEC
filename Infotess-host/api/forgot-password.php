@@ -19,7 +19,7 @@ $error = '';
 $success = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $identifier = trim($_POST['identifier']); // Email or Index Number
+    $identifier = trim($_POST['identifier'] ?? ''); // Email or Index Number
 
     if (empty($identifier)) {
         $error = "Please enter your Email or Admission Number.";

@@ -20,8 +20,8 @@ if (isLoggedIn()) {
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $identifier = trim($_POST['identifier']); // Email or Index Number
-    $password = $_POST['password'];
+    $identifier = trim($_POST['identifier'] ?? ''); // Email or Index Number
+    $password = $_POST['password'] ?? '';
 
     if (empty($identifier) || empty($password)) {
         $error = "Please enter both identifier and password.";

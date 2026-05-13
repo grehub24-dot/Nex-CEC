@@ -11,8 +11,8 @@ $error = '';
 $success = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $new_password = $_POST['new_password'];
-    $confirm_password = $_POST['confirm_password'];
+    $new_password = $_POST['new_password'] ?? '';
+    $confirm_password = $_POST['confirm_password'] ?? '';
 
     if (empty($new_password) || empty($confirm_password)) {
         $error = "All fields are required.";

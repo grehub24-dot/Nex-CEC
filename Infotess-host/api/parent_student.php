@@ -69,21 +69,37 @@ $upload_message = '';
 $upload_error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_child_photo'])) {
     if (isset($_FILES['child_photo']) && $_FILES['child_photo']['error'] === UPLOAD_ERR_OK) {
-        $upload_dir = __DIR__ . '/../images/profiles/';
-        if (!is_dir($upload_dir)) {
-            mkdir($upload_dir, 0777, true);
-        }
-        $ext = pathinfo($_FILES['child_photo']['name'], PATHINFO_EXTENSION);
-        $filename = 'student_' . $student_id . '_' . time() . '.' . $ext;
-        $target = $upload_dir . $filename;
-        if (move_uploaded_file($_FILES['child_photo']['tmp_name'], $target)) {
-            $path = 'images/profiles/' . $filename;
-            $stmt = $pdo->prepare("UPDATE students SET profile_picture = ? WHERE id = ?");
-            $stmt->execute([$path, $student_id]);
-            $student['profile_picture'] = $path;
-            $upload_message = "Profile picture updated successfully.";
+        $file = $_FILES['child_photo'];
+        // Validate file size (max 2MB)
+        if ($file['size'] > 2 * 1024 * 1024) {
+            $upload_error = "File too large. Maximum size is 2MB.";
         } else {
-            $upload_error = "Failed to upload image.";
+            // Validate MIME type
+            $allowed_mime = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+            $allowed_ext = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            $mime = finfo_file($finfo, $file['tmp_name']);
+            finfo_close($finfo);
+            $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+            if (!in_array($mime, $allowed_mime) || !in_array($ext, $allowed_ext)) {
+                $upload_error = "Invalid file type. Only JPG, PNG, GIF, and WebP images are allowed.";
+            } else {
+                $upload_dir = __DIR__ . '/../images/profiles/';
+                if (!is_dir($upload_dir)) {
+                    mkdir($upload_dir, 0775, true);
+                }
+                $filename = 'student_' . $student_id . '_' . time() . '_' . uniqid() . '.' . $ext;
+                $target = $upload_dir . $filename;
+                if (move_uploaded_file($file['tmp_name'], $target)) {
+                    $path = 'images/profiles/' . $filename;
+                    $stmt = $pdo->prepare("UPDATE students SET profile_picture = ? WHERE id = ?");
+                    $stmt->execute([$path, $student_id]);
+                    $student['profile_picture'] = $path;
+                    $upload_message = "Profile picture updated successfully.";
+                } else {
+                    $upload_error = "Failed to upload image.";
+                }
+            }
         }
     } else {
         $upload_error = "No image selected or upload error.";

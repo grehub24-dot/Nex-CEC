@@ -92,9 +92,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     $fTerm  = preg_replace('/[^0-9]/', '', (string)($f['term'] ?? ''));
                     $formTerm = preg_replace('/[^0-9]/', '', (string)$term);
                     if ($fTitle === $fee_title && $fYear === $year && $fTerm === $formTerm) {
-                        $fClassId = !empty($f['class_id']) ? (int)$f['class_id'] : 0;
-                        $tcidInt = !empty($tcid) ? (int)$tcid : 0;
-                        if ($fClassId === $tcidInt) { $is_dup = true; break; }
+                        // Duplicate detection:
+                        // - An existing "All Classes" fee (class_id IS NULL) matches ANY class
+                        // - A new "All Classes" fee (tcid is null) matches any existing "All Classes" fee
+                        // - Same specific class_id always matches
+                        $fClassNull = empty($f['class_id']);
+                        $newIsNull = empty($tcid);
+                        $sameClass = (!$fClassNull && !$newIsNull && (int)$f['class_id'] === (int)$tcid);
+                        if ($fClassNull || $sameClass) {
+                            $is_dup = true; break;
+                        }
                     }
                 }
                 if ($is_dup) {

@@ -313,7 +313,8 @@ require_once 'includes/header.php';
                             <option value="">-- Select Class --</option>
                             <optgroup label="Early Childhood">
                                 <option value="Creche">Creche</option>
-                                <option value="Nursery">Nursery</option>
+                                <option value="Nursery 1">Nursery 1</option>
+                                <option value="Nursery 2">Nursery 2</option>
                                 <option value="KG 1">KG 1</option>
                                 <option value="KG 2">KG 2</option>
                             </optgroup>

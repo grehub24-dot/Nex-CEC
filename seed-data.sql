@@ -30,11 +30,13 @@ SELECT 'school_logo', 'images/school-logo.png' WHERE NOT EXISTS (SELECT 1 FROM s
 INSERT INTO classes (name, level_group, sort_order)
 SELECT 'Creche', 'early_childhood', 0 WHERE NOT EXISTS (SELECT 1 FROM classes WHERE name = 'Creche');
 INSERT INTO classes (name, level_group, sort_order)
-SELECT 'Nursery', 'early_childhood', 1 WHERE NOT EXISTS (SELECT 1 FROM classes WHERE name = 'Nursery');
+SELECT 'Nursery 1', 'early_childhood', 1 WHERE NOT EXISTS (SELECT 1 FROM classes WHERE name = 'Nursery 1');
 INSERT INTO classes (name, level_group, sort_order)
-SELECT 'KG 1', 'early_childhood', 2 WHERE NOT EXISTS (SELECT 1 FROM classes WHERE name = 'KG 1');
+SELECT 'Nursery 2', 'early_childhood', 2 WHERE NOT EXISTS (SELECT 1 FROM classes WHERE name = 'Nursery 2');
 INSERT INTO classes (name, level_group, sort_order)
-SELECT 'KG 2', 'early_childhood', 3 WHERE NOT EXISTS (SELECT 1 FROM classes WHERE name = 'KG 2');
+SELECT 'KG 1', 'early_childhood', 3 WHERE NOT EXISTS (SELECT 1 FROM classes WHERE name = 'KG 1');
+INSERT INTO classes (name, level_group, sort_order)
+SELECT 'KG 2', 'early_childhood', 4 WHERE NOT EXISTS (SELECT 1 FROM classes WHERE name = 'KG 2');
 INSERT INTO classes (name, level_group, sort_order)
 SELECT 'Basic 1', 'primary', 4 WHERE NOT EXISTS (SELECT 1 FROM classes WHERE name = 'Basic 1');
 INSERT INTO classes (name, level_group, sort_order)
@@ -362,17 +364,17 @@ BEGIN
 
     SELECT id INTO uid FROM users WHERE email = 'guardian.ama@parent.com';
     INSERT INTO students (user_id, full_name, enrollment_id, admission_number, class_name, gender, date_of_birth, place_of_birth, nationality, address, guardian_name, guardian_email, guardian_relationship, guardian_phone_primary, guardian_phone_emergency, guardian_occupation, guardian_address, health_insurance_id, medical_conditions, allergies, special_needs, previous_school, previous_class, admission_date, academic_year, enrollment_type, payment_status, status)
-    SELECT uid, 'Ama Serwaa Darko', 'ENR-2025-J1K2L3', 'CEC-250908-003', 'Nursery', 'Female', '2021-03-12', 'Kumasi', 'Ghanaian', '5 Roman Hill', 'Mrs. Ama Darko', 'guardian.ama@parent.com', 'Mother', '0247444555', '0247444666', 'Teacher', '5 Roman Hill', 'NHIS-4567890', 'Mild asthma', 'None', NULL, NULL, NULL, '2025-09-08', '2025/2026', 'New', 'Paid', 'Active'
+    SELECT uid, 'Ama Serwaa Darko', 'ENR-2025-J1K2L3', 'CEC-250908-003', 'Nursery 1', 'Female', '2021-03-12', 'Kumasi', 'Ghanaian', '5 Roman Hill', 'Mrs. Ama Darko', 'guardian.ama@parent.com', 'Mother', '0247444555', '0247444666', 'Teacher', '5 Roman Hill', 'NHIS-4567890', 'Mild asthma', 'None', NULL, NULL, NULL, '2025-09-08', '2025/2026', 'New', 'Paid', 'Active'
     WHERE NOT EXISTS (SELECT 1 FROM students WHERE admission_number = 'CEC-250908-003');
 
     SELECT id INTO uid FROM users WHERE email = 'guardian.yaw@parent.com';
     INSERT INTO students (user_id, full_name, enrollment_id, admission_number, class_name, gender, date_of_birth, place_of_birth, nationality, address, guardian_name, guardian_email, guardian_relationship, guardian_phone_primary, guardian_phone_emergency, guardian_occupation, guardian_address, health_insurance_id, medical_conditions, allergies, special_needs, previous_school, previous_class, admission_date, academic_year, enrollment_type, payment_status, status)
-    SELECT uid, 'Yaw Boateng Jnr.', 'ENR-2025-M4N5O6', 'CEC-250908-004', 'Nursery', 'Male', '2021-06-18', 'Kumasi', 'Ghanaian', '20 Oforikrom', 'Mr. Yaw Boateng Sr.', 'guardian.yaw@parent.com', 'Father', '0248555666', '0248555777', 'Farmer', '20 Oforikrom', 'NHIS-5678901', '', 'None', NULL, NULL, NULL, '2025-09-08', '2025/2026', 'New', 'Paid', 'Active'
+    SELECT uid, 'Yaw Boateng Jnr.', 'ENR-2025-M4N5O6', 'CEC-250908-004', 'Nursery 1', 'Male', '2021-06-18', 'Kumasi', 'Ghanaian', '20 Oforikrom', 'Mr. Yaw Boateng Sr.', 'guardian.yaw@parent.com', 'Father', '0248555666', '0248555777', 'Farmer', '20 Oforikrom', 'NHIS-5678901', '', 'None', NULL, NULL, NULL, '2025-09-08', '2025/2026', 'New', 'Paid', 'Active'
     WHERE NOT EXISTS (SELECT 1 FROM students WHERE admission_number = 'CEC-250908-004');
 
     SELECT id INTO uid FROM users WHERE email = 'guardian.efua@parent.com';
     INSERT INTO students (user_id, full_name, enrollment_id, admission_number, class_name, gender, date_of_birth, place_of_birth, nationality, address, guardian_name, guardian_email, guardian_relationship, guardian_phone_primary, guardian_phone_emergency, guardian_occupation, guardian_address, health_insurance_id, medical_conditions, allergies, special_needs, previous_school, previous_class, admission_date, academic_year, enrollment_type, payment_status, status)
-    SELECT uid, 'Efua Adjei', 'ENR-2025-P7Q8R9', 'CEC-250908-005', 'Nursery', 'Female', '2021-09-25', 'Kumasi', 'Ghanaian', '3 Asokwa', 'Mrs. Efua Adjei', 'guardian.efua@parent.com', 'Mother', '0249666777', '0249666888', 'Hairdresser', '3 Asokwa Estate', NULL, 'None', NULL, NULL, NULL, NULL, '2025-09-08', '2025/2026', 'New', 'Paid', 'Active'
+    SELECT uid, 'Efua Adjei', 'ENR-2025-P7Q8R9', 'CEC-250908-005', 'Nursery 1', 'Female', '2021-09-25', 'Kumasi', 'Ghanaian', '3 Asokwa', 'Mrs. Efua Adjei', 'guardian.efua@parent.com', 'Mother', '0249666777', '0249666888', 'Hairdresser', '3 Asokwa Estate', NULL, 'None', NULL, NULL, NULL, NULL, '2025-09-08', '2025/2026', 'New', 'Paid', 'Active'
     WHERE NOT EXISTS (SELECT 1 FROM students WHERE admission_number = 'CEC-250908-005');
 
     -- KG 1 (3)

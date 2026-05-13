@@ -50,18 +50,19 @@ END $$;
 -- Seed classes
 INSERT INTO classes (name, level_group, sort_order) VALUES
 ('Creche', 'early_childhood', 0),
-('Nursery', 'early_childhood', 1),
-('KG 1', 'early_childhood', 2),
-('KG 2', 'early_childhood', 3),
-('Basic 1', 'primary', 4),
-('Basic 2', 'primary', 5),
-('Basic 3', 'primary', 6),
-('Basic 4', 'primary', 7),
-('Basic 5', 'primary', 8),
-('Basic 6', 'primary', 9),
-('JHS 1', 'jhs', 10),
-('JHS 2', 'jhs', 11),
-('JHS 3', 'jhs', 12)
+('Nursery 1', 'early_childhood', 1),
+('Nursery 2', 'early_childhood', 2),
+('KG 1', 'early_childhood', 3),
+('KG 2', 'early_childhood', 4),
+('Basic 1', 'primary', 5),
+('Basic 2', 'primary', 6),
+('Basic 3', 'primary', 7),
+('Basic 4', 'primary', 8),
+('Basic 5', 'primary', 9),
+('Basic 6', 'primary', 10),
+('JHS 1', 'jhs', 11),
+('JHS 2', 'jhs', 12),
+('JHS 3', 'jhs', 13)
 ON CONFLICT (name) DO NOTHING;
 
 -- 2. Add class_name column to students (if not exists)

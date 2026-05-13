@@ -31,7 +31,7 @@ try {
 }
 $group_defs = [
     'creche'        => ['label' => 'Creche',        'names' => ['Creche']],
-    'pre_school'    => ['label' => 'Pre-school',    'names' => ['Nursery', 'KG 1', 'KG 2']],
+    'pre_school'    => ['label' => 'Pre-school',    'names' => ['Nursery 1', 'Nursery 2', 'KG 1', 'KG 2']],
     'lower_primary' => ['label' => 'Lower Primary', 'names' => ['Basic 1', 'Basic 2', 'Basic 3']],
     'upper_primary' => ['label' => 'Upper Primary', 'names' => ['Basic 4', 'Basic 5', 'Basic 6']],
     'jhs'           => ['label' => 'JHS',           'names' => ['JHS 1', 'JHS 2', 'JHS 3']],

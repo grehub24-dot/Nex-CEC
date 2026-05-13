@@ -199,7 +199,7 @@ if (!$student) {
                         <select name="class_name" class="form-control" required>
                             <option value="">-- Select Class --</option>
                             <optgroup label="Early Childhood">
-                                <?php foreach (['Creche','Nursery','KG 1','KG 2'] as $c): ?>
+                                <?php foreach (['Creche','Nursery 1','Nursery 2','KG 1','KG 2'] as $c): ?>
                                     <option value="<?php echo $c; ?>" <?php echo ($student['class_name'] ?? '') === $c ? 'selected' : ''; ?>><?php echo $c; ?></option>
                                 <?php endforeach; ?>
                             </optgroup>

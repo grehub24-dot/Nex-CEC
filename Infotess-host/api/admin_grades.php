@@ -4,6 +4,9 @@ require_once 'includes/db.php';
 // Enforce access control
 requireAccess('grades');
 
+// Auto-migrate old "Nursery" class to "Nursery 1" / "Nursery 2" if needed
+migrateNurseryClasses($pdo);
+
 $settings = [];
 $stmt = $pdo->query("SELECT setting_key, setting_value FROM system_settings");
 while ($row = $stmt->fetch()) { $settings[$row['setting_key']] = $row['setting_value']; }
@@ -39,7 +42,8 @@ $selected_subject = $_GET['subject_id'] ?? '';
 // Map class names to their educational category (matches admin_subjects.php categories)
 $class_category_map = [
     'Creche'  => 'creche',
-    'Nursery' => 'nursery',
+    'Nursery 1' => 'nursery',
+    'Nursery 2' => 'nursery',
     'KG 1'    => 'kindergarten',
     'KG 2'    => 'kindergarten',
     'Basic 1' => 'primary', 'Basic 2' => 'primary', 'Basic 3' => 'primary',

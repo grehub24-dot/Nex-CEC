@@ -428,3 +428,62 @@ function enforcePasswordReset() {
         }
     }
 }
+
+/**
+ * Auto-migrate the old single "Nursery" class to "Nursery 1" and "Nursery 2".
+ * Runs once on first admin page load after update.
+ */
+function migrateNurseryClasses($pdo): void {
+    try {
+        // Check if old "Nursery" class still exists
+        $stmt = $pdo->prepare("SELECT id FROM classes WHERE name = ?");
+        $stmt->execute(['Nursery']);
+        $old_nursery = $stmt->fetch();
+
+        // Check if "Nursery 1" already exists (migration already done)
+        $stmt = $pdo->prepare("SELECT id FROM classes WHERE name = ?");
+        $stmt->execute(['Nursery 1']);
+        $nursery1_exists = $stmt->fetch();
+
+        if ($old_nursery && !$nursery1_exists) {
+            $old_id = (int)$old_nursery['id'];
+
+            // Rename "Nursery" → "Nursery 1"
+            $stmt = $pdo->prepare("UPDATE classes SET name = ? WHERE id = ?");
+            $stmt->execute(['Nursery 1', $old_id]);
+
+            // Update sort_order for all affected classes
+            // New order: Creche(0), Nursery1(1), Nursery2(2), KG1(3), KG2(4), Basic1(5)...
+            $sort_updates = [
+                'Nursery 1' => 1,
+                'Nursery 2' => 2,
+                'KG 1'      => 3,
+                'KG 2'      => 4,
+                'Basic 1'   => 5,
+                'Basic 2'   => 6,
+                'Basic 3'   => 7,
+                'Basic 4'   => 8,
+                'Basic 5'   => 9,
+                'Basic 6'   => 10,
+                'JHS 1'     => 11,
+                'JHS 2'     => 12,
+                'JHS 3'     => 13,
+            ];
+            foreach ($sort_updates as $name => $order) {
+                $stmt = $pdo->prepare("UPDATE classes SET sort_order = ? WHERE name = ?");
+                $stmt->execute([$order, $name]);
+            }
+
+            // Insert "Nursery 2"
+            $stmt = $pdo->prepare("INSERT INTO classes (name, level_group, sort_order) VALUES (?, ?, ?) ON CONFLICT (name) DO NOTHING");
+            $stmt->execute(['Nursery 2', 'early_childhood', 2]);
+
+            // Update existing students with class_name = 'Nursery' → 'Nursery 1'
+            $stmt = $pdo->prepare("UPDATE students SET class_name = ? WHERE class_name = ?");
+            $stmt->execute(['Nursery 1', 'Nursery']);
+        }
+    } catch (Exception $e) {
+        // Migration failed silently — no disruption to the user
+        error_log("migrateNurseryClasses: " . $e->getMessage());
+    }
+}

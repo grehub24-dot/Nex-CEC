@@ -349,10 +349,6 @@ foreach ($fees as $f) {
                         <i class="fas fa-trash"></i> Delete Selected (<span id="selectedCount">0</span>)
                     </button>
                 </div>
-                <form id="bulkDeleteForm" action="fees.php" method="POST">
-                    <input type="hidden" name="action" value="bulk_delete_fees">
-                    <input type="hidden" name="year" value="<?php echo htmlspecialchars($filter_year); ?>">
-                    <input type="hidden" name="term" value="<?php echo htmlspecialchars($filter_term); ?>">
                 <div class="table-responsive">
                     <table class="table">
                         <thead>
@@ -372,7 +368,7 @@ foreach ($fees as $f) {
                             <?php else: ?>
                                 <?php foreach ($fees as $fee): ?>
                                 <tr>
-                                    <td><input type="checkbox" name="fee_ids[]" value="<?php echo $fee['id']; ?>" class="fee-checkbox" onchange="updateBulkDeleteButton()"></td>
+                                    <td><input type="checkbox" value="<?php echo $fee['id']; ?>" class="fee-checkbox" onchange="updateBulkDeleteButton()"></td>
                                     <td><strong><?php echo htmlspecialchars($fee['title']); ?></strong></td>
                                     <td><?php echo htmlspecialchars($fee['fee_type'] ?? 'General'); ?></td>
                                     <td><?php echo htmlspecialchars($fee['class_name']); ?></td>
@@ -400,7 +396,6 @@ foreach ($fees as $f) {
                         </tbody>
                     </table>
                 </div>
-                </form>
             </div>
         </main>
     </div>
@@ -559,9 +554,41 @@ foreach ($fees as $f) {
         function confirmBulkDelete() {
             var checked = document.querySelectorAll('.fee-checkbox:checked');
             if (checked.length === 0) return;
-            if (confirm('Delete ' + checked.length + ' selected fee item(s)? This cannot be undone.')) {
-                document.getElementById('bulkDeleteForm').submit();
-            }
+            if (!confirm('Delete ' + checked.length + ' selected fee item(s)? This cannot be undone.')) return;
+
+            // Build a temporary form dynamically (avoids nested form issues)
+            var form = document.createElement('form');
+            form.method = 'POST';
+            form.action = 'fees.php';
+
+            var actionInput = document.createElement('input');
+            actionInput.type = 'hidden';
+            actionInput.name = 'action';
+            actionInput.value = 'bulk_delete_fees';
+            form.appendChild(actionInput);
+
+            var yearInput = document.createElement('input');
+            yearInput.type = 'hidden';
+            yearInput.name = 'year';
+            yearInput.value = '<?php echo htmlspecialchars($filter_year); ?>';
+            form.appendChild(yearInput);
+
+            var termInput = document.createElement('input');
+            termInput.type = 'hidden';
+            termInput.name = 'term';
+            termInput.value = '<?php echo htmlspecialchars($filter_term); ?>';
+            form.appendChild(termInput);
+
+            checked.forEach(function(cb) {
+                var input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'fee_ids[]';
+                input.value = cb.value;
+                form.appendChild(input);
+            });
+
+            document.body.appendChild(form);
+            form.submit();
         }
 
         // Group mapping for JS: groupKey => { label, classIds: [...] }

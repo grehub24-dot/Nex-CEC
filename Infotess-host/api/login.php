@@ -8,6 +8,9 @@ if (isLoggedIn()) {
         redirect('student/dashboard.php');
     } elseif ($role === 'parent') {
         redirect('parent/dashboard.php');
+    } elseif (isset($_SESSION['has_children']) && $_SESSION['has_children']) {
+        // Dual-role user — show route selector
+        redirect('route_selector.php');
     } else {
         // Admin, teacher, staff, bursar all go to admin dashboard
         redirect('admin/dashboard.php');
@@ -91,10 +94,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     redirect('parent/dashboard.php');
                 } elseif (in_array($user['role'], ['teacher', 'staff', 'bursar'])) {
                     $_SESSION['name'] = ucfirst($user['role']);
+
+                    // Check if this user also has children (dual-role: staff + parent)
+                    $stmt_hc = $pdo->prepare("SELECT id FROM parent_students WHERE parent_user_id = ? LIMIT 1");
+                    $stmt_hc->execute([$user['id']]);
+                    if ($stmt_hc->fetch()) {
+                        $_SESSION['has_children'] = true;
+                        redirect('route_selector.php');
+                    }
+
                     redirect('admin/dashboard.php');
                 } else {
-                    // Fallback for any other role
+                    // Fallback for admin, super_admin, or any other role
                     $_SESSION['name'] = "User";
+
+                    // Also check for children (e.g., admin who is also a parent)
+                    $stmt_hc = $pdo->prepare("SELECT id FROM parent_students WHERE parent_user_id = ? LIMIT 1");
+                    $stmt_hc->execute([$user['id']]);
+                    if ($stmt_hc->fetch()) {
+                        $_SESSION['has_children'] = true;
+                        redirect('route_selector.php');
+                    }
+
                     redirect('admin/dashboard.php');
                 }
             }

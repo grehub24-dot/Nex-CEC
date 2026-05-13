@@ -44,7 +44,9 @@
                 <li role="none"><a href="<?php echo $base_url; ?>about.php" role="menuitem">About</a></li>
                 <li role="none"><a href="<?php echo $base_url; ?>contact.php" role="menuitem">Contact</a></li>
                 <?php if (isset($_SESSION['user_id'])): ?>
-                    <?php if ($_SESSION['role'] === 'admin' || $_SESSION['role'] === 'super_admin'): ?>
+                    <?php if (isset($_SESSION['has_children']) && $_SESSION['has_children']): ?>
+                        <li role="none"><a href="<?php echo $base_url; ?>route_selector.php" class="btn-login" role="menuitem">Portals</a></li>
+                    <?php elseif ($_SESSION['role'] === 'admin' || $_SESSION['role'] === 'super_admin'): ?>
                         <li role="none"><a href="<?php echo $base_url; ?>admin/dashboard.php" class="btn-login" role="menuitem">Admin Panel</a></li>
                     <?php elseif ($_SESSION['role'] === 'parent'): ?>
                         <li role="none"><a href="<?php echo $base_url; ?>parent/dashboard.php" class="btn-login" role="menuitem">Parent Portal</a></li>

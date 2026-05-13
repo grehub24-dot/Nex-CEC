@@ -89,6 +89,24 @@ function isStaff() {
 }
 
 /**
+ * Check if user is a parent OR a staff/teacher with linked children (dual-role).
+ * Used by parent pages to grant access to dual-role users.
+ */
+function isParentOrDual() {
+    if (isset($_SESSION['role']) && $_SESSION['role'] === 'parent') {
+        return true;
+    }
+    return isset($_SESSION['has_children']) && $_SESSION['has_children'] === true;
+}
+
+/**
+ * Check if the current user has children linked (dual-role).
+ */
+function hasChildren() {
+    return isset($_SESSION['has_children']) && $_SESSION['has_children'] === true;
+}
+
+/**
  * RBAC: Define page-to-role permissions.
  * 'admin' = admin + super_admin only
  * 'bursar' = bursar only
@@ -239,6 +257,11 @@ function getSidebarMenu($currentPage = '') {
         $allItems[] = ['href' => 'settings.php', 'icon' => 'fas fa-tools', 'label' => 'System Settings', 'acl' => 'settings'];
     }
     
+    // Dual-role: add "Parent View" link for staff/teachers who also have children
+    if (isset($_SESSION['has_children']) && $_SESSION['has_children']) {
+        $allItems[] = ['href' => '../parent/dashboard.php', 'icon' => 'fas fa-user-friends', 'label' => 'Parent View', 'acl' => null];
+    }
+
     $allItems[] = ['href' => '../logout.php', 'icon' => 'fas fa-sign-out-alt', 'label' => 'Logout', 'acl' => null];
     
     // Filter by ACL: only show items the user can access (logout always shown)

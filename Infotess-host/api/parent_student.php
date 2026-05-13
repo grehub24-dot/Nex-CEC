@@ -1,7 +1,7 @@
 <?php
 require_once 'includes/db.php';
 
-if (!isLoggedIn() || !isParent()) {
+if (!isLoggedIn() || !isParentOrDual()) {
     redirect('../login.php');
 }
 
@@ -9,7 +9,7 @@ $parent_user_id = $_SESSION['user_id'];
 $student_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
 if (!$student_id) {
-    redirect('dashboard.php');
+    redirect('parent/dashboard.php');
 }
 
 // Verify this parent owns this student
@@ -17,10 +17,10 @@ try {
     $stmt = $pdo->prepare("SELECT student_id FROM parent_students WHERE parent_user_id = ? AND student_id = ?");
     $stmt->execute([$parent_user_id, $student_id]);
     if (!$stmt->fetch()) {
-        redirect('dashboard.php');
+        redirect('parent/dashboard.php');
     }
 } catch (Exception $e) {
-    redirect('dashboard.php');
+    redirect('parent/dashboard.php');
 }
 
 // Fetch Settings
@@ -40,7 +40,7 @@ $stmt->execute([$student_id]);
 $student = $stmt->fetch();
 
 if (!$student) {
-    redirect('dashboard.php');
+    redirect('parent/dashboard.php');
 }
 
 // Fetch payments
@@ -145,8 +145,15 @@ $initial = strtoupper(substr($student['full_name'] ?? '?', 0, 1));
 </head>
 <body>
     <div class="top-bar">
-        <a href="dashboard.php"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+        <div>
+            <a href="../parent/dashboard.php"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+        </div>
         <span>Parent Portal — <?php echo htmlspecialchars($school_name); ?></span>
+        <div>
+            <?php if (isset($_SESSION['has_children']) && $_SESSION['has_children']): ?>
+            <a href="../admin/dashboard.php" style="color: white; margin-left: 15px; font-size: 13px;"><i class="fas fa-chalkboard-teacher"></i> Staff Portal</a>
+            <?php endif; ?>
+        </div>
     </div>
 
     <div class="container">
@@ -311,13 +318,13 @@ $initial = strtoupper(substr($student['full_name'] ?? '?', 0, 1));
 
         <!-- Actions -->
         <div style="display: flex; gap: 15px; justify-content: center; margin-top: 10px;">
-            <a href="fees.php?id=<?php echo $student_id; ?>" class="btn-back" style="background: #27ae60;">
+            <a href="../parent/fees.php?id=<?php echo $student_id; ?>" class="btn-back" style="background: #27ae60;">
                 <i class="fas fa-money-bill"></i> View Full Fee Statement
             </a>
-            <a href="report_card.php?id=<?php echo $student_id; ?>" class="btn-back" style="background: #f39c12;">
+            <a href="../parent/report_card.php?id=<?php echo $student_id; ?>" class="btn-back" style="background: #f39c12;">
                 <i class="fas fa-clipboard"></i> View Report Card
             </a>
-            <a href="dashboard.php" class="btn-back">
+            <a href="../parent/dashboard.php" class="btn-back">
                 <i class="fas fa-arrow-left"></i> Back to Dashboard
             </a>
         </div>

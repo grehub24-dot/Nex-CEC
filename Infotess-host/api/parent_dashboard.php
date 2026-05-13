@@ -1,7 +1,7 @@
 <?php
 require_once 'includes/db.php';
 
-if (!isLoggedIn() || !isParent()) {
+if (!isLoggedIn() || !isParentOrDual()) {
     redirect('../login.php');
 }
 
@@ -177,8 +177,11 @@ foreach ($children as $c) {
             <p>Parent Portal</p>
         </div>
         <ul>
-            <li><a href="dashboard.php" class="active"><i class="fas fa-home"></i> My Children</a></li>
-            <li><a href="messages.php"><i class="fas fa-envelope"></i> Messages</a></li>
+            <?php if (isset($_SESSION['has_children']) && $_SESSION['has_children']): ?>
+            <li><a href="../admin/dashboard.php"><i class="fas fa-chalkboard-teacher"></i> Staff Dashboard</a></li>
+            <?php endif; ?>
+            <li><a href="../parent/dashboard.php" class="active"><i class="fas fa-home"></i> My Children</a></li>
+            <li><a href="../parent/messages.php"><i class="fas fa-envelope"></i> Messages</a></li>
             <li><a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
         </ul>
     </aside>
@@ -269,13 +272,13 @@ foreach ($children as $c) {
                             </div>
                         </div>
                         <div class="card-footer">
-                            <a href="student.php?id=<?php echo $child['id']; ?>" class="btn-view">
+                            <a href="../parent/student.php?id=<?php echo $child['id']; ?>" class="btn-view">
                                 <i class="fas fa-eye"></i> View Profile
                             </a>
-                            <a href="fees.php?id=<?php echo $child['id']; ?>" class="btn-fees">
+                            <a href="../parent/fees.php?id=<?php echo $child['id']; ?>" class="btn-fees">
                                 <i class="fas fa-money-bill"></i> Fees
                             </a>
-                            <a href="report_card.php?id=<?php echo $child['id']; ?>" class="btn-report">
+                            <a href="../parent/report_card.php?id=<?php echo $child['id']; ?>" class="btn-report">
                                 <i class="fas fa-clipboard"></i> Report
                             </a>
                         </div>

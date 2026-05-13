@@ -33,14 +33,44 @@ foreach ($terms as $t) {
 // Get student's class
 $class_name = $student['class_name'] ?? '';
 
-// Get subjects for this class (bridge can't handle subquery in WHERE)
-$stmt = $pdo->prepare("SELECT id FROM classes WHERE name = ?");
-$stmt->execute([$class_name]);
-$classId = $stmt->fetchColumn();
+// Get subjects for this class using category mapping (set via admin_subjects.php)
+$class_category_map = [
+    'Creche'  => 'creche',
+    'Nursery' => 'nursery',
+    'KG 1'    => 'kindergarten',
+    'KG 2'    => 'kindergarten',
+    'Basic 1' => 'primary', 'Basic 2' => 'primary', 'Basic 3' => 'primary',
+    'Basic 4' => 'primary', 'Basic 5' => 'primary', 'Basic 6' => 'primary',
+    'JHS 1'   => 'jhs',     'JHS 2'   => 'jhs',     'JHS 3'   => 'jhs',
+];
+$subject_category_mapping = [];
+try {
+    $stmt = $pdo->prepare("SELECT setting_value FROM system_settings WHERE setting_key = ?");
+    $stmt->execute(['subject_categories']);
+    $row = $stmt->fetch();
+    if ($row && !empty($row['setting_value'])) {
+        $decoded = json_decode($row['setting_value'], true);
+        if (is_array($decoded)) {
+            $subject_category_mapping = $decoded;
+        }
+    }
+} catch (Exception $e) {}
 $allSubj = $pdo->query("SELECT * FROM subjects ORDER BY name ASC")->fetchAll();
-$subjects = array_filter($allSubj, function($s) use ($classId) {
-    return empty($s['class_id']) || (int)$s['class_id'] === (int)$classId;
-});
+$category_key = $class_category_map[$class_name] ?? null;
+if ($category_key && isset($subject_category_mapping[$category_key]) && !empty($subject_category_mapping[$category_key])) {
+    $allowed_ids = array_map('intval', $subject_category_mapping[$category_key]);
+    $subjects = array_filter($allSubj, function($s) use ($allowed_ids) {
+        return in_array((int)$s['id'], $allowed_ids);
+    });
+} else {
+    // Fall back to class_id-based filtering (for backward compatibility)
+    $stmt = $pdo->prepare("SELECT id FROM classes WHERE name = ?");
+    $stmt->execute([$class_name]);
+    $classId = $stmt->fetchColumn();
+    $subjects = array_filter($allSubj, function($s) use ($classId) {
+        return empty($s['class_id']) || (int)$s['class_id'] === (int)$classId;
+    });
+}
 
 // Get SBA scores for this term
 $sba_scores = [];

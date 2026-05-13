@@ -36,14 +36,57 @@ $selected_class = $_GET['class_id'] ?? '';
 $selected_term = $_GET['term_id'] ?? '';
 $selected_subject = $_GET['subject_id'] ?? '';
 
-// Get all subjects (bridge drops OR conditions in WHERE)
+// Map class names to their educational category (matches admin_subjects.php categories)
+$class_category_map = [
+    'Creche'  => 'creche',
+    'Nursery' => 'nursery',
+    'KG 1'    => 'kindergarten',
+    'KG 2'    => 'kindergarten',
+    'Basic 1' => 'primary', 'Basic 2' => 'primary', 'Basic 3' => 'primary',
+    'Basic 4' => 'primary', 'Basic 5' => 'primary', 'Basic 6' => 'primary',
+    'JHS 1'   => 'jhs',     'JHS 2'   => 'jhs',     'JHS 3'   => 'jhs',
+];
+
+// Load subject-to-category mapping from system_settings (set via admin_subjects.php)
+$subject_category_mapping = [];
+try {
+    $stmt = $pdo->prepare("SELECT setting_value FROM system_settings WHERE setting_key = ?");
+    $stmt->execute(['subject_categories']);
+    $row = $stmt->fetch();
+    if ($row && !empty($row['setting_value'])) {
+        $decoded = json_decode($row['setting_value'], true);
+        if (is_array($decoded)) {
+            $subject_category_mapping = $decoded;
+        }
+    }
+} catch (Exception $e) {}
+
+// Get selected class name for category lookup
+$class_name = '';
+if ($selected_class) {
+    $stmt = $pdo->prepare("SELECT name FROM classes WHERE id = ?");
+    $stmt->execute([(int)$selected_class]);
+    $class_name = $stmt->fetchColumn() ?: '';
+}
+
+// Load subjects and filter by category when a class is selected
 $all_subjects = $pdo->query("SELECT * FROM subjects");
 $all_subjects = $all_subjects ? $all_subjects->fetchAll() : [];
 usort($all_subjects, function($a, $b) {
     return strcmp($a['name'] ?? '', $b['name'] ?? '');
 });
-if ($selected_class) {
-    $subjects = array_filter($all_subjects, fn($s) => empty($s['class_id']) || (int)$s['class_id'] === (int)$selected_class);
+if ($selected_class && $class_name) {
+    $category_key = $class_category_map[$class_name] ?? null;
+    if ($category_key && isset($subject_category_mapping[$category_key]) && !empty($subject_category_mapping[$category_key])) {
+        // Subjects are assigned per category in admin_subjects.php — use that mapping
+        $allowed_ids = array_map('intval', $subject_category_mapping[$category_key]);
+        $subjects = array_filter($all_subjects, function($s) use ($allowed_ids) {
+            return in_array((int)$s['id'], $allowed_ids);
+        });
+    } else {
+        // Fall back to class_id-based filtering (for backward compatibility)
+        $subjects = array_filter($all_subjects, fn($s) => empty($s['class_id']) || (int)$s['class_id'] === (int)$selected_class);
+    }
 } else {
     $subjects = $all_subjects;
 }
@@ -153,14 +196,6 @@ if (!empty($students)) {
     }
 }
 
-// Get class name for bulk form
-$class_name = '';
-if ($selected_class) {
-    $stmt = $pdo->prepare("SELECT * FROM classes WHERE id = ?");
-    $stmt->execute([$selected_class]);
-    $class_row = $stmt->fetch();
-    $class_name = $class_row ? ($class_row['name'] ?? '') : '';
-}
 ?>
 
 <!DOCTYPE html>

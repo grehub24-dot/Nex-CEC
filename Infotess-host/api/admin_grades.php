@@ -75,50 +75,41 @@ if ($selected_class) {
     $class_name = $classRow ? ($classRow['name'] ?? '') : '';
 }
 
-// Load subjects and filter by category when a class is selected
+// Load all subjects from the database
 $all_subjects = $pdo->query("SELECT * FROM subjects");
 $all_subjects = $all_subjects ? $all_subjects->fetchAll() : [];
 usort($all_subjects, function($a, $b) {
     return strcmp($a['name'] ?? '', $b['name'] ?? '');
 });
+
+// Filter subjects by category when a class is selected.
+// Uses the subject-to-category mapping set in admin_subjects.php (stored in system_settings).
+// If no mapping exists or filtering yields no results, ALL subjects are shown (never empty).
+$subjects = $all_subjects; // default: show all
 if ($selected_class && $class_name) {
     $category_key = $class_category_map[$class_name] ?? null;
     if ($category_key && isset($subject_category_mapping[$category_key]) && !empty($subject_category_mapping[$category_key])) {
-        // Subjects are assigned per category in admin_subjects.php — use that mapping
         $allowed_ids = array_map('intval', $subject_category_mapping[$category_key]);
-        $subjects = array_filter($all_subjects, function($s) use ($allowed_ids) {
+        $filtered = array_filter($all_subjects, function($s) use ($allowed_ids) {
             return in_array((int)$s['id'], $allowed_ids);
         });
-        // Safety: if category filtering returned no subjects, fall through to class_id filtering
-        if (empty($subjects)) {
-            $subjects = array_filter($all_subjects, fn($s) => empty($s['class_id']) || (int)$s['class_id'] === (int)$selected_class);
+        // Only use filtered list if it actually has results
+        if (!empty($filtered)) {
+            $subjects = $filtered;
         }
-    } else {
-        // Fall back to class_id-based filtering (for backward compatibility)
-        $subjects = array_filter($all_subjects, fn($s) => empty($s['class_id']) || (int)$s['class_id'] === (int)$selected_class);
     }
-} else {
-    $subjects = $all_subjects;
 }
 
 // Get students in selected class
 $students = [];
-if ($selected_class) {
-    // Two-step lookup: bridge can't handle subquery in WHERE
-    // NOTE: bridge ignores column list in SELECT; always use SELECT * and access by key.
-    $stmt = $pdo->prepare("SELECT * FROM classes WHERE id = ?");
-    $stmt->execute([(int)$selected_class]);
-    $classRow = $stmt->fetch();
-    $className = $classRow ? ($classRow['name'] ?? '') : '';
-    if ($className) {
-        // NOTE: bridge ignores column list and ORDER BY; sort in PHP after fetch.
-        $stmt = $pdo->prepare("SELECT * FROM students WHERE class_name = ?");
-        $stmt->execute([$className]);
-        $students = $stmt->fetchAll();
-        usort($students, function($a, $b) {
-            return strcmp($a['full_name'] ?? '', $b['full_name'] ?? '');
-        });
-    }
+if ($selected_class && $class_name) {
+    // NOTE: bridge ignores column list and ORDER BY; sort in PHP after fetch.
+    $stmt = $pdo->prepare("SELECT * FROM students WHERE class_name = ?");
+    $stmt->execute([$class_name]);
+    $students = $stmt->fetchAll();
+    usort($students, function($a, $b) {
+        return strcmp($a['full_name'] ?? '', $b['full_name'] ?? '');
+    });
 }
 
 // Handle Bulk Save SBA Scores

@@ -60,32 +60,19 @@ try {
     }
 } catch (Exception $e) {}
 $allSubj = $pdo->query("SELECT * FROM subjects ORDER BY name ASC")->fetchAll();
+// Default: show all subjects
+$subjects = $allSubj;
+// If we have a category mapping for this class level, filter to relevant subjects
 $category_key = $class_category_map[$class_name] ?? null;
 if ($category_key && isset($subject_category_mapping[$category_key]) && !empty($subject_category_mapping[$category_key])) {
     $allowed_ids = array_map('intval', $subject_category_mapping[$category_key]);
-    $subjects = array_filter($allSubj, function($s) use ($allowed_ids) {
+    $filtered = array_filter($allSubj, function($s) use ($allowed_ids) {
         return in_array((int)$s['id'], $allowed_ids);
     });
-    // Safety: if category filtering returned no subjects, fall through to class_id filtering
-    if (empty($subjects)) {
-        $stmt = $pdo->prepare("SELECT * FROM classes WHERE name = ?");
-        $stmt->execute([$class_name]);
-        $classRow = $stmt->fetch();
-        $classId = $classRow ? (int)$classRow['id'] : 0;
-        $subjects = array_filter($allSubj, function($s) use ($classId) {
-            return empty($s['class_id']) || (int)$s['class_id'] === $classId;
-        });
+    // Only use filtered list if it actually has results; otherwise fall back to all subjects
+    if (!empty($filtered)) {
+        $subjects = $filtered;
     }
-} else {
-    // Fall back to class_id-based filtering (for backward compatibility)
-    // NOTE: bridge ignores column list in SELECT; always use SELECT * and access by key.
-    $stmt = $pdo->prepare("SELECT * FROM classes WHERE name = ?");
-    $stmt->execute([$class_name]);
-    $classRow = $stmt->fetch();
-    $classId = $classRow ? (int)$classRow['id'] : 0;
-    $subjects = array_filter($allSubj, function($s) use ($classId) {
-        return empty($s['class_id']) || (int)$s['class_id'] === $classId;
-    });
 }
 
 // Get SBA scores for this term

@@ -369,6 +369,41 @@ function sanitize($input) {
     return htmlspecialchars(strip_tags(trim($input)), ENT_QUOTES, 'UTF-8');
 }
 
+/**
+ * Attempt to fix double-encoded UTF-8 text that was corrupted during storage.
+ * Common cause: UTF-8 bytes stored into a latin1 column, then re-encoded.
+ * This is a best-effort recovery for display purposes.
+ */
+function fix_utf8_encoding($text) {
+    if ($text === null || $text === '') {
+        return $text;
+    }
+
+    // If the text is already valid UTF-8 and doesn't have suspicious sequences, return as-is
+    if (mb_check_encoding($text, 'UTF-8') && !preg_match('/[\x80-\x9F]/', $text)) {
+        return $text;
+    }
+
+    // Try to detect and fix: if mb_detect_encoding says it's UTF-8 but has Windows-1252 range chars
+    if (preg_match('/[\x80-\x9F]/', $text)) {
+        // Convert from Windows-1252 to UTF-8
+        $converted = @mb_convert_encoding($text, 'UTF-8', 'Windows-1252');
+        if ($converted !== false) {
+            $text = $converted;
+        }
+    }
+
+    // If still not valid UTF-8, try ISO-8859-1 as source
+    if (!mb_check_encoding($text, 'UTF-8')) {
+        $converted = @mb_convert_encoding($text, 'UTF-8', 'ISO-8859-1');
+        if ($converted !== false) {
+            $text = $converted;
+        }
+    }
+
+    return $text;
+}
+
 function flash($name, $message = '', $class = 'success') {
     if (!empty($message)) {
         $_SESSION[$name] = $message;

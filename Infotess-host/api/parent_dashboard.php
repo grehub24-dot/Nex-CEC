@@ -121,10 +121,16 @@ try {
         .parent-sidebar ul li { border-bottom: 1px solid rgba(255,255,255,0.05); }
         .parent-sidebar ul li a {
             display: block; padding: 14px 20px; color: rgba(255,255,255,0.85); text-decoration: none;
-            font-size: 14px; transition: all 0.2s;
+            font-size: 14px; transition: all 0.2s; position: relative;
         }
         .parent-sidebar ul li a:hover, .parent-sidebar ul li a.active { background: rgba(255,255,255,0.1); color: white; padding-left: 25px; }
         .parent-sidebar ul li a i { width: 22px; text-align: center; margin-right: 8px; }
+        .parent-sidebar .msg-count {
+            position: absolute; right: 15px; top: 50%; transform: translateY(-50%);
+            background: #e74c3c; color: white; padding: 1px 8px;
+            border-radius: 10px; font-size: 11px; font-weight: 700; line-height: 1.5;
+            min-width: 20px; text-align: center;
+        }
         .top-bar {
             background: white; padding: 20px 30px; border-radius: 10px; margin-bottom: 25px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.06); display: flex; align-items: center; justify-content: space-between;
@@ -239,7 +245,7 @@ try {
                 <a href="../parent/messages.php">
                     <i class="fas fa-envelope"></i> Messages
                     <?php if ($unread_count > 0): ?>
-                        <span class="badge" style="float:right; background:#e74c3c; color:white; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700;"><?php echo $unread_count; ?></span>
+                        <span class="msg-count"><?php echo $unread_count; ?></span>
                     <?php endif; ?>
                 </a>
             </li>

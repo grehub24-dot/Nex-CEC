@@ -187,8 +187,8 @@ unset($m);
         <?php else: ?>
             <?php foreach ($messages as $msg):
                 $is_unread = empty($msg['is_read']);
-                $title = htmlspecialchars($msg['title'] ?? '(No subject)');
-                $content = htmlspecialchars($msg['content'] ?? '');
+                $title = htmlspecialchars(fix_utf8_encoding($msg['title'] ?? '(No subject)'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+                $content = htmlspecialchars(fix_utf8_encoding($msg['content'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
                 $date = date('j M Y, g:i a', strtotime($msg['created_at'] ?? 'now'));
                 $sender = htmlspecialchars($msg['sender_email'] ?? 'School');
                 $msg_id = (int)$msg['id'];

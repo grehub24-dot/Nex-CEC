@@ -63,6 +63,32 @@ $present_count = count(array_filter($attendance, fn($a) => ($a['status'] ?? '') 
 $absent_count = count(array_filter($attendance, fn($a) => ($a['status'] ?? '') === 'absent'));
 
 $initial = strtoupper(substr($student['full_name'] ?? '?', 0, 1));
+
+// Handle child profile picture upload
+$upload_message = '';
+$upload_error = '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_child_photo'])) {
+    if (isset($_FILES['child_photo']) && $_FILES['child_photo']['error'] === UPLOAD_ERR_OK) {
+        $upload_dir = __DIR__ . '/../images/profiles/';
+        if (!is_dir($upload_dir)) {
+            mkdir($upload_dir, 0777, true);
+        }
+        $ext = pathinfo($_FILES['child_photo']['name'], PATHINFO_EXTENSION);
+        $filename = 'student_' . $student_id . '_' . time() . '.' . $ext;
+        $target = $upload_dir . $filename;
+        if (move_uploaded_file($_FILES['child_photo']['tmp_name'], $target)) {
+            $path = 'images/profiles/' . $filename;
+            $stmt = $pdo->prepare("UPDATE students SET profile_picture = ? WHERE id = ?");
+            $stmt->execute([$path, $student_id]);
+            $student['profile_picture'] = $path;
+            $upload_message = "Profile picture updated successfully.";
+        } else {
+            $upload_error = "Failed to upload image.";
+        }
+    } else {
+        $upload_error = "No image selected or upload error.";
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -91,10 +117,22 @@ $initial = strtoupper(substr($student['full_name'] ?? '?', 0, 1));
         .page-header .avatar {
             width: 60px; height: 60px; border-radius: 50%; background: #1a5276;
             display: flex; align-items: center; justify-content: center;
-            color: white; font-size: 26px; font-weight: bold;
+            color: white; font-size: 26px; font-weight: bold; flex-shrink: 0;
+            overflow: hidden; position: relative;
         }
+        .page-header .avatar img {
+            width: 100%; height: 100%; object-fit: cover;
+        }
+        .page-header .avatar .overlay {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            background: rgba(0,0,0,0.5); color: white; font-size: 18px;
+            height: 0; display: flex; align-items: center; justify-content: center;
+            transition: height 0.2s; cursor: pointer;
+        }
+        .page-header .avatar:hover .overlay { height: 50%; }
         .page-header .student-info h2 { font-size: 22px; color: #1a5276; margin: 0; }
         .page-header .student-info p { font-size: 14px; color: #888; margin: 3px 0 0; }
+        .photo-upload-form { display: none; }
         .status-badge { padding: 5px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; }
         .status-active { background: #e6f7e6; color: #27ae60; }
         .status-pending { background: #fff3e0; color: #f39c12; }
@@ -158,10 +196,33 @@ $initial = strtoupper(substr($student['full_name'] ?? '?', 0, 1));
     </div>
 
     <div class="container">
+        <!-- Upload message -->
+        <?php if ($upload_message): ?>
+            <div class="alert alert-success" style="margin-bottom: 15px;"><?php echo htmlspecialchars($upload_message); ?></div>
+        <?php endif; ?>
+        <?php if ($upload_error): ?>
+            <div class="alert alert-danger" style="margin-bottom: 15px;"><?php echo htmlspecialchars($upload_error); ?></div>
+        <?php endif; ?>
+
+        <!-- Hidden upload form (submitted via JS) -->
+        <form method="POST" enctype="multipart/form-data" class="photo-upload-form" id="childPhotoForm">
+            <input type="hidden" name="upload_child_photo" value="1">
+            <input type="file" name="child_photo" id="childPhotoInput" accept="image/*">
+        </form>
+
         <!-- Page Header -->
         <div class="page-header">
             <div class="student-info">
-                <div class="avatar"><?php echo htmlspecialchars($initial); ?></div>
+                <div class="avatar" id="childAvatarContainer">
+                    <?php if (!empty($student['profile_picture'])): ?>
+                        <img src="../<?php echo htmlspecialchars($student['profile_picture']); ?>" alt="Profile" id="childAvatarImg">
+                    <?php else: ?>
+                        <span id="childAvatarInitial"><?php echo htmlspecialchars($initial); ?></span>
+                    <?php endif; ?>
+                    <div class="overlay" onclick="document.getElementById('childPhotoInput').click();">
+                        <i class="fas fa-camera"></i>
+                    </div>
+                </div>
                 <div>
                     <h2><?php echo htmlspecialchars($student['full_name'] ?? 'Unknown'); ?></h2>
                     <p>
@@ -330,5 +391,48 @@ $initial = strtoupper(substr($student['full_name'] ?? '?', 0, 1));
             </a>
         </div>
     </div>
+
+    <script>
+        // Auto-upload child profile picture when file is selected
+        var childPhotoInput = document.getElementById('childPhotoInput');
+        var childPhotoForm = document.getElementById('childPhotoForm');
+        var avatarContainer = document.getElementById('childAvatarContainer');
+        var avatarImg = document.getElementById('childAvatarImg');
+        var avatarInitial = document.getElementById('childAvatarInitial');
+
+        if (childPhotoInput && childPhotoForm) {
+            childPhotoInput.addEventListener('change', function() {
+                var file = this.files && this.files[0];
+                if (!file) return;
+                if (!file.type.startsWith('image/')) {
+                    alert('Please select an image file.');
+                    this.value = '';
+                    return;
+                }
+                // Show preview immediately
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    if (avatarImg) {
+                        avatarImg.src = e.target.result;
+                        avatarImg.style.display = 'block';
+                        if (avatarInitial) avatarInitial.style.display = 'none';
+                    } else {
+                        // Create img element if it doesn't exist
+                        var img = document.createElement('img');
+                        img.id = 'childAvatarImg';
+                        img.src = e.target.result;
+                        img.alt = 'Profile';
+                        if (avatarInitial) {
+                            avatarInitial.style.display = 'none';
+                            avatarInitial.parentNode.insertBefore(img, avatarInitial);
+                        }
+                    }
+                };
+                reader.readAsDataURL(file);
+                // Auto-submit the form
+                childPhotoForm.submit();
+            });
+        }
+    </script>
 </body>
 </html>

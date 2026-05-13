@@ -362,6 +362,10 @@ function redirect($url) {
 }
 
 function sanitize($input) {
+    // Handle null input to avoid deprecated trim(null) warning in PHP 8.1+
+    if ($input === null || $input === false) {
+        return '';
+    }
     return htmlspecialchars(strip_tags(trim($input)), ENT_QUOTES, 'UTF-8');
 }
 

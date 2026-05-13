@@ -52,11 +52,11 @@ foreach ($group_defs as $gKey => $gDef) {
 
 // Handle Add/Edit Fee
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
-    $fee_title = sanitize($_POST['fee_title']);
-    $fee_type = sanitize($_POST['fee_type']);
-    $amount = floatval($_POST['amount']);
-    $year = sanitize($_POST['academic_year']);
-    $term = sanitize($_POST['term']);
+    $fee_title = sanitize($_POST['fee_title'] ?? '');
+    $fee_type = sanitize($_POST['fee_type'] ?? '');
+    $amount = floatval($_POST['amount'] ?? 0);
+    $year = sanitize($_POST['academic_year'] ?? '');
+    $term = sanitize($_POST['term'] ?? '');
     $class_id = !empty($_POST['class_id']) ? (int)$_POST['class_id'] : null;
     $is_mandatory = isset($_POST['is_mandatory']) ? true : false;
 

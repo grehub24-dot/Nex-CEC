@@ -66,13 +66,25 @@ if ($category_key && isset($subject_category_mapping[$category_key]) && !empty($
     $subjects = array_filter($allSubj, function($s) use ($allowed_ids) {
         return in_array((int)$s['id'], $allowed_ids);
     });
+    // Safety: if category filtering returned no subjects, fall through to class_id filtering
+    if (empty($subjects)) {
+        $stmt = $pdo->prepare("SELECT * FROM classes WHERE name = ?");
+        $stmt->execute([$class_name]);
+        $classRow = $stmt->fetch();
+        $classId = $classRow ? (int)$classRow['id'] : 0;
+        $subjects = array_filter($allSubj, function($s) use ($classId) {
+            return empty($s['class_id']) || (int)$s['class_id'] === $classId;
+        });
+    }
 } else {
     // Fall back to class_id-based filtering (for backward compatibility)
-    $stmt = $pdo->prepare("SELECT id FROM classes WHERE name = ?");
+    // NOTE: bridge ignores column list in SELECT; always use SELECT * and access by key.
+    $stmt = $pdo->prepare("SELECT * FROM classes WHERE name = ?");
     $stmt->execute([$class_name]);
-    $classId = $stmt->fetchColumn();
+    $classRow = $stmt->fetch();
+    $classId = $classRow ? (int)$classRow['id'] : 0;
     $subjects = array_filter($allSubj, function($s) use ($classId) {
-        return empty($s['class_id']) || (int)$s['class_id'] === (int)$classId;
+        return empty($s['class_id']) || (int)$s['class_id'] === $classId;
     });
 }
 

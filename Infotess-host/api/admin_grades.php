@@ -66,11 +66,13 @@ try {
 } catch (Exception $e) {}
 
 // Get selected class name for category lookup
+// NOTE: bridge ignores column list in SELECT; always use SELECT * and access by key.
 $class_name = '';
 if ($selected_class) {
-    $stmt = $pdo->prepare("SELECT name FROM classes WHERE id = ?");
+    $stmt = $pdo->prepare("SELECT * FROM classes WHERE id = ?");
     $stmt->execute([(int)$selected_class]);
-    $class_name = $stmt->fetchColumn() ?: '';
+    $classRow = $stmt->fetch();
+    $class_name = $classRow ? ($classRow['name'] ?? '') : '';
 }
 
 // Load subjects and filter by category when a class is selected
@@ -87,6 +89,10 @@ if ($selected_class && $class_name) {
         $subjects = array_filter($all_subjects, function($s) use ($allowed_ids) {
             return in_array((int)$s['id'], $allowed_ids);
         });
+        // Safety: if category filtering returned no subjects, fall through to class_id filtering
+        if (empty($subjects)) {
+            $subjects = array_filter($all_subjects, fn($s) => empty($s['class_id']) || (int)$s['class_id'] === (int)$selected_class);
+        }
     } else {
         // Fall back to class_id-based filtering (for backward compatibility)
         $subjects = array_filter($all_subjects, fn($s) => empty($s['class_id']) || (int)$s['class_id'] === (int)$selected_class);

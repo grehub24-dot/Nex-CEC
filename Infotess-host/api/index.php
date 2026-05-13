@@ -70,8 +70,11 @@ foreach ($studentPages as $page) {
     $routes["student/$page.php"] = "student_$page.php";
 }
 
+// Direct AJAX / utility routes
+$routes['mark_message_read.php'] = 'mark_message_read.php';
+
 // Parent routes
-$parentPages = ['dashboard', 'student', 'fees', 'report_card', 'messages'];
+$parentPages = ['dashboard', 'student', 'fees', 'report_card', 'messages', 'profile', 'password-reset'];
 foreach ($parentPages as $page) {
     $routes["parent/$page.php"] = "parent_$page.php";
 }

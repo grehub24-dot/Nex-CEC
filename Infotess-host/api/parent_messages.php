@@ -62,18 +62,29 @@ try {
     error_log("Parent messages fetch error: " . $e->getMessage());
 }
 
-// Mark unread as read (bridge cannot handle NOW() or IS NULL in SET/WHERE)
+// Determine read status using message_reads table (per-user tracking)
+// Two-step: fetch all message_reads entries for this user
+$read_message_ids = [];
 try {
-    $now = date('Y-m-d H:i:s');
-    $stmt = $pdo->prepare("UPDATE messages SET read_at = ? WHERE receiver_id = ?");
-    $stmt->execute([$now, $parent_user_id]);
-} catch (Exception $e) {}
+    $stmt = $pdo->prepare("SELECT message_id FROM message_reads WHERE user_id = ?");
+    $stmt->execute([$parent_user_id]);
+    $read_rows = $stmt->fetchAll();
+    $read_message_ids = array_map(fn($r) => (int)$r['message_id'], $read_rows);
+} catch (Exception $e) {
+    error_log("message_reads fetch error: " . $e->getMessage());
+}
 
 // Count unread
 $unread_count = 0;
-foreach ($messages as $m) {
-    if (empty($m['read_at'])) $unread_count++;
+foreach ($messages as &$m) {
+    $mid = (int)$m['id'];
+    // A message is "read" if there's an entry in message_reads for this user
+    // Fallback: also check messages.read_at for backward compatibility (direct messages)
+    $is_read = in_array($mid, $read_message_ids) || !empty($m['read_at']);
+    $m['is_read'] = $is_read;
+    if (!$is_read) $unread_count++;
 }
+unset($m);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -150,9 +161,10 @@ foreach ($messages as $m) {
             <a href="../parent/dashboard.php"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
         </div>
         <span>Parent Portal — <?php echo htmlspecialchars($school_name); ?></span>
-        <div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <a href="../parent/profile.php" style="color: white; font-size: 13px;" title="My Profile"><i class="fas fa-user-cog"></i></a>
             <?php if (isset($_SESSION['has_children']) && $_SESSION['has_children']): ?>
-            <a href="../admin/dashboard.php" style="color: white; margin-left: 15px; font-size: 13px;"><i class="fas fa-chalkboard-teacher"></i> Staff Portal</a>
+            <a href="../admin/dashboard.php" style="color: white; font-size: 13px;"><i class="fas fa-chalkboard-teacher"></i> Staff Portal</a>
             <?php endif; ?>
         </div>
     </div>
@@ -174,14 +186,15 @@ foreach ($messages as $m) {
             </div>
         <?php else: ?>
             <?php foreach ($messages as $msg):
-                $is_unread = empty($msg['read_at']);
+                $is_unread = empty($msg['is_read']);
                 $title = htmlspecialchars($msg['title'] ?? '(No subject)');
                 $content = htmlspecialchars($msg['content'] ?? '');
                 $date = date('j M Y, g:i a', strtotime($msg['created_at'] ?? 'now'));
                 $sender = htmlspecialchars($msg['sender_email'] ?? 'School');
+                $msg_id = (int)$msg['id'];
             ?>
-                <div class="card <?php echo $is_unread ? 'unread' : ''; ?>">
-                    <div class="msg-header" onclick="toggleMsg(this)">
+                <div class="card <?php echo $is_unread ? 'unread' : ''; ?>" data-msg-id="<?php echo $msg_id; ?>">
+                    <div class="msg-header" onclick="toggleMsg(this, <?php echo $msg_id; ?>)">
                         <div class="msg-title">
                             <?php if ($is_unread): ?>
                                 <span class="unread-dot"></span>
@@ -204,10 +217,35 @@ foreach ($messages as $m) {
     </div>
 
     <script>
-        function toggleMsg(header) {
+        function toggleMsg(header, msgId) {
             var body = header.nextElementSibling;
+            var card = header.closest('.card');
             if (body) {
                 body.classList.toggle('open');
+
+                // If message was unread and is now being opened, mark as read
+                if (card && card.classList.contains('unread')) {
+                    card.classList.remove('unread');
+                    var dot = header.querySelector('.unread-dot');
+                    if (dot) dot.style.display = 'none';
+
+                    // Update unread count in header
+                    var badge = document.querySelector('.page-header .badge');
+                    if (badge) {
+                        var count = parseInt(badge.textContent);
+                        if (count > 1) {
+                            badge.textContent = (count - 1) + ' unread';
+                        } else {
+                            badge.remove();
+                        }
+                    }
+
+                    // AJAX: mark message as read on the server
+                    var xhr = new XMLHttpRequest();
+                    xhr.open('POST', '../mark_message_read.php', true);
+                    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                    xhr.send('message_id=' + msgId);
+                }
             }
         }
     </script>

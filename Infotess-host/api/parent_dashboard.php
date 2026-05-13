@@ -47,6 +47,56 @@ foreach ($children as $c) {
     if (($c['status'] ?? '') === 'active') $active_count++;
     elseif (($c['status'] ?? '') === 'pending') $pending_count++;
 }
+
+// Fetch unread message count for sidebar badge
+// Two-step for bridge compatibility
+$unread_count = 0;
+try {
+    // Step 1: Get all direct messages to this user
+    $stmt = $pdo->prepare("SELECT id FROM messages WHERE receiver_id = ?");
+    $stmt->execute([$parent_user_id]);
+    $direct_ids = array_map(fn($r) => (int)$r['id'], $stmt->fetchAll());
+
+    // Step 2: Get all broadcast messages
+    $stmt = $pdo->prepare("SELECT id FROM messages WHERE is_broadcast = ?");
+    $stmt->execute([1]);
+    $broadcast_ids = array_map(fn($r) => (int)$r['id'], $stmt->fetchAll());
+
+    // Step 3: Get all message IDs this user has read
+    $all_msg_ids = array_unique(array_merge($direct_ids, $broadcast_ids));
+    $stmt = $pdo->prepare("SELECT message_id FROM message_reads WHERE user_id = ?");
+    $stmt->execute([$parent_user_id]);
+    $read_ids = array_map(fn($r) => (int)$r['message_id'], $stmt->fetchAll());
+
+    // Unread = in direct/broadcast but NOT in message_reads
+    // Also check messages.read_at for backward compatibility with direct messages
+    foreach (array_chunk($all_msg_ids, 50) as $chunk) {
+        if (empty($chunk)) continue;
+        $placeholders = implode(',', array_fill(0, count($chunk), '?'));
+        $stmt = $pdo->prepare("SELECT id FROM messages WHERE id IN ($placeholders) AND read_at IS NULL");
+        $stmt->execute($chunk);
+        $unread_direct = array_map(fn($r) => (int)$r['id'], $stmt->fetchAll());
+        foreach ($unread_direct as $uid) {
+            if (!in_array($uid, $read_ids)) $unread_count++;
+        }
+    }
+} catch (Exception $e) {
+    error_log("Unread count error: " . $e->getMessage());
+}
+
+// Fetch parent profile picture
+$parent_profile_pic = null;
+try {
+    // First check users table for profile_picture
+    $stmt = $pdo->prepare("SELECT profile_picture FROM users WHERE id = ?");
+    $stmt->execute([$parent_user_id]);
+    $row = $stmt->fetch();
+    if ($row && !empty($row['profile_picture'])) {
+        $parent_profile_pic = $row['profile_picture'];
+    }
+} catch (Exception $e) {
+    // Column may not exist yet
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -172,7 +222,11 @@ foreach ($children as $c) {
     <!-- Sidebar -->
     <aside class="parent-sidebar" id="sidebar">
         <div class="sidebar-header">
-            <img src="../images/school-logo.png" alt="Logo" onerror="this.src='../images/aamusted.jpg'">
+            <?php if ($parent_profile_pic): ?>
+                <img src="../<?php echo htmlspecialchars($parent_profile_pic); ?>" alt="Profile" style="width:64px; height:64px; border-radius:50%; background:white; padding:3px; margin-bottom:10px; object-fit:cover;">
+            <?php else: ?>
+                <img src="../images/school-logo.png" alt="Logo" onerror="this.src='../images/aamusted.jpg'">
+            <?php endif; ?>
             <h3><?php echo htmlspecialchars($school_name); ?></h3>
             <p>Parent Portal</p>
         </div>
@@ -181,7 +235,16 @@ foreach ($children as $c) {
             <li><a href="../admin/dashboard.php"><i class="fas fa-chalkboard-teacher"></i> Staff Dashboard</a></li>
             <?php endif; ?>
             <li><a href="../parent/dashboard.php" class="active"><i class="fas fa-home"></i> My Children</a></li>
-            <li><a href="../parent/messages.php"><i class="fas fa-envelope"></i> Messages</a></li>
+            <li>
+                <a href="../parent/messages.php">
+                    <i class="fas fa-envelope"></i> Messages
+                    <?php if ($unread_count > 0): ?>
+                        <span class="badge" style="float:right; background:#e74c3c; color:white; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700;"><?php echo $unread_count; ?></span>
+                    <?php endif; ?>
+                </a>
+            </li>
+            <li><a href="../parent/profile.php"><i class="fas fa-user-cog"></i> My Profile</a></li>
+            <li><a href="../parent/password-reset.php"><i class="fas fa-key"></i> Change Password</a></li>
             <li><a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
         </ul>
     </aside>

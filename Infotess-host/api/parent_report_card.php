@@ -133,9 +133,10 @@ try {
             <a href="../parent/dashboard.php"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
         </div>
         <span>Report Cards — <?php echo htmlspecialchars($student['full_name'] ?? ''); ?></span>
-        <div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <a href="../parent/profile.php" style="color: white; font-size: 13px;" title="My Profile"><i class="fas fa-user-cog"></i></a>
             <?php if (isset($_SESSION['has_children']) && $_SESSION['has_children']): ?>
-            <a href="../admin/dashboard.php" style="color: white; margin-left: 15px; font-size: 13px;"><i class="fas fa-chalkboard-teacher"></i> Staff Portal</a>
+            <a href="../admin/dashboard.php" style="color: white; font-size: 13px;"><i class="fas fa-chalkboard-teacher"></i> Staff Portal</a>
             <?php endif; ?>
         </div>
     </div>

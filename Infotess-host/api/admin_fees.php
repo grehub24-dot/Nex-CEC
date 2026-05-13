@@ -178,15 +178,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         } catch (Exception $e) {
             $error = "Error: " . $e->getMessage();
         }
+    } elseif ($_POST['action'] === 'bulk_delete_fees') {
+        $ids = $_POST['fee_ids'] ?? [];
+        if (!empty($ids) && is_array($ids)) {
+            try {
+                $pdo->beginTransaction();
+                $deleted = 0;
+                foreach ($ids as $fid) {
+                    $stmt = $pdo->prepare("DELETE FROM fee_structures WHERE id = ?");
+                    $stmt->execute([$fid]);
+                    $deleted++;
+                }
+                $pdo->commit();
+                    $message = "$deleted fee item(s) deleted successfully.";
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                $error = "Error during bulk delete: " . $e->getMessage();
+            }
+        } else {
+            $error = "No fee items selected for deletion.";
+        }
     }
 }
 
 // Fetch Fee Types from settings
 $fee_types_list = explode(',', $settings['fee_types'] ?? 'Tuition,PTA Levy,Sports & Culture,ICT,Examination,Development,Feeding,Transport,Uniform,Books & Materials');
 
-// Fetch All Fees
-$filter_year = $_GET['year'] ?? $current_year;
-$filter_term = $_GET['term'] ?? $current_term;
+// Fetch All Fees — read from GET or fall back to POST (for bulk delete) or default
+$filter_year = $_GET['year'] ?? $_POST['year'] ?? $current_year;
+$filter_term = $_GET['term'] ?? $_POST['term'] ?? $current_term;
 $filter_class = isset($_GET['class_id']) && $_GET['class_id'] !== '' ? $_GET['class_id'] : null;
 
 // Fetch All Fees (bridge drops complex WHERE — filter in PHP)
@@ -320,10 +340,24 @@ foreach ($fees as $f) {
             <!-- Fees Table -->
             <div class="section">
                 <h3>Fee Items — <?php echo htmlspecialchars($filter_year); ?> Term <?php echo htmlspecialchars($filter_term); ?></h3>
+                <div style="margin-bottom: 10px; display: flex; align-items: center; gap: 10px;">
+                    <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 13px;">
+                        <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this.checked)">
+                        Select All
+                    </label>
+                    <button id="bulkDeleteBtn" class="btn-admin-sm" style="background: #e74c3c; border: none; display: none;" onclick="confirmBulkDelete()">
+                        <i class="fas fa-trash"></i> Delete Selected (<span id="selectedCount">0</span>)
+                    </button>
+                </div>
+                <form id="bulkDeleteForm" action="fees.php" method="POST">
+                    <input type="hidden" name="action" value="bulk_delete_fees">
+                    <input type="hidden" name="year" value="<?php echo htmlspecialchars($filter_year); ?>">
+                    <input type="hidden" name="term" value="<?php echo htmlspecialchars($filter_term); ?>">
                 <div class="table-responsive">
                     <table class="table">
                         <thead>
                             <tr>
+                                <th style="width: 40px;"></th>
                                 <th>Fee Title</th>
                                 <th>Type</th>
                                 <th>Class</th>
@@ -334,10 +368,11 @@ foreach ($fees as $f) {
                         </thead>
                         <tbody>
                             <?php if (empty($fees)): ?>
-                                <tr><td colspan="6" style="text-align:center; color: #666;">No fees configured for this filter.</td></tr>
+                                <tr><td colspan="7" style="text-align:center; color: #666;">No fees configured for this filter.</td></tr>
                             <?php else: ?>
                                 <?php foreach ($fees as $fee): ?>
                                 <tr>
+                                    <td><input type="checkbox" name="fee_ids[]" value="<?php echo $fee['id']; ?>" class="fee-checkbox" onchange="updateBulkDeleteButton()"></td>
                                     <td><strong><?php echo htmlspecialchars($fee['title']); ?></strong></td>
                                     <td><?php echo htmlspecialchars($fee['fee_type'] ?? 'General'); ?></td>
                                     <td><?php echo htmlspecialchars($fee['class_name']); ?></td>
@@ -365,6 +400,7 @@ foreach ($fees as $f) {
                         </tbody>
                     </table>
                 </div>
+                </form>
             </div>
         </main>
     </div>
@@ -505,6 +541,29 @@ foreach ($fees as $f) {
     </div>
 
     <script>
+        // ====== Bulk Delete Helpers ======
+        function toggleSelectAll(checked) {
+            document.querySelectorAll('.fee-checkbox').forEach(function(cb) { cb.checked = checked; });
+            updateBulkDeleteButton();
+        }
+
+        function updateBulkDeleteButton() {
+            var checked = document.querySelectorAll('.fee-checkbox:checked');
+            var count = checked.length;
+            var btn = document.getElementById('bulkDeleteBtn');
+            var span = document.getElementById('selectedCount');
+            span.textContent = count;
+            btn.style.display = count > 0 ? 'inline-block' : 'none';
+        }
+
+        function confirmBulkDelete() {
+            var checked = document.querySelectorAll('.fee-checkbox:checked');
+            if (checked.length === 0) return;
+            if (confirm('Delete ' + checked.length + ' selected fee item(s)? This cannot be undone.')) {
+                document.getElementById('bulkDeleteForm').submit();
+            }
+        }
+
         // Group mapping for JS: groupKey => { label, classIds: [...] }
         var LEVEL_GROUPS = <?php echo json_encode(array_map(function($g) {
             return [

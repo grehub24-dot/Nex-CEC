@@ -230,8 +230,17 @@ $all_students = $pdo->query("SELECT id, full_name, admission_number FROM student
                         $s = $pdo->prepare("SELECT full_name, admission_number FROM students WHERE user_id = ?");
                         $s->execute([$msg['sender_id']]);
                         $stu = $s->fetch();
-                        $msg['sender_name'] = $stu ? $stu['full_name'] : 'Unknown';
-                        $msg['admission_number'] = $stu ? $stu['admission_number'] : '-';
+                        if ($stu) {
+                            $msg['sender_name'] = $stu['full_name'];
+                            $msg['admission_number'] = $stu['admission_number'];
+                        } else {
+                            // Fallback: look up sender's email from users table
+                            $u = $pdo->prepare("SELECT email FROM users WHERE id = ?");
+                            $u->execute([$msg['sender_id']]);
+                            $user = $u->fetch();
+                            $msg['sender_name'] = $user ? $user['email'] : 'Unknown';
+                            $msg['admission_number'] = '-';
+                        }
                     }
                     
                     if (empty($student_msgs)):

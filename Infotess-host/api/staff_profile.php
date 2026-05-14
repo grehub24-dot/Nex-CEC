@@ -112,7 +112,7 @@ foreach ($all_msg_ids as $mid) {
             <li><a href="../staff/payslip.php"><i class="fas fa-file-invoice-dollar"></i> Pay Slips</a></li>
             <li><a href="../staff/profile.php" class="active"><i class="fas fa-user-cog"></i> Profile</a></li>
             <li>
-                <a href="../admin/inbox.php">
+                <a href="../admin/messaging.php">
                     <i class="fas fa-envelope"></i> Messages
                     <?php if ($unread_count > 0): ?>
                         <span class="msg-count"><?php echo $unread_count; ?></span>

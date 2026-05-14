@@ -211,7 +211,7 @@ if (!empty($students)) {
             <li><a href="../staff/attendance.php"><i class="fas fa-calendar-check"></i> My Attendance</a></li>
             <li><a href="../staff/payslip.php"><i class="fas fa-file-invoice-dollar"></i> Pay Slips</a></li>
             <li><a href="../staff/profile.php"><i class="fas fa-user-cog"></i> Profile</a></li>
-            <li><a href="../admin/inbox.php"><i class="fas fa-envelope"></i> Messages</a></li>
+            <li><a href="../admin/messaging.php"><i class="fas fa-envelope"></i> Messages</a></li>
             <li><a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
         </ul>
     </aside>

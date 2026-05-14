@@ -176,12 +176,10 @@ try {
                                 </p>
                             </div>
                             <div class="actions">
-                                <?php if (!empty($rc['pdf_path'])): ?>
-                                    <a href="<?php echo htmlspecialchars($rc['pdf_path']); ?>" class="btn btn-download" target="_blank">
-                                        <i class="fas fa-download"></i> PDF
-                                    </a>
-                                <?php endif; ?>
-                                <a href="javascript:void(0)" onclick="alert('Detailed report view coming soon.')" class="btn btn-view">
+                                <a href="report_card_pdf.php?student_id=<?php echo $student_id; ?>&term_id=<?php echo $rc['term_id']; ?>" class="btn btn-download" target="_blank">
+                                    <i class="fas fa-download"></i> PDF
+                                </a>
+                                <a href="report_card_pdf.php?student_id=<?php echo $student_id; ?>&term_id=<?php echo $rc['term_id']; ?>" class="btn btn-view">
                                     <i class="fas fa-eye"></i> View
                                 </a>
                             </div>

@@ -14,33 +14,7 @@ $school_name = $settings['school_name'] ?? 'Nex CEC';
 $current_year = $settings['current_academic_year'] ?? date('Y') . '/' . (date('Y') + 1);
 $current_term = $settings['current_term'] ?? '1';
 
-// Deduplicate fee_structures: keep only the earliest entry for each unique combination
-// (title, academic_year, term, class_id) — prevents duplicates regardless of how they were created
-$deduped = 0;
-try {
-    $allFeeRows = $pdo->query("SELECT * FROM fee_structures")->fetchAll();
-    $seen = [];
-    $toDelete = [];
-    foreach ($allFeeRows as $fr) {
-        $key = ($fr['title'] ?? '') . '|' . ($fr['academic_year'] ?? '') . '|' . ($fr['term'] ?? '') . '|' . ($fr['class_id'] ?? 'NULL');
-        if (isset($seen[$key])) {
-            $toDelete[] = $fr['id'];
-        } else {
-            $seen[$key] = true;
-        }
-    }
-    foreach ($toDelete as $did) {
-        $pdo->prepare("DELETE FROM fee_structures WHERE id = ?")->execute([$did]);
-        $deduped++;
-    }
-} catch (Exception $e) {
-    // Dedup is best-effort
-}
-
-$message = '';
-$error = '';
-
-// === Build $classes and $level_groups BEFORE POST handler (they are needed by add/edit) ===
+// === Build $classes, $level_groups, and $classIdToName BEFORE POST handler ===
 $classes = [];
 try {
     $stmt = $pdo->query("SELECT * FROM classes");
@@ -51,6 +25,10 @@ try {
     });
 } catch (Exception $e) {
     $classes = [];
+}
+$classIdToName = [];
+foreach ($classes as $c) {
+    $classIdToName[(int)$c['id']] = $c['name'];
 }
 $group_defs = [
     'creche'        => ['label' => 'Creche',        'names' => ['Creche']],
@@ -72,6 +50,35 @@ foreach ($group_defs as $gKey => $gDef) {
     }
 }
 // === END early definitions ===
+
+// Deduplicate fee_structures using class NAME as the canonical key.
+// This is resilient to class_id changes (e.g. Nursery 2 goes from id=3 to id=287 after re-insertion).
+$deduped = 0;
+try {
+    $allFeeRows = $pdo->query("SELECT * FROM fee_structures")->fetchAll();
+    $seen = [];
+    $toDelete = [];
+    foreach ($allFeeRows as $fr) {
+        $className = ($fr['class_id'] !== null && isset($classIdToName[(int)$fr['class_id']]))
+            ? $classIdToName[(int)$fr['class_id']]
+            : 'NULL';
+        $key = ($fr['title'] ?? '') . '|' . ($fr['academic_year'] ?? '') . '|' . ($fr['term'] ?? '') . '|' . $className;
+        if (isset($seen[$key])) {
+            $toDelete[] = $fr['id'];
+        } else {
+            $seen[$key] = true;
+        }
+    }
+    foreach ($toDelete as $did) {
+        $pdo->prepare("DELETE FROM fee_structures WHERE id = ?")->execute([$did]);
+        $deduped++;
+    }
+} catch (Exception $e) {
+    // Dedup is best-effort
+}
+
+$message = '';
+$error = '';
 
 // Handle Add/Edit Fee
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
@@ -118,10 +125,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         // Duplicate detection:
                         // - An existing "All Classes" fee (class_id IS NULL) matches ANY class
                         // - A new "All Classes" fee (tcid is null) matches any existing "All Classes" fee
-                        // - Same specific class_id always matches
+                        // - Same class: compare by resolved class NAME (resilient to class_id changes),
+                        //   fall back to direct ID comparison if name lookup fails
                         $fClassNull = empty($f['class_id']);
                         $newIsNull = empty($tcid);
-                        $sameClass = (!$fClassNull && !$newIsNull && (int)$f['class_id'] === (int)$tcid);
+                        $sameClass = false;
+                        if (!$fClassNull && !$newIsNull) {
+                            $storedName = $classIdToName[(int)$f['class_id']] ?? null;
+                            $newName = $classIdToName[(int)$tcid] ?? null;
+                            if ($storedName !== null && $newName !== null) {
+                                $sameClass = ($storedName === $newName);
+                            } else {
+                                $sameClass = ((int)$f['class_id'] === (int)$tcid);
+                            }
+                        }
                         if ($fClassNull || $sameClass) {
                             $is_dup = true; break;
                         }

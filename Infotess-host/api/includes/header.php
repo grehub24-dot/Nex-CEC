@@ -7,6 +7,23 @@
     <!-- CSS -->
     <?php $base_url = getBasePath(); ?>
     <link rel="stylesheet" href="<?php echo $base_url; ?>css/style.css">
+    <!-- PWA -->
+    <link rel="manifest" href="<?php echo $base_url; ?>manifest.json">
+    <meta name="theme-color" content="#003366">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="<?php echo $base_url; ?>images/school-logo.png">
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('<?php echo $base_url; ?>sw.js').then(function(reg) {
+                    console.log('SW registered: ' + reg.scope);
+                }).catch(function(err) {
+                    console.log('SW registration failed: ' + err);
+                });
+            });
+        }
+    </script>
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -50,6 +67,8 @@
                         <li role="none"><a href="<?php echo $base_url; ?>admin/dashboard.php" class="btn-login" role="menuitem">Admin Panel</a></li>
                     <?php elseif ($_SESSION['role'] === 'parent'): ?>
                         <li role="none"><a href="<?php echo $base_url; ?>parent/dashboard.php" class="btn-login" role="menuitem">Parent Portal</a></li>
+                    <?php elseif ($_SESSION['role'] === 'staff' || $_SESSION['role'] === 'teacher'): ?>
+                        <li role="none"><a href="<?php echo $base_url; ?>staff/dashboard.php" class="btn-login" role="menuitem">Staff Portal</a></li>
                     <?php else: ?>
                         <li role="none"><a href="<?php echo $base_url; ?>student/dashboard.php" class="btn-login" role="menuitem">Dashboard</a></li>
                     <?php endif; ?>

@@ -2123,3 +2123,26 @@ input[type="radio"] {
         display: none !important;
     }
 }
+
+/* ==========================================
+    38. PWA STANDALONE MODE
+    ========================================== */
+@media all and (display-mode: standalone) {
+    /* Hide install prompts (if any) */
+    .install-pwa-banner {
+        display: none !important;
+    }
+    /* Add safe area padding for notch phones */
+    body {
+        padding-top: env(safe-area-inset-top, 0px);
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    /* Adjust top bar for standalone (no browser chrome) */
+    .top-bar {
+        padding-top: calc(15px + env(safe-area-inset-top, 0px));
+    }
+    /* Main content offset for standalone */
+    .main-content {
+        padding-top: calc(20px + env(safe-area-inset-top, 0px));
+    }
+}

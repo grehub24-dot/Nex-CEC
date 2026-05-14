@@ -1,0 +1,26 @@
+{
+  "name": "Nex CEC School Management System",
+  "short_name": "Nex CEC",
+  "description": "Complete school management system for Nex CEC Basic School — from Creche through JHS.",
+  "start_url": "/login.php",
+  "display": "standalone",
+  "background_color": "#f4f4f4",
+  "theme_color": "#003366",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/images/school-logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/images/school-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["education", "productivity"],
+  "lang": "en-US"
+}

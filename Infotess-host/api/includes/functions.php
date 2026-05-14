@@ -487,3 +487,21 @@ function migrateNurseryClasses($pdo): void {
         error_log("migrateNurseryClasses: " . $e->getMessage());
     }
 }
+
+/**
+ * Fetch system settings as a key-value array.
+ * Call at the top of any page: $settings = fetchSettings($pdo);
+ * Replaces the 10-line $settings = []; try { ... } catch pattern.
+ */
+function fetchSettings($pdo): array {
+    $settings = [];
+    try {
+        $stmt = $pdo->query("SELECT setting_key, setting_value FROM system_settings");
+        while ($row = $stmt->fetch()) {
+            $settings[$row['setting_key']] = $row['setting_value'];
+        }
+    } catch (Exception $e) {
+        error_log("fetchSettings: " . $e->getMessage());
+    }
+    return $settings;
+}

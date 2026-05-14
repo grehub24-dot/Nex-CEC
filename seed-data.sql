@@ -345,7 +345,7 @@ BEGIN
 END $$;
 
 -- ==========================================
--- 12. STUDENTS (39 students ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â 3 per class)
+-- 12. STUDENTS (39 students – 3 per class)
 -- ==========================================
 DO $$
 DECLARE
@@ -555,7 +555,7 @@ BEGIN
 END $$;
 
 -- ==========================================
--- 13. PAYMENTS (26 records ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â one per paid student)
+-- 13. PAYMENTS (26 records – one per paid student)
 -- ==========================================
 DO $$
 DECLARE
@@ -778,8 +778,8 @@ BEGIN
     IF admin_uid IS NULL THEN RETURN; END IF;
 
     INSERT INTO messages (sender_id, title, content, is_broadcast, created_at)
-    SELECT admin_uid, 'Welcome Back ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Term 1 2025/2026', 'Dear Parents and Guardians, we welcome you to the new academic year. Classes resume on September 8th, 2025. Please ensure all fees are paid before the end of the first week.', true, '2025-09-05'
-    WHERE NOT EXISTS (SELECT 1 FROM messages WHERE title = 'Welcome Back ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Term 1 2025/2026');
+    SELECT admin_uid, 'Welcome Back – Term 1 2025/2026', 'Dear Parents and Guardians, we welcome you to the new academic year. Classes resume on September 8th, 2025. Please ensure all fees are paid before the end of the first week.', true, '2025-09-05'
+    WHERE NOT EXISTS (SELECT 1 FROM messages WHERE title = 'Welcome Back – Term 1 2025/2026');
 
     INSERT INTO messages (sender_id, title, content, is_broadcast, created_at)
     SELECT admin_uid, 'PTA Meeting Notice', 'Dear Parents, the first PTA meeting for 2025/2026 will be held on September 20th, 2025 at the school assembly hall. Attendance is mandatory.', true, '2025-09-15'

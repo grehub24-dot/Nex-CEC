@@ -141,7 +141,7 @@ usort($direct_messages, function($a, $b) {
 
         <main class="main-content">
             <div class="top-bar">
-                <h2>Message Center</h2>
+                <h2>Messages</h2>
                 <button onclick="document.getElementById('sendModal').style.display='block'" class="btn-primary"><i class="fas fa-paper-plane"></i> Contact Admin</button>
             </div>
 

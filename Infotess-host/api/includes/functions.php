@@ -248,7 +248,7 @@ function getSidebarMenu($currentPage = '') {
         $allItems[] = ['href' => 'users.php', 'icon' => 'fas fa-users-cog', 'label' => 'User Management', 'acl' => 'users'];
     }
     
-    $allItems[] = ['href' => 'messaging.php', 'icon' => 'fas fa-envelope', 'label' => 'Messaging', 'acl' => 'messaging'];
+    $allItems[] = ['href' => 'messaging.php', 'icon' => 'fas fa-envelope', 'label' => 'Communications', 'acl' => 'messaging'];
     $allItems[] = ['href' => 'inbox.php', 'icon' => 'fas fa-inbox', 'label' => 'Inbox', 'acl' => 'inbox'];
     
     if ($isFullAdmin) {

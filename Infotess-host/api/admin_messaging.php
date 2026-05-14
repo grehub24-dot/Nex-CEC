@@ -51,14 +51,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
 
-                $message = "Broadcast sent. SMS delivered to $sentCount member(s)";
+                $message = "Announcement sent. SMS delivered to $sentCount parent(s)/guardian(s)";
                 if ($failedCount > 0) {
                     $message .= " ($failedCount failed).";
                 } else {
                     $message .= ".";
                 }
             } else {
-                $message = "Broadcast message sent successfully!";
+                $message = "Announcement sent successfully!";
             }
         } catch (Exception $e) {
             $error = "Error: " . $e->getMessage();
@@ -109,7 +109,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt = $pdo->prepare("INSERT INTO messages (sender_id, title, content, is_broadcast) VALUES (?, ?, ?, ?)");
                     $stmt->execute([$_SESSION['user_id'], "Bulk SMS", $sms_content, 1]);
 
-                    $message = "SMS sent successfully to $count member(s)";
+                    $message = "SMS sent successfully to $count parent(s)/guardian(s)";
                     if ($failedCount > 0) {
                         $message .= " ($failedCount failed).";
                     } else {
@@ -151,7 +151,7 @@ $all_students = $pdo->query("SELECT id, full_name, admission_number FROM student
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Messaging - Admin</title>
+    <title>Communications - Admin</title>
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -191,9 +191,9 @@ $all_students = $pdo->query("SELECT id, full_name, admission_number FROM student
 
         <main class="main-content">
             <div class="top-bar">
-                <h2>Message Platform</h2>
+                <h2>School Communications</h2>
                 <div style="display:flex; gap:10px;">
-                    <button onclick="document.getElementById('msgModal').style.display='block'" class="btn-admin-action"><i class="fas fa-paper-plane"></i> New Broadcast</button>
+                    <button onclick="document.getElementById('msgModal').style.display='block'" class="btn-admin-action"><i class="fas fa-paper-plane"></i> New Announcement</button>
                     <button onclick="document.getElementById('smsModal').style.display='block'" class="btn-admin-action btn-admin-success"><i class="fas fa-sms"></i> Send SMS</button>
                 </div>
             </div>
@@ -287,7 +287,7 @@ $all_students = $pdo->query("SELECT id, full_name, admission_number FROM student
                     // Enrich with recipient names (two-step lookup for Supabase compatibility)
                     foreach ($all_msgs as &$msg) {
                         if ($msg['is_broadcast']) {
-                            $msg['recipient_name'] = 'All Students (Broadcast)';
+                            $msg['recipient_name'] = 'All Parents/Guardians';
                         } else {
                             $s = $pdo->prepare("SELECT full_name FROM students WHERE user_id = ?");
                             $s->execute([$msg['receiver_id']]);
@@ -317,10 +317,10 @@ $all_students = $pdo->query("SELECT id, full_name, admission_number FROM student
                                         <td><?php echo date('M d, Y H:i', strtotime($msg['created_at'])); ?></td>
                                         <td>
                                             <span class="badge" style="background: <?php echo $msg['is_broadcast'] ? '#003366' : '#28a745'; ?>; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;">
-                                                <?php echo $msg['is_broadcast'] ? 'Bulk / Broadcast' : 'Individual'; ?>
+                                                    <?php echo $msg['is_broadcast'] ? 'School Broadcast' : 'Direct Message'; ?>
                                             </span>
                                         </td>
-                                        <td><?php echo $msg['is_broadcast'] ? '<em>All Students</em>' : htmlspecialchars($msg['recipient_name'] ?? 'Unknown'); ?></td>
+                                        <td><?php echo $msg['is_broadcast'] ? '<em>All Parents/Guardians</em>' : htmlspecialchars($msg['recipient_name'] ?? 'Unknown'); ?></td>
                                         <td><strong><?php echo htmlspecialchars($msg['title']); ?></strong></td>
                                         <td><?php echo htmlspecialchars($msg['content']); ?></td>
                                         <td>
@@ -344,7 +344,7 @@ $all_students = $pdo->query("SELECT id, full_name, admission_number FROM student
     <div id="msgModal" class="modal">
         <div class="modal-content">
             <span class="close-btn" onclick="document.getElementById('msgModal').style.display='none'">&times;</span>
-            <h3>Send Broadcast Message</h3>
+            <h3>Send Announcement to All Parents</h3>
             <form method="POST" action="" style="margin-top: 20px;">
                 <input type="hidden" name="action" value="broadcast">
                 <div class="form-group">
@@ -358,7 +358,7 @@ $all_students = $pdo->query("SELECT id, full_name, admission_number FROM student
                 <div class="form-group">
                     <label><input type="checkbox" name="send_sms"> Also Send SMS (Caution: Costs apply)</label>
                 </div>
-                <button type="submit" class="btn-primary" style="width: 100%; padding: 12px;">Send to All Students</button>
+                <button type="submit" class="btn-primary" style="width: 100%; padding: 12px;">Send to All Parents/Guardians</button>
             </form>
         </div>
     </div>
@@ -368,14 +368,14 @@ $all_students = $pdo->query("SELECT id, full_name, admission_number FROM student
         <div class="modal-content">
             <span class="close-btn" onclick="document.getElementById('smsModal').style.display='none'">&times;</span>
             <h3>Send SMS</h3>
-            <p style="font-size: 0.9rem; color: #666; margin-bottom: 15px;">Send a direct SMS message to students.</p>
+                            <p style="font-size: 0.9rem; color: #666; margin-bottom: 15px;">Send a direct SMS message to parents/guardians.</p>
             <form method="POST" action="" style="margin-top: 10px;">
                 <input type="hidden" name="action" value="send_sms_only">
                 
                 <div class="form-group">
                     <label>Recipient Type</label>
                     <select name="recipient_type" id="recipientType" class="form-control" onchange="toggleStudentSelect()">
-                        <option value="all">All Registered Students</option>
+                        <option value="all">All Parents/Guardians</option>
                         <option value="individual">Individual Student</option>
                     </select>
                 </div>

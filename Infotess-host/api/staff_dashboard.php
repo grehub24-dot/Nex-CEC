@@ -171,7 +171,7 @@ foreach (array_chunk($all_msg_ids, 50) as $chunk) {
             <li><a href="../staff/payslip.php"><i class="fas fa-file-invoice-dollar"></i> Pay Slips</a></li>
             <li><a href="../staff/profile.php"><i class="fas fa-user-cog"></i> Profile</a></li>
             <li>
-                <a href="../admin/messaging.php">
+                <a href="../staff/messaging.php">
                     <i class="fas fa-envelope"></i> Messages
                     <?php if ($unread_count > 0): ?>
                         <span class="msg-count"><?php echo $unread_count; ?></span>

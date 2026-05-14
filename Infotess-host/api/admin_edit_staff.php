@@ -161,7 +161,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         </div>
 
                         <div class="section-divider">
-                            <h4><i class="fas fa-university"></i> Bank Details</h4>
+                            <h4><i class="fas fa-piggy-bank"></i> Bank Details</h4>
                         </div>
 
                         <div>

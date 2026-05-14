@@ -16,17 +16,17 @@ try {
     // Insert default settings if they don't exist
     $defaults = [
         'current_academic_year' => '2025/2026',
-        'current_semester' => '1',
+        'current_term' => '1',
         'annual_dues_amount' => '100.00',
         'payment_modes' => 'Cash,Mobile Money,Bank Transfer',
-        'department_name' => 'Information Technology Education',
-        'institution_name' => 'USTED'
+        'school_section' => 'Primary',
+        'institution_name' => 'Nex CEC Basic School'
     ];
 
     // Bridge doesn't support ON CONFLICT — check existence before insert
     $checkStmt = $pdo->prepare("SELECT setting_key FROM system_settings WHERE setting_key = ?");
     $stmt = $pdo->prepare("INSERT INTO system_settings (setting_key, setting_value) VALUES (?, ?)");
-    foreach ($defaultSettings as $key => $value) {
+    foreach ($defaults as $key => $value) {
         $checkStmt->execute([$key]);
         if (!$checkStmt->fetch()) {
             $stmt->execute([$key, $value]);

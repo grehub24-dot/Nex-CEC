@@ -8,7 +8,7 @@ $resources = $stmt->fetchAll();
 
 <div class="hero" style="height: 50vh;">
     <h1>Student Resources</h1>
-    <p>Access verified AAMUSTED portals, academic tools, and downloadable materials.</p>
+    <p>Access useful resources, learning materials, and school information for students and parents.</p>
 </div>
 
 <div class="section">

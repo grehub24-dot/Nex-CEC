@@ -348,7 +348,7 @@ $total_pages = $total_rows > 0 ? (int)ceil($total_rows / $limit) : 1;
 
                     <!-- Bank/Cash -->
                     <div style="flex: 1; min-width: 200px; border: 1px solid #ddd; padding: 15px; border-radius: 8px;">
-                        <h4><i class="fas fa-university"></i> Bank / Cash</h4>
+                        <h4><i class="fas fa-piggy-bank"></i> Bank / Cash</h4>
                         <button onclick="showVoucher()" class="btn-primary" style="width:100%;">Print Payment Voucher</button>
                     </div>
                 </div>

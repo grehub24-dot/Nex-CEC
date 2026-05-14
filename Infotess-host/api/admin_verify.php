@@ -80,7 +80,7 @@ if ($receipt_number) {
                             <p><strong>Class:</strong> <?php echo htmlspecialchars($payment['class_name'] ?? '-'); ?></p>
                             <p><strong>Amount:</strong> GHS <?php echo number_format($payment['amount'], 2); ?></p>
                             <p><strong>Date:</strong> <?php echo $payment['payment_date']; ?></p>
-                            <p><strong>Purpose:</strong> <?php echo htmlspecialchars($payment['semester'] . ' ' . $payment['academic_year']); ?></p>
+                            <p><strong>Purpose:</strong> Term <?php echo htmlspecialchars($payment['semester'] . ' — ' . $payment['academic_year']); ?></p>
                         </div>
                     </div>
 
@@ -101,7 +101,7 @@ if ($receipt_number) {
                                         <td><?php echo $record['payment_date']; ?></td>
                                         <td><?php echo $record['receipt_number']; ?></td>
                                         <td>GHS <?php echo number_format($record['amount'], 2); ?></td>
-                                        <td><?php echo $record['semester'] . ' ' . $record['academic_year']; ?></td>
+                                        <td>Term <?php echo $record['semester'] . ' — ' . $record['academic_year']; ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>

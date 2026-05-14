@@ -92,7 +92,7 @@ foreach ($fees as $f) {
             </div>
             <div class="card">
                 <div class="card-content">
-                    <h3><i class="fas fa-university" style="color: var(--primary-color);"></i> Bank Transfer</h3>
+                    <h3><i class="fas fa-building" style="color: var(--primary-color);"></i> Bank Transfer</h3>
                     <p>Transfer to the school's bank account. Contact the finance office for account details. Use the student's Index Number as reference.</p>
                 </div>
             </div>

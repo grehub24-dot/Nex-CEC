@@ -7,7 +7,7 @@ $activities = $stmt->fetchAll();
 ?>
 
 <div class="container" style="padding: 40px 0;">
-    <h1>INFOTESS Activities</h1>
+    <h1>School Activities</h1>
     <?php if (!empty($activities)): ?>
         <div class="card-grid">
             <?php foreach ($activities as $activity): ?>
@@ -27,10 +27,10 @@ $activities = $stmt->fetchAll();
     <?php else: ?>
         <div class="card-grid">
             <div class="card">
-                <img src="images/aamusted.jpg" alt="USTED Update Placeholder">
+                <img src="images/aamusted.jpg" alt="School Activity Placeholder">
                 <div class="card-content">
-                    <h3>USTED Transition Update</h3>
-                    <p>INFOTESS activities gallery and highlights are being refreshed with USTED-branded updates.</p>
+                    <h3>School Activities</h3>
+                    <p>School activities gallery and highlights are being updated. Check back soon for the latest events and programmes.</p>
                 </div>
             </div>
             <div class="card">
@@ -44,7 +44,7 @@ $activities = $stmt->fetchAll();
                 <img src="images/aamusted-logo.svg" alt="Community Placeholder">
                 <div class="card-content">
                     <h3>Community Activities</h3>
-                    <p>Community of Practice, Assembly meetings, and special INFOTESS events will be published here.</p>
+                    <p>School assemblies, community events, and special programmes will be published here.</p>
                 </div>
             </div>
         </div>

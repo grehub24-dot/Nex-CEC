@@ -47,7 +47,7 @@ $events = $stmt->fetchAll();
         <?php endif; ?>
         
         <div style="text-align: center; margin-top: 40px;">
-            <a href="https://aamusted.edu.gh/" target="_blank" class="btn-primary">View Official AAMUSTED Site</a>
+            <p style="color: #888;">Stay tuned for upcoming school events and activities.</p>
         </div>
     </div>
 </div>

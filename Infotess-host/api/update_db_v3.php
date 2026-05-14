@@ -50,7 +50,7 @@ try {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
 
-    // 6. Create News table (for scraping results)
+    // 6. Create News table (for updates)
     $pdo->exec("CREATE TABLE IF NOT EXISTS news (
         id INT AUTO_INCREMENT PRIMARY KEY,
         title VARCHAR(255) NOT NULL,
@@ -101,21 +101,22 @@ try {
     }
 
     $eventRows = [
-        ['2026 Matriculation Ceremony', 'Matriculation ceremony for fresh Postgraduate and Undergraduate students admitted for the 2025/2026 Academic Year.', '2026-02-20 10:00:00', 'AAMUSTED, Kumasi & Mampong Campuses', 'https://aamusted.edu.gh/aamusted-organises-2025-2026-orientation-for-fresh-students/'],
-        ['Matriculation Ceremony 2025 – Sandwich Session', 'Official matriculation for fresh students admitted to the Sandwich Session for the 2025 academic year.', '2025-12-15 09:00:00', 'Main Auditorium', 'https://aamusted.edu.gh/'],
-        ['Medical Examinations for Fresh Students', 'Commencement of mandatory medical examinations for all newly admitted students for the academic year.', '2025-12-01 08:00:00', 'University Clinic', 'https://mampong.aamusted.edu.gh/2022/01/12/student-medical-examination-2022/'],
-        ['First Congregation', 'Graduation ceremony for graduands of the university.', '2023-05-17 09:00:00', 'Ceremonial Grounds', 'https://aamusted.edu.gh/'],
-        ['Graduate Seminar Series', 'A virtual seminar series organized for graduate students and researchers.', '2023-03-21 10:00:00', 'Virtual (Zoom)', 'https://aamusted.edu.gh/']
+        ['School Reopening – First Term', 'School reopens for the first term of the academic year. All students are expected to report in full uniform.', date('Y-m-d', strtotime('first monday of september')) . ' 07:30:00', 'School Campus'],
+        ['Open Day / Parent-Teacher Conference', 'Parents and guardians are invited to meet with teachers to discuss student progress and performance.', date('Y-m-d', strtotime('last friday of november')) . ' 09:00:00', 'School Hall'],
+        ['Christmas Break', 'School closes for the Christmas holiday. Students resume next term.', date('Y-12-20') . ' 12:00:00', 'School Campus'],
+        ['Second Term Begins', 'School reopens for the second term.', date('Y-01-10') . ' 07:30:00', 'School Campus'],
+        ['BECE Preparation Clinic', 'Intensive revision classes for JHS 3 students preparing for the BECE.', date('Y-04-01') . ' 08:00:00', 'JHS Block'],
+        ['End of Year Speech & Prize-Giving Day', 'Annual speech day and prize-giving ceremony to celebrate student achievements.', date('Y-07-15') . ' 09:00:00', 'School Auditorium']
     ];
     $insertEvent = $pdo->prepare("INSERT INTO events (title, description, event_date, location, source_url) SELECT ?, ?, ?, ?, ? FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM events WHERE title = ?)");
     foreach ($eventRows as $r) {
-        $insertEvent->execute([$r[0], $r[1], $r[2], $r[3], $r[4], $r[0]]);
+        $insertEvent->execute([$r[0], $r[1], $r[2], $r[3], '', $r[0]]);
     }
 
     $galleryRows = [
-        ['USTED Change of Name', 'images/aamusted.jpg', 'University Update'],
-        ['INFOTESS Spotlight', 'images/infotess.png', 'Society Activities'],
-        ['Campus Moments', 'images/aamusted-logo.svg', 'Events & Community']
+        ['School Campus', '', 'School Life'],
+        ['Classroom Activities', '', 'Academics'],
+        ['Sports & Culture', '', 'Events & Community']
     ];
     $insertGallery = $pdo->prepare("INSERT INTO gallery (title, image_url, category) SELECT ?, ?, ? FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM gallery WHERE title = ?)");
     foreach ($galleryRows as $r) {
@@ -123,8 +124,8 @@ try {
     }
 
     $newsRows = [
-        ['AAMUSTED Honours Former Staff', 'AAMUSTED has recognised former staff for their years of dedicated service and contribution to the university community.', 'https://aamusted.edu.gh/', 'images/aamusted.jpg', '2026-03-05 10:00:00'],
-        ['AAMUSTED Student Entrepreneurship Team Excels', 'Student innovators continue to represent AAMUSTED strongly in national innovation and entrepreneurship events.', 'https://aamusted.edu.gh/aamusted-student-entrepreneurship-team-qualifies-for-semis-of-mcdan-youth-challenge/', 'images/aamusted.jpg', '2026-02-04 10:00:00']
+        ['School Honours Best Performing Students', 'The school has recognised outstanding students for their academic excellence and good conduct this term.', '', '', date('Y-m-d H:i:s')],
+        ['Inter-House Sports Competition Held', 'Students participated actively in the annual inter-house sports competition showcasing talent and teamwork.', '', '', date('Y-m-d H:i:s')]
     ];
     $insertNews = $pdo->prepare("INSERT INTO news (title, content, source_url, image_url, published_at) SELECT ?, ?, ?, ?, ? FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM news WHERE source_url = ?)");
     foreach ($newsRows as $r) {
@@ -132,9 +133,9 @@ try {
     }
 
     $projectRows = [
-        ['INFOTESS P.A System Donation Project', 'INFOTESS donated 15 P.A systems to IT and educational lecturers as part of a community impact initiative.', 'images/infotess.png', '2025-11-15', 'completed'],
-        ['Student Tech Mentorship Series', 'Peer-led mentorship sessions helping students build practical software and data skills.', 'images/aamusted.jpg', '2026-01-20', 'ongoing'],
-        ['Campus Smart Noticeboard Prototype', 'A prototype digital noticeboard project for centralized campus announcements.', 'images/aamusted-logo.svg', '2026-04-10', 'planned']
+        ['School Garden Project', 'Students learn about agriculture and environmental stewardship through the school garden initiative.', '', date('Y-m-d'), 'ongoing'],
+        ['Reading Challenge Programme', 'A school-wide reading initiative to improve literacy and cultivate a love for reading.', '', date('Y-m-d'), 'ongoing'],
+        ['STEM Club Launch', 'A new after-school club introducing students to science, technology, engineering, and mathematics.', '', date('Y-m-d'), 'planned']
     ];
     $insertProject = $pdo->prepare("INSERT INTO projects (title, description, image_url, project_date, status) SELECT ?, ?, ?, ?, ? FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM projects WHERE title = ?)");
     foreach ($projectRows as $r) {
@@ -142,9 +143,8 @@ try {
     }
 
     $alumniRows = [
-        ['Kwame Ahin Adu Ezekiel', '2024', 'Alumni President', 'AAMUSTED Alumni Association', 'images/aamusted.jpg', 'Proud to support student innovation and leadership at INFOTESS.'],
-        ['Koomson Thomas', '2025', 'Alumni President', 'Technology Education Community', 'images/infotess.png', 'Stay connected, keep building, and always mentor the next cohort.'],
-        ['Ama Serwaa Boateng', '2023', 'Alumni Member', 'EdTech Practitioner', 'images/aamusted-logo.svg', 'INFOTESS helped shape my practical skills and confidence in tech.']
+        ['Former Student – Class of 2024', '2024', 'Alumni Representative', 'Nex CEC Alumni Association', '', 'Proud to have started my educational journey at this great school.'],
+        ['Former Student – Class of 2023', '2023', 'Alumni Member', 'Community Leader', '', 'The school laid a strong foundation for my secondary education.']
     ];
     $insertAlumni = $pdo->prepare("INSERT INTO alumni (full_name, graduation_year, position, company, image_url, testimonial) SELECT ?, ?, ?, ?, ?, ? FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM alumni WHERE full_name = ?)");
     foreach ($alumniRows as $r) {
@@ -152,15 +152,10 @@ try {
     }
 
     $resourceRows = [
-        ['AAMUSTED Library Portal', 'Access the university library services, research databases, and digital collections.', 'https://aamusted.edu.gh/library/', 'Portal'],
-        ['AAMUSTED Library E-Resources', 'Browse academic e-resources and research platforms curated for students.', 'https://aamusted.edu.gh/library/e-resources/', 'E-Resources'],
-        ['AAMUSTED LMS', 'Open the Learning Management System for lecture content, assignments, and course activities.', 'https://lms.aamusted.edu.gh/', 'LMS'],
-        ['Student LMS Quick Guide', 'Follow the official quick guide for navigating and using AAMUSTED LMS as a student.', 'https://itdirectorate.aamusted.edu.gh/index.php/a-quick-guide-for-student-lms/', 'Guide'],
-        ['Provisional Fees Schedule (2025/2026)', 'Download and review the approved fee schedules for the 2025/2026 academic year.', 'https://aamusted.edu.gh/fees-schedule-for-2025-2026-academic-year/', 'Fees'],
-        ['Academic Calendar', 'Track semester timelines, reopening dates, and key academic milestones.', 'https://aamusted.edu.gh/category/academic_calendar/', 'Calendar'],
-        ['Admissions & Applications', 'Check application updates, admission requirements, and programme entry details.', 'https://aamusted.edu.gh/apply/', 'Admissions'],
-        ['AAMUSTED Mail Access', 'Open official mail access information and related student communication tools.', 'https://aamusted.edu.gh/aamusted-mail/', 'Communication'],
-        ['OSIS Password Reset Guide', 'Use the official AAMUSTED-Mampong guide for student OSIS password reset steps.', 'https://mampong.aamusted.edu.gh/guide-to-resetting-changing-your-osis-password/', 'OSIS']
+        ['School Calendar', 'View the academic calendar with term dates, holidays, and key events.', '', 'Calendar'],
+        ['Uniform Guidelines', 'Download the school uniform policy and dress code requirements.', '', 'Guidelines'],
+        ['Fee Schedule', 'Review the approved fee structure for the current academic year.', '', 'Fees'],
+        ['PTA Information', 'Information about the Parent-Teacher Association and how to get involved.', '', 'Community']
     ];
     $insertResource = $pdo->prepare("INSERT INTO student_resources (title, description, file_url, resource_type) SELECT ?, ?, ?, ? FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM student_resources WHERE title = ?)");
     foreach ($resourceRows as $r) {
@@ -168,9 +163,9 @@ try {
     }
 
     $notificationRows = [
-        ['Welcome to INFOTESS Portal', 'Welcome to the INFOTESS student portal. Check your dashboard regularly for updates and announcements.'],
+        ['Welcome to Nex CEC Portal', 'Welcome to the Nex CEC school portal. Check your dashboard regularly for updates and announcements.'],
         ['Password Security Reminder', 'Use your temporary password to login and reset it immediately to keep your account secure.'],
-        ['Dues Payment Reminder', 'Please review your dues status and complete pending payments before the deadline.']
+        ['Fee Payment Reminder', 'Please review your fee status and complete pending payments before the deadline.']
     ];
     $studentUsers = $pdo->query("SELECT id FROM users WHERE role = 'student'")->fetchAll();
     $insertNotification = $pdo->prepare("INSERT INTO notifications (user_id, title, message, is_read) SELECT ?, ?, ?, 0 FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM notifications WHERE user_id = ? AND title = ?)");

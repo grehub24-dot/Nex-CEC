@@ -9,7 +9,7 @@ $projects = $stmt->fetchAll();
 
 <div class="hero" style="height: 50vh;">
     <h1>Projects & Innovations</h1>
-    <p>Showcase of student projects and department innovations.</p>
+    <p>Showcase of student projects and school innovations.</p>
 </div>
 
 <div class="section">

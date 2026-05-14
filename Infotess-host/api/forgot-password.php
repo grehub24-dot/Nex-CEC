@@ -106,7 +106,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <p style='margin-top: 20px;'><strong>Note:</strong> You will be required to change this temporary password immediately after logging in.</p>
                         </div>
                         <div class='footer'>
-                            <p><strong>USTED - Infotess</strong></p>
+                            <p><strong>Nex CEC Basic School</strong></p>
                             <p>This is an automated email. Please do not reply.</p>
                         </div>
                     </div>

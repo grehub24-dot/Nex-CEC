@@ -8,7 +8,7 @@ $news_items = $stmt->fetchAll();
 
 <div class="hero" style="height: 40vh; background: linear-gradient(rgba(0,51,102,0.8), rgba(0,51,102,0.8)), url('images/aamusted.jpg') center/cover;">
     <h1>News & Updates</h1>
-    <p>Stay informed with the latest news from USTED</p>
+    <p>Stay informed with the latest school news and updates</p>
 </div>
 
 <div class="section">

@@ -308,7 +308,7 @@ $total_pages = $total_rows > 0 ? (int)ceil($total_rows / $limit) : 1;
                         </div>
 
                         <div class="section-divider">
-                            <h4><i class="fas fa-university"></i> Bank Details (for Payroll)</h4>
+                            <h4><i class="fas fa-piggy-bank"></i> Bank Details (for Payroll)</h4>
                         </div>
 
                         <div>

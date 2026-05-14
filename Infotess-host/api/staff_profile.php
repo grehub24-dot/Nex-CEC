@@ -168,7 +168,7 @@ foreach ($all_msg_ids as $mid) {
         <!-- Bank Information -->
         <?php if (!empty($staff['bank_name']) || !empty($staff['account_number'])): ?>
         <div class="profile-section">
-            <h3><i class="fas fa-university"></i> Bank Information</h3>
+            <h3><i class="fas fa-piggy-bank"></i> Bank Information</h3>
             <div class="info-grid">
                 <div class="item"><span class="label">Bank Name</span><span class="value"><?php echo htmlspecialchars($staff['bank_name'] ?? 'N/A'); ?></span></div>
                 <div class="item"><span class="label">Account Number</span><span class="value"><?php echo htmlspecialchars($staff['account_number'] ?? 'N/A'); ?></span></div>

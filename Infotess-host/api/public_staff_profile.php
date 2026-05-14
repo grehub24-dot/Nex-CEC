@@ -2,92 +2,18 @@
 require_once 'includes/db.php';
 require_once 'includes/header.php';
 
-// Staff Data (Same as in department.php)
-$staff_members = [
-    'Prof. Yarhands Dissou Arthur' => [
-        'role' => 'Dean, FASME', 
-        'image' => 'images/PROF-YARHANDS.png',
-        'bio' => 'Prof. Yarhands Dissou Arthur is the Dean of the Faculty of Applied Sciences and Mathematics Education. He is a distinguished scholar with extensive experience in educational leadership and research.',
-        'email' => 'ydarthur@usted.edu.gh',
-        'research' => ['Educational Leadership', 'Applied Sciences', 'Curriculum Development']
-    ],
-    'Dr. George Asante' => [
-        'role' => 'H.O.D, Department of IT Education', 
-        'image' => 'images/George-Asante.png',
-        'bio' => 'Dr. George Asante serves as the Head of the Department of Information Technology Education. He is committed to advancing IT education and fostering a culture of innovation among students.',
-        'email' => 'gasante@usted.edu.gh',
-        'research' => ['Information Technology Education', 'E-Learning', 'Educational Technology']
-    ],
-    'Prof. Francis Ohene Boateng' => [
-        'role' => 'Associate Professor', 
-        'image' => 'images/PROF-FO-BOATENG.png',
-        'bio' => 'Prof. Francis Ohene Boateng is an Associate Professor with a focus on computing and technology integration in education.',
-        'email' => 'foboateng@usted.edu.gh',
-        'research' => ['Computing', 'Artificial Intelligence', 'Data Science']
-    ],
-    'Prof. Ebenezer Bonyah' => [
-        'role' => 'Professor', 
-        'image' => 'images/PROF_BONYAH-.png',
-        'bio' => 'Prof. Ebenezer Bonyah is a Professor known for his contributions to mathematics and its applications in technology.',
-        'email' => 'ebonyah@usted.edu.gh',
-        'research' => ['Mathematical Modeling', 'Applied Mathematics', 'Statistics']
-    ],
-    'Dr. Adasa Nkrumah Kofi Frimpong' => [
-        'role' => 'Ag. Head, Academic & Admin Computing', 
-        'image' => 'images/Dr.-Adasa-Nkrumah-K.-F.jpg',
-        'bio' => 'Dr. Adasa Nkrumah Kofi Frimpong heads the Academic and Administrative Computing unit, ensuring robust digital infrastructure for the university.',
-        'email' => 'ankfrimpong@usted.edu.gh',
-        'research' => ['Cloud Computing', 'Network Security', 'IT Infrastructure']
-    ],
-    'Rev. Dr. Benjamin Adu Obeng' => [
-        'role' => 'Lecturer', 
-        'image' => 'images/Rev.-Dr.-Adu-Obeng.png',
-        'bio' => 'Rev. Dr. Benjamin Adu Obeng combines his pastoral and academic roles to mentor students in both character and learning.',
-        'email' => 'baobeng@usted.edu.gh',
-        'research' => ['Ethics in IT', 'Software Engineering', 'Database Management']
-    ],
-    'Dr. Joseph Frank Gordon' => [
-        'role' => 'Lecturer', 
-        'image' => 'images/Dr.-Joseph-Gordon.png',
-        'bio' => 'Dr. Joseph Frank Gordon is a dedicated lecturer with a passion for teaching and research in computer science.',
-        'email' => 'jfgordon@usted.edu.gh',
-        'research' => ['Computer Science Education', 'Programming', 'Algorithms']
-    ],
-    'Dr. Emmanuel Akweittey' => [
-        'role' => 'Senior Lecturer', 
-        'image' => 'images/AKWEITTEY-.jpg',
-        'bio' => 'Dr. Emmanuel Akweittey is a Senior Lecturer with expertise in advanced computing concepts and methodologies.',
-        'email' => 'eakweittey@usted.edu.gh',
-        'research' => ['Advanced Computing', 'Machine Learning', 'Cybersecurity']
-    ],
-    'Dr. Ernest Larbi' => [
-        'role' => 'Lecturer', 
-        'image' => 'images/Mr.-Ernest-Larbi.png',
-        'bio' => 'Dr. Ernest Larbi is a lecturer focused on practical IT skills and student development.',
-        'email' => 'elarbi@usted.edu.gh',
-        'research' => ['Web Technologies', 'Mobile Application Development', 'HCI']
-    ],
-    'Mr. Franco Osei-Wusu' => [
-        'role' => 'Assistant Lecturer', 
-        'image' => 'images/franco.png',
-        'bio' => 'Mr. Franco Osei-Wusu is an Assistant Lecturer supporting the department in various academic and technical capacities.',
-        'email' => 'foseiwusu@usted.edu.gh',
-        'research' => ['Network Administration', 'System Analysis', 'Tech Support']
-    ],
-    'Mr. Kennedy Gyimah' => [
-        'role' => 'Lecturer', 
-        'image' => 'images/Kennedy-Gyimah.png',
-        'bio' => 'Mr. Kennedy Gyimah is a Lecturer with expertise in Applied Mathematics, Machine Learning, and Computer Vision. He is dedicated to integrating technology into mathematical education.',
-        'email' => 'kennedygyimah@usted.edu.gh',
-        'research' => ['Applied Mathematics', 'Machine Learning', 'Computer Vision']
-    ]
-];
+$staff_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
-$name = isset($_GET['name']) ? urldecode($_GET['name']) : '';
-$staff = isset($staff_members[$name]) ? $staff_members[$name] : null;
+// Fetch staff from database
+$stmt = $pdo->prepare("SELECT * FROM staff WHERE id = ? AND status = 'active'");
+$stmt->execute([$staff_id]);
+$staff = $stmt->fetch();
+
+$settings = fetchSettings($pdo);
+$school_name = $settings['school_name'] ?? 'Nex CEC Basic School';
 
 if (!$staff) {
-    echo '<div class="container" style="padding: 100px 0; text-align: center;"><h2>Staff Member Not Found</h2><a href="department.php" class="btn-primary">Back to Department</a></div>';
+    echo '<div class="container" style="padding: 100px 0; text-align: center;"><h2>Staff Member Not Found</h2><a href="department.php" class="btn-primary">Back to About Us</a></div>';
     require_once 'includes/footer.php';
     exit;
 }
@@ -95,36 +21,51 @@ if (!$staff) {
 
 <div class="section" style="background: var(--light-bg);">
     <div class="container">
-        <a href="department.php" style="display: inline-block; margin-bottom: 20px; color: var(--primary-color); font-weight: bold;">&larr; Back to Department</a>
-        
-        <div class="card" style="display: flex; flex-direction: column; md:flex-row; overflow: hidden;">
+        <a href="department.php" style="display: inline-block; margin-bottom: 20px; color: var(--primary-color); font-weight: bold;">&larr; Back to About Us</a>
+
+        <div class="card" style="display: flex; flex-direction: column; overflow: hidden;">
             <div style="display: flex; flex-wrap: wrap;">
-                <div style="flex: 1; min-width: 300px; max-width: 400px;">
-                    <img src="<?php echo $staff['image']; ?>" alt="<?php echo htmlspecialchars($name); ?>" style="width: 100%; height: 100%; object-fit: cover; min-height: 400px;">
+                <div style="flex: 1; min-width: 300px; max-width: 400px; background: var(--color-primary); display: flex; align-items: center; justify-content: center; padding: 40px;">
+                    <div style="width: 150px; height: 150px; border-radius: 50%; background: rgba(255,255,255,0.2); color: white; display: flex; align-items: center; justify-content: center; font-size: 4rem;">
+                        <i class="fas fa-user-tie"></i>
+                    </div>
                 </div>
                 <div style="flex: 2; padding: 40px; min-width: 300px;">
-                    <h1 style="color: var(--primary-color); margin-bottom: 10px;"><?php echo htmlspecialchars($name); ?></h1>
-                    <h3 style="color: var(--secondary-color); margin-bottom: 20px;"><?php echo htmlspecialchars($staff['role']); ?></h3>
-                    
+                    <h1 style="color: var(--primary-color); margin-bottom: 5px;"><?php echo htmlspecialchars($staff['full_name']); ?></h1>
+                    <h3 style="color: var(--secondary-color); margin-bottom: 5px;"><?php echo htmlspecialchars($staff['position'] ?? 'Staff'); ?></h3>
+                    <?php if (!empty($staff['department'])): ?>
+                        <p style="color: #888; margin-bottom: 20px;"><?php echo htmlspecialchars($staff['department']); ?></p>
+                    <?php endif; ?>
+
                     <div style="margin-bottom: 30px;">
                         <h4 style="border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 15px;">Biography</h4>
-                        <p style="line-height: 1.8; color: #555;"><?php echo $staff['bio']; ?></p>
+                        <p style="line-height: 1.8; color: #555;">
+                            <?php echo htmlspecialchars($staff['full_name']); ?> is a dedicated member of the <?php echo htmlspecialchars($school_name); ?> team.
+                            <?php if (!empty($staff['position'])): ?>
+                                Serving as <?php echo htmlspecialchars($staff['position']); ?>,
+                            <?php endif; ?>
+                            <?php echo htmlspecialchars($staff['full_name']); ?> is committed to providing quality education and supporting the holistic development of every child.
+                        </p>
                     </div>
 
                     <div style="margin-bottom: 30px;">
                         <h4 style="border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 15px;">Contact Information</h4>
-                        <p><i class="fas fa-envelope" style="width: 25px; color: var(--primary-color);"></i> <a href="mailto:<?php echo $staff['email']; ?>"><?php echo $staff['email']; ?></a></p>
-                        <p><i class="fas fa-map-marker-alt" style="width: 25px; color: var(--primary-color);"></i> Department of IT Education, USTED</p>
+                        <?php if (!empty($staff['email'])): ?>
+                            <p><i class="fas fa-envelope" style="width: 25px; color: var(--primary-color);"></i> <a href="mailto:<?php echo htmlspecialchars($staff['email']); ?>"><?php echo htmlspecialchars($staff['email']); ?></a></p>
+                        <?php endif; ?>
+                        <?php if (!empty($staff['phone'])): ?>
+                            <p><i class="fas fa-phone" style="width: 25px; color: var(--primary-color);"></i> <?php echo htmlspecialchars($staff['phone']); ?></p>
+                        <?php endif; ?>
+                        <?php if (!empty($staff['address'])): ?>
+                            <p><i class="fas fa-map-marker-alt" style="width: 25px; color: var(--primary-color);"></i> <?php echo htmlspecialchars($staff['address']); ?></p>
+                        <?php endif; ?>
+                        <p><i class="fas fa-school" style="width: 25px; color: var(--primary-color);"></i> <?php echo htmlspecialchars($school_name); ?></p>
                     </div>
 
-                    <?php if (!empty($staff['research'])): ?>
+                    <?php if (!empty($staff['qualification'])): ?>
                     <div>
-                        <h4 style="border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 15px;">Research Interests</h4>
-                        <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-                            <?php foreach ($staff['research'] as $interest): ?>
-                                <span style="background: #e9ecef; padding: 5px 15px; border-radius: 20px; font-size: 0.9rem; color: #495057;"><?php echo htmlspecialchars($interest); ?></span>
-                            <?php endforeach; ?>
-                        </div>
+                        <h4 style="border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 15px;">Qualification</h4>
+                        <span style="background: #e9ecef; padding: 5px 15px; border-radius: 20px; font-size: 0.9rem; color: #495057;"><?php echo htmlspecialchars($staff['qualification']); ?></span>
                     </div>
                     <?php endif; ?>
                 </div>

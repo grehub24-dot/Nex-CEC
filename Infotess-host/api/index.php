@@ -75,7 +75,7 @@ $routes['mark_message_read.php'] = 'mark_message_read.php';
 $routes['report_card_pdf.php'] = 'report_card_pdf.php';
 
 // Staff routes
-$staffPages = ['dashboard', 'payslip', 'attendance', 'grades'];
+$staffPages = ['dashboard', 'payslip', 'attendance', 'grades', 'profile'];
 foreach ($staffPages as $page) {
     $routes["staff/$page.php"] = "staff_$page.php";
 }

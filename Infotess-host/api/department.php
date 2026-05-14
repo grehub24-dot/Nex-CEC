@@ -52,7 +52,7 @@ $staff_members = [
     <h2 class="section-title">Meet Our Faculty & Staff</h2>
     <div class="card-grid">
         <?php foreach ($staff_members as $staff): ?>
-            <a href="staff_profile.php?name=<?php echo urlencode($staff['name']); ?>" class="card" style="text-align: center; text-decoration: none; color: inherit; display: block;">
+            <a href="public_staff_profile.php?name=<?php echo urlencode($staff['name']); ?>" class="card" style="text-align: center; text-decoration: none; color: inherit; display: block;">
                 <img src="<?php echo $staff['image']; ?>" alt="<?php echo htmlspecialchars($staff['name']); ?>" style="height: 250px; object-fit: cover; width: 100%;">
                 <div class="card-content">
                     <h3 style="margin-bottom: 5px;"><?php echo htmlspecialchars($staff['name']); ?></h3>

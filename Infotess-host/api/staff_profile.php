@@ -1,136 +1,194 @@
 <?php
 require_once 'includes/db.php';
-require_once 'includes/header.php';
 
-// Staff Data (Same as in department.php)
-$staff_members = [
-    'Prof. Yarhands Dissou Arthur' => [
-        'role' => 'Dean, FASME', 
-        'image' => 'images/PROF-YARHANDS.png',
-        'bio' => 'Prof. Yarhands Dissou Arthur is the Dean of the Faculty of Applied Sciences and Mathematics Education. He is a distinguished scholar with extensive experience in educational leadership and research.',
-        'email' => 'ydarthur@usted.edu.gh',
-        'research' => ['Educational Leadership', 'Applied Sciences', 'Curriculum Development']
-    ],
-    'Dr. George Asante' => [
-        'role' => 'H.O.D, Department of IT Education', 
-        'image' => 'images/George-Asante.png',
-        'bio' => 'Dr. George Asante serves as the Head of the Department of Information Technology Education. He is committed to advancing IT education and fostering a culture of innovation among students.',
-        'email' => 'gasante@usted.edu.gh',
-        'research' => ['Information Technology Education', 'E-Learning', 'Educational Technology']
-    ],
-    'Prof. Francis Ohene Boateng' => [
-        'role' => 'Associate Professor', 
-        'image' => 'images/PROF-FO-BOATENG.png',
-        'bio' => 'Prof. Francis Ohene Boateng is an Associate Professor with a focus on computing and technology integration in education.',
-        'email' => 'foboateng@usted.edu.gh',
-        'research' => ['Computing', 'Artificial Intelligence', 'Data Science']
-    ],
-    'Prof. Ebenezer Bonyah' => [
-        'role' => 'Professor', 
-        'image' => 'images/PROF_BONYAH-.png',
-        'bio' => 'Prof. Ebenezer Bonyah is a Professor known for his contributions to mathematics and its applications in technology.',
-        'email' => 'ebonyah@usted.edu.gh',
-        'research' => ['Mathematical Modeling', 'Applied Mathematics', 'Statistics']
-    ],
-    'Dr. Adasa Nkrumah Kofi Frimpong' => [
-        'role' => 'Ag. Head, Academic & Admin Computing', 
-        'image' => 'images/Dr.-Adasa-Nkrumah-K.-F.jpg',
-        'bio' => 'Dr. Adasa Nkrumah Kofi Frimpong heads the Academic and Administrative Computing unit, ensuring robust digital infrastructure for the university.',
-        'email' => 'ankfrimpong@usted.edu.gh',
-        'research' => ['Cloud Computing', 'Network Security', 'IT Infrastructure']
-    ],
-    'Rev. Dr. Benjamin Adu Obeng' => [
-        'role' => 'Lecturer', 
-        'image' => 'images/Rev.-Dr.-Adu-Obeng.png',
-        'bio' => 'Rev. Dr. Benjamin Adu Obeng combines his pastoral and academic roles to mentor students in both character and learning.',
-        'email' => 'baobeng@usted.edu.gh',
-        'research' => ['Ethics in IT', 'Software Engineering', 'Database Management']
-    ],
-    'Dr. Joseph Frank Gordon' => [
-        'role' => 'Lecturer', 
-        'image' => 'images/Dr.-Joseph-Gordon.png',
-        'bio' => 'Dr. Joseph Frank Gordon is a dedicated lecturer with a passion for teaching and research in computer science.',
-        'email' => 'jfgordon@usted.edu.gh',
-        'research' => ['Computer Science Education', 'Programming', 'Algorithms']
-    ],
-    'Dr. Emmanuel Akweittey' => [
-        'role' => 'Senior Lecturer', 
-        'image' => 'images/AKWEITTEY-.jpg',
-        'bio' => 'Dr. Emmanuel Akweittey is a Senior Lecturer with expertise in advanced computing concepts and methodologies.',
-        'email' => 'eakweittey@usted.edu.gh',
-        'research' => ['Advanced Computing', 'Machine Learning', 'Cybersecurity']
-    ],
-    'Dr. Ernest Larbi' => [
-        'role' => 'Lecturer', 
-        'image' => 'images/Mr.-Ernest-Larbi.png',
-        'bio' => 'Dr. Ernest Larbi is a lecturer focused on practical IT skills and student development.',
-        'email' => 'elarbi@usted.edu.gh',
-        'research' => ['Web Technologies', 'Mobile Application Development', 'HCI']
-    ],
-    'Mr. Franco Osei-Wusu' => [
-        'role' => 'Assistant Lecturer', 
-        'image' => 'images/franco.png',
-        'bio' => 'Mr. Franco Osei-Wusu is an Assistant Lecturer supporting the department in various academic and technical capacities.',
-        'email' => 'foseiwusu@usted.edu.gh',
-        'research' => ['Network Administration', 'System Analysis', 'Tech Support']
-    ],
-    'Mr. Kennedy Gyimah' => [
-        'role' => 'Lecturer', 
-        'image' => 'images/Kennedy-Gyimah.png',
-        'bio' => 'Mr. Kennedy Gyimah is a Lecturer with expertise in Applied Mathematics, Machine Learning, and Computer Vision. He is dedicated to integrating technology into mathematical education.',
-        'email' => 'kennedygyimah@usted.edu.gh',
-        'research' => ['Applied Mathematics', 'Machine Learning', 'Computer Vision']
-    ]
-];
+if (!isLoggedIn() || (!isStaff() && !isTeacher())) {
+    redirect('../login.php');
+}
 
-$name = isset($_GET['name']) ? urldecode($_GET['name']) : '';
-$staff = isset($staff_members[$name]) ? $staff_members[$name] : null;
+$settings = fetchSettings($pdo);
+$school_name = $settings['school_name'] ?? 'Nex CEC';
+
+$user_id = $_SESSION['user_id'];
+
+// Fetch staff record
+$stmt = $pdo->prepare("SELECT * FROM staff WHERE user_id = ?");
+$stmt->execute([$user_id]);
+$staff = $stmt->fetch();
 
 if (!$staff) {
-    echo '<div class="container" style="padding: 100px 0; text-align: center;"><h2>Staff Member Not Found</h2><a href="department.php" class="btn-primary">Back to Department</a></div>';
-    require_once 'includes/footer.php';
+    echo '<div class="container" style="padding:100px 0;text-align:center;"><h2>Staff record not found</h2><a href="../logout.php" class="btn-primary">Logout</a></div>';
     exit;
 }
+
+$staff_id = (int)$staff['id'];
+
+// Fetch user record
+$stmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
+$stmt->execute([$user_id]);
+$user = $stmt->fetch();
+
+// Fetch salary structure
+$stmt = $pdo->prepare("SELECT * FROM salary_structures WHERE staff_id = ? ORDER BY created_at DESC LIMIT 1");
+$stmt->execute([$staff_id]);
+$salary = $stmt->fetch();
+
+// Fetch unread messages count
+$stmt = $pdo->prepare("SELECT id FROM messages WHERE receiver_id = ?");
+$stmt->execute([$user_id]);
+$direct_ids = array_map(fn($r) => (int)$r['id'], $stmt->fetchAll());
+$stmt = $pdo->prepare("SELECT id FROM messages WHERE is_broadcast = ?");
+$stmt->execute([1]);
+$broadcast_ids = array_map(fn($r) => (int)$r['id'], $stmt->fetchAll());
+$all_msg_ids = array_unique(array_merge($direct_ids, $broadcast_ids));
+$stmt = $pdo->prepare("SELECT message_id FROM message_reads WHERE user_id = ?");
+$stmt->execute([$user_id]);
+$read_ids = array_map(fn($r) => (int)$r['message_id'], $stmt->fetchAll());
+$unread_count = 0;
+foreach ($all_msg_ids as $mid) {
+    if (!in_array($mid, $read_ids)) $unread_count++;
+}
 ?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile — <?php echo htmlspecialchars($school_name); ?></title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .staff-container { display: flex; min-height: 100vh; }
+        .staff-sidebar {
+            width: 250px; background: #1a5276; color: white; position: fixed;
+            top: 0; left: 0; height: 100vh; overflow-y: auto; z-index: 100;
+        }
+        .staff-sidebar .sidebar-header { padding: 25px 15px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .staff-sidebar .sidebar-header img { width: 64px; height: 64px; border-radius: 50%; background: white; padding: 3px; margin-bottom: 10px; object-fit: cover; }
+        .staff-sidebar .sidebar-header h3 { font-size: 15px; margin: 0; }
+        .staff-sidebar .sidebar-header p { font-size: 12px; opacity: 0.8; margin: 5px 0 0; }
+        .staff-sidebar ul { list-style: none; padding: 0; margin: 0; }
+        .staff-sidebar ul li { border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .staff-sidebar ul li a { display: block; padding: 14px 20px; color: rgba(255,255,255,0.85); text-decoration: none; font-size: 14px; transition: all 0.2s; }
+        .staff-sidebar ul li a:hover, .staff-sidebar ul li a.active { background: rgba(255,255,255,0.1); color: white; padding-left: 25px; }
+        .staff-sidebar ul li a i { width: 22px; text-align: center; margin-right: 8px; }
+        .staff-sidebar .msg-count { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); background: #e74c3c; color: white; padding: 1px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+        .staff-main { flex: 1; padding: 30px; background: #f4f6f9; margin-left: 250px; }
+        .top-bar { background: white; padding: 20px 30px; border-radius: 10px; margin-bottom: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); display: flex; align-items: center; justify-content: space-between; }
+        .top-bar h2 { font-size: 20px; margin: 0; color: #1a5276; }
+        .profile-section { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); padding: 25px; margin-bottom: 25px; }
+        .profile-section h3 { font-size: 16px; color: #1a5276; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #eee; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .info-grid .item { font-size: 14px; }
+        .info-grid .item .label { color: #888; display: block; font-size: 12px; }
+        .info-grid .item .value { font-weight: 600; color: #333; }
+        @media (max-width: 768px) {
+            .staff-sidebar { left: -250px; transition: left 0.3s; }
+            .staff-sidebar.open { left: 0; }
+            .staff-main { margin-left: 0; padding: 20px; }
+            .top-bar { flex-direction: column; text-align: center; }
+            .info-grid { grid-template-columns: 1fr; }
+        }
+        .hamburger-menu { display: none; position: fixed; top: 15px; left: 15px; z-index: 200; background: #1a5276; color: white; border: none; width: 40px; height: 40px; border-radius: 8px; font-size: 18px; cursor: pointer; }
+        @media (max-width: 768px) { .hamburger-menu { display: block; } }
+    </style>
+</head>
+<body>
+    <button class="hamburger-menu" onclick="document.getElementById('sidebar').classList.toggle('open')">
+        <i class="fas fa-bars"></i>
+    </button>
 
-<div class="section" style="background: var(--light-bg);">
-    <div class="container">
-        <a href="department.php" style="display: inline-block; margin-bottom: 20px; color: var(--primary-color); font-weight: bold;">&larr; Back to Department</a>
-        
-        <div class="card" style="display: flex; flex-direction: column; md:flex-row; overflow: hidden;">
-            <div style="display: flex; flex-wrap: wrap;">
-                <div style="flex: 1; min-width: 300px; max-width: 400px;">
-                    <img src="<?php echo $staff['image']; ?>" alt="<?php echo htmlspecialchars($name); ?>" style="width: 100%; height: 100%; object-fit: cover; min-height: 400px;">
-                </div>
-                <div style="flex: 2; padding: 40px; min-width: 300px;">
-                    <h1 style="color: var(--primary-color); margin-bottom: 10px;"><?php echo htmlspecialchars($name); ?></h1>
-                    <h3 style="color: var(--secondary-color); margin-bottom: 20px;"><?php echo htmlspecialchars($staff['role']); ?></h3>
-                    
-                    <div style="margin-bottom: 30px;">
-                        <h4 style="border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 15px;">Biography</h4>
-                        <p style="line-height: 1.8; color: #555;"><?php echo $staff['bio']; ?></p>
-                    </div>
-
-                    <div style="margin-bottom: 30px;">
-                        <h4 style="border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 15px;">Contact Information</h4>
-                        <p><i class="fas fa-envelope" style="width: 25px; color: var(--primary-color);"></i> <a href="mailto:<?php echo $staff['email']; ?>"><?php echo $staff['email']; ?></a></p>
-                        <p><i class="fas fa-map-marker-alt" style="width: 25px; color: var(--primary-color);"></i> Department of IT Education, USTED</p>
-                    </div>
-
-                    <?php if (!empty($staff['research'])): ?>
-                    <div>
-                        <h4 style="border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 15px;">Research Interests</h4>
-                        <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-                            <?php foreach ($staff['research'] as $interest): ?>
-                                <span style="background: #e9ecef; padding: 5px 15px; border-radius: 20px; font-size: 0.9rem; color: #495057;"><?php echo htmlspecialchars($interest); ?></span>
-                            <?php endforeach; ?>
-                        </div>
-                    </div>
+    <aside class="staff-sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <img src="../images/school-logo.png" alt="Logo" onerror="this.src='../images/aamusted.jpg'">
+            <h3><?php echo htmlspecialchars($school_name); ?></h3>
+            <p>Staff Portal</p>
+        </div>
+        <ul>
+            <li><a href="../staff/dashboard.php"><i class="fas fa-home"></i> Dashboard</a></li>
+            <?php if (isTeacher()): ?>
+            <li><a href="../staff/grades.php"><i class="fas fa-clipboard-list"></i> SBA / Grades</a></li>
+            <?php endif; ?>
+            <li><a href="../staff/attendance.php"><i class="fas fa-calendar-check"></i> My Attendance</a></li>
+            <li><a href="../staff/payslip.php"><i class="fas fa-file-invoice-dollar"></i> Pay Slips</a></li>
+            <li><a href="../staff/profile.php" class="active"><i class="fas fa-user-cog"></i> Profile</a></li>
+            <li>
+                <a href="../admin/inbox.php">
+                    <i class="fas fa-envelope"></i> Messages
+                    <?php if ($unread_count > 0): ?>
+                        <span class="msg-count"><?php echo $unread_count; ?></span>
                     <?php endif; ?>
-                </div>
+                </a>
+            </li>
+            <li><a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+        </ul>
+    </aside>
+
+    <div class="staff-main">
+        <div class="top-bar">
+            <div>
+                <h2>My Profile</h2>
+                <p class="subtitle" style="font-size:13px;color:#888;margin:3px 0 0;"><?php echo htmlspecialchars($staff['position'] ?? ''); ?> &bull; <?php echo htmlspecialchars($staff['department'] ?? 'General'); ?></p>
+            </div>
+            <span style="font-size:13px;color:#888;">Staff ID: <?php echo htmlspecialchars($staff['staff_id'] ?? 'N/A'); ?></span>
+        </div>
+
+        <!-- Personal Information -->
+        <div class="profile-section">
+            <h3><i class="fas fa-user"></i> Personal Information</h3>
+            <div class="info-grid">
+                <div class="item"><span class="label">Full Name</span><span class="value"><?php echo htmlspecialchars($staff['full_name'] ?? ''); ?></span></div>
+                <div class="item"><span class="label">Staff ID</span><span class="value"><?php echo htmlspecialchars($staff['staff_id'] ?? ''); ?></span></div>
+                <div class="item"><span class="label">Gender</span><span class="value"><?php echo htmlspecialchars($staff['gender'] ?? 'N/A'); ?></span></div>
+                <div class="item"><span class="label">Date of Birth</span><span class="value"><?php echo htmlspecialchars($staff['date_of_birth'] ?? 'N/A'); ?></span></div>
+                <div class="item"><span class="label">Address</span><span class="value"><?php echo htmlspecialchars($staff['address'] ?? 'N/A'); ?></span></div>
             </div>
         </div>
-    </div>
-</div>
 
-<?php require_once 'includes/footer.php'; ?>
+        <!-- Employment Information -->
+        <div class="profile-section">
+            <h3><i class="fas fa-briefcase"></i> Employment Information</h3>
+            <div class="info-grid">
+                <div class="item"><span class="label">Position</span><span class="value"><?php echo htmlspecialchars($staff['position'] ?? ''); ?></span></div>
+                <div class="item"><span class="label">Department</span><span class="value"><?php echo htmlspecialchars($staff['department'] ?? 'N/A'); ?></span></div>
+                <div class="item"><span class="label">Qualification</span><span class="value"><?php echo htmlspecialchars($staff['qualification'] ?? 'N/A'); ?></span></div>
+                <div class="item"><span class="label">Hire Date</span><span class="value"><?php echo htmlspecialchars($staff['hire_date'] ?? 'N/A'); ?></span></div>
+                <div class="item"><span class="label">Status</span><span class="value"><span class="badge badge-success"><?php echo htmlspecialchars(ucfirst($staff['status'] ?? 'Active')); ?></span></span></div>
+            </div>
+        </div>
+
+        <!-- Contact Information -->
+        <div class="profile-section">
+            <h3><i class="fas fa-address-card"></i> Contact Information</h3>
+            <div class="info-grid">
+                <div class="item"><span class="label">Email</span><span class="value"><?php echo htmlspecialchars($staff['email'] ?? htmlspecialchars($user['email'] ?? '')); ?></span></div>
+                <div class="item"><span class="label">Phone</span><span class="value"><?php echo htmlspecialchars($staff['phone'] ?? 'N/A'); ?></span></div>
+            </div>
+        </div>
+
+        <!-- Bank Information -->
+        <?php if (!empty($staff['bank_name']) || !empty($staff['account_number'])): ?>
+        <div class="profile-section">
+            <h3><i class="fas fa-university"></i> Bank Information</h3>
+            <div class="info-grid">
+                <div class="item"><span class="label">Bank Name</span><span class="value"><?php echo htmlspecialchars($staff['bank_name'] ?? 'N/A'); ?></span></div>
+                <div class="item"><span class="label">Account Number</span><span class="value"><?php echo htmlspecialchars($staff['account_number'] ?? 'N/A'); ?></span></div>
+            </div>
+        </div>
+        <?php endif; ?>
+
+        <!-- Salary Structure -->
+        <?php if ($salary): ?>
+        <div class="profile-section">
+            <h3><i class="fas fa-money-check-alt"></i> Salary Structure</h3>
+            <div class="info-grid">
+                <div class="item"><span class="label">Basic Salary</span><span class="value">GHS <?php echo number_format($salary['basic_salary'], 2); ?></span></div>
+                <div class="item"><span class="label">Housing Allowance</span><span class="value">GHS <?php echo number_format($salary['housing_allowance'] ?? 0, 2); ?></span></div>
+                <div class="item"><span class="label">Transport Allowance</span><span class="value">GHS <?php echo number_format($salary['transport_allowance'] ?? 0, 2); ?></span></div>
+                <div class="item"><span class="label">Other Allowances</span><span class="value">GHS <?php echo number_format($salary['other_allowances'] ?? 0, 2); ?></span></div>
+                <div class="item"><span class="label">SSNIT Rate</span><span class="value"><?php echo $salary['ssnit_rate']; ?>%</span></div>
+            </div>
+        </div>
+        <?php endif; ?>
+    </div>
+</body>
+</html>

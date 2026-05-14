@@ -59,20 +59,24 @@ $all_msg_ids = array_unique(array_merge($direct_ids, $broadcast_ids));
 $stmt = $pdo->prepare("SELECT message_id FROM message_reads WHERE user_id = ?");
 $stmt->execute([$user_id]);
 $read_ids = array_map(fn($r) => (int)$r['message_id'], $stmt->fetchAll());
-$unread_count = 0;
+// Start by counting messages NOT in message_reads table
+$unread_message_ids = [];
 foreach ($all_msg_ids as $mid) {
-    if (!in_array($mid, $read_ids)) $unread_count++;
-}
-// Also check read_at for direct messages
-foreach (array_chunk($all_msg_ids, 50) as $chunk) {
-    if (empty($chunk)) continue;
-    $placeholders = implode(',', array_fill(0, count($chunk), '?'));
-    $stmt = $pdo->prepare("SELECT id FROM messages WHERE id IN ($placeholders) AND read_at IS NULL");
-    $stmt->execute($chunk);
-    foreach ($stmt->fetchAll() as $r) {
-        if (!in_array((int)$r['id'], $read_ids)) $unread_count++;
+    if (!in_array($mid, $read_ids)) {
+        $unread_message_ids[] = $mid;
     }
 }
+// Remove legacy-read messages (read_at set but not in message_reads)
+foreach (array_chunk($unread_message_ids, 50) as $chunk) {
+    if (empty($chunk)) continue;
+    $placeholders = implode(',', array_fill(0, count($chunk), '?'));
+    $stmt = $pdo->prepare("SELECT id FROM messages WHERE id IN ($placeholders) AND read_at IS NOT NULL");
+    $stmt->execute($chunk);
+    foreach ($stmt->fetchAll() as $r) {
+        $unread_message_ids = array_diff($unread_message_ids, [(int)$r['id']]);
+    }
+}
+$unread_count = count($unread_message_ids);
 ?>
 <!DOCTYPE html>
 <html lang="en">

@@ -11,8 +11,10 @@ if (isLoggedIn()) {
     } elseif (isset($_SESSION['has_children']) && $_SESSION['has_children']) {
         // Dual-role user — show route selector
         redirect('route_selector.php');
+    } elseif (in_array($role, ['staff', 'teacher'])) {
+        redirect('staff/dashboard.php');
     } else {
-        // Admin, teacher, staff, bursar all go to admin dashboard
+        // Admin and bursar go to admin dashboard
         redirect('admin/dashboard.php');
     }
 }
@@ -103,7 +105,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         redirect('route_selector.php');
                     }
 
-                    redirect('admin/dashboard.php');
+                    // Staff and teacher roles go to staff portal; bursar goes to admin dashboard
+                    if (in_array($user['role'], ['staff', 'teacher'])) {
+                        redirect('staff/dashboard.php');
+                    } else {
+                        redirect('admin/dashboard.php');
+                    }
                 } else {
                     // Fallback for admin, super_admin, or any other role
                     $_SESSION['name'] = "User";

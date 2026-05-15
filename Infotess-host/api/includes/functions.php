@@ -505,3 +505,141 @@ function fetchSettings($pdo): array {
     }
     return $settings;
 }
+
+// ==========================================
+// Supabase Storage Helper
+// ==========================================
+
+/**
+ * Upload an uploaded file (from $_FILES) to a Supabase Storage bucket.
+ * Returns the public URL on success, or the fallback path on failure.
+ *
+ * @param array  $file     An entry from $_FILES, e.g. $_FILES['image']
+ * @param string $bucket   Supabase bucket name (e.g. 'executives', 'profiles')
+ * @param string $filename Custom filename (if empty, uses time + original name)
+ * @param string $fallback Fallback URL/path if upload fails or no file given
+ * @return string          Full public URL of uploaded file, or fallback value
+ */
+function upload_to_supabase_storage(array $file, string $bucket, string $filename = '', string $fallback = 'images/aamusted.jpg'): string {
+    global $supabase;
+    if (!$supabase || !($supabase instanceof SupabaseClient)) {
+        error_log("upload_to_supabase_storage: SupabaseClient not available");
+        return $fallback;
+    }
+
+    if (empty($file) || !isset($file['tmp_name']) || $file['error'] !== UPLOAD_ERR_OK) {
+        return $fallback;
+    }
+
+    $tmpPath = $file['tmp_name'];
+    if (!file_exists($tmpPath) || !is_readable($tmpPath)) {
+        return $fallback;
+    }
+
+    try {
+        if (empty($filename)) {
+            $ext = pathinfo($file['name'] ?? 'file', PATHINFO_EXTENSION);
+            $filename = time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+        }
+
+        $fileData = file_get_contents($tmpPath);
+        if ($fileData === false) {
+            throw new Exception("Cannot read uploaded file");
+        }
+
+        // Detect content type
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $contentType = finfo_file($finfo, $tmpPath);
+        finfo_close($finfo);
+
+        $supabase->uploadFile($bucket, $filename, $fileData, $contentType);
+        return $supabase->getPublicUrl($bucket, $filename);
+    } catch (Exception $e) {
+        error_log("Supabase Storage upload error (" . $bucket . "/" . $filename . "): " . $e->getMessage());
+        return $fallback;
+    }
+}
+
+/**
+ * Resolve a storage URL for use in <img src="...">.
+ * If the stored value is already an absolute URL (http/https), return as-is.
+ * If it's a relative path (e.g. images/executives/foo.jpg), prepend ../ for local dev.
+ *
+ * @param string|null $path     Stored URL or path
+ * @param string      $fallback Fallback relative path
+ * @return string               Safe src attribute value
+ */
+function resolve_storage_url(?string $path, string $fallback = 'images/aamusted.jpg'): string {
+    $url = $path ?: $fallback;
+    if (strpos($url, 'http://') === 0 || strpos($url, 'https://') === 0) {
+        return $url;
+    }
+    return '../' . ltrim($url, '/');
+}
+
+// ==========================================
+// CSRF Protection
+// ==========================================
+
+/**
+ * Generate and store a CSRF token in the session if one doesn't exist.
+ * Returns the current valid token.
+ */
+function generate_csrf_token(): string {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+    if (empty($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+    return $_SESSION['csrf_token'];
+}
+
+/**
+ * Validate a submitted CSRF token against the session token using timing-safe comparison.
+ * Automatically regenerates the token after successful validation (one-time use).
+ * Returns true if valid, false otherwise.
+ */
+function validate_csrf_token(?string $token): bool {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+    if (empty($_SESSION['csrf_token']) || empty($token)) {
+        return false;
+    }
+    $valid = hash_equals($_SESSION['csrf_token'], $token);
+    if ($valid) {
+        // Regenerate token after successful validation (one-time use)
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+    return $valid;
+}
+
+/**
+ * Verify CSRF token from POST/GET request. If invalid, stops execution with an error.
+ * Call at the top of any form handler: validate_request_csrf();
+ */
+function validate_request_csrf(): void {
+    $token = $_POST['csrf_token'] ?? $_GET['csrf_token'] ?? '';
+    if (!validate_csrf_token($token)) {
+        error_log("CSRF validation failed for " . ($_SERVER['REQUEST_URI'] ?? 'unknown'));
+        http_response_code(419);
+        die("Session expired or invalid request. Please refresh the page and try again.");
+    }
+}
+
+/**
+ * Render a hidden CSRF token input field.
+ * Usage inside forms: <?php csrf_field(); ?>
+ */
+function csrf_field(): void {
+    echo '<input type="hidden" name="csrf_token" value="' . generate_csrf_token() . '">';
+}
+
+/**
+ * Render a CSRF token as a query parameter (for search links, delete links, etc.).
+ * Usage: <a href="page.php?action=delete&id=1&<?php csrf_query(); ?>">
+ */
+function csrf_query(): string {
+    return 'csrf_token=' . urlencode(generate_csrf_token());
+}

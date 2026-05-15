@@ -27,6 +27,7 @@ if (!$staff) {
 
 // Handle Update
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_staff') {
+    validate_request_csrf();
     $full_name = sanitize($_POST['full_name']);
     $position = sanitize($_POST['position']);
     $department = sanitize($_POST['department'] ?? '');
@@ -90,6 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     <h3><?php echo htmlspecialchars($staff['full_name']); ?> (<?php echo htmlspecialchars($staff['staff_id']); ?>)</h3>
                     <form action="edit_staff.php?id=<?php echo $staff_id; ?>" method="POST" style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-top: 20px;">
                         <input type="hidden" name="action" value="update_staff">
+                        <?php csrf_field(); ?>
                         
                         <div>
                             <label>Full Name</label>

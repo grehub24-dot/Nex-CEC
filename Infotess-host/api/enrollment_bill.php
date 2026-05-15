@@ -40,18 +40,11 @@ $fees = [
 ];
 $total = (float)$admission_fee + (float)$prospectus_fee + (float)$form_fee;
 
-// Generate bill
+// Generate bill (file saved for email attachment, not for HTTP serving)
 $billGen = new BillGenerator();
-$billFile = $billGen->generate($student, $fees, $total, $school_name);
+$billGen->generate($student, $fees, $total, $school_name);
 
-// Redirect to the generated bill
-$billPath = 'bills/' . $billFile;
-if (file_exists(__DIR__ . '/' . $billPath)) {
-    header('Location: ' . $billPath);
-    exit;
-}
-
-// Fallback: display directly
+// Render bill HTML directly (no redirect to static file — Vercel compatible)
 $logoData = '';
 $logoPath = __DIR__ . '/images/school-logo.png';
 if (file_exists($logoPath)) {

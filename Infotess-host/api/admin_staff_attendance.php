@@ -16,6 +16,7 @@ $error = '';
 
 // After a successful POST, redirect to a GET URL to avoid re-submission on refresh
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'save_staff_attendance') {
+    validate_request_csrf();
     $attendance_date = sanitize($_POST['attendance_date']);
     try {
         $pdo->beginTransaction();
@@ -166,6 +167,7 @@ try {
                     </div>
 
                     <form method="POST" action="/admin/staff_attendance.php">
+                        <?php csrf_field(); ?>
                         <input type="hidden" name="action" value="save_staff_attendance">
                         <input type="hidden" name="attendance_date" value="<?php echo htmlspecialchars($selected_date); ?>">
                         

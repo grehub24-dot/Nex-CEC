@@ -114,6 +114,7 @@ if ($selected_class && $class_name) {
 
 // Handle Bulk Save SBA Scores
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'save_bulk_sba') {
+    validate_request_csrf();
     $subject_id = (int)$_POST['subject_id'];
     $term_id = (int)$_POST['term_id'];
     $class_name = sanitize($_POST['class_name']);
@@ -274,6 +275,7 @@ if (!empty($students)) {
                     </div>
 
                     <form method="POST" action="grades.php">
+                        <?php csrf_field(); ?>
                         <input type="hidden" name="action" value="save_bulk_sba">
                         <input type="hidden" name="subject_id" value="<?php echo $selected_subject; ?>">
                         <input type="hidden" name="term_id" value="<?php echo $selected_term; ?>">

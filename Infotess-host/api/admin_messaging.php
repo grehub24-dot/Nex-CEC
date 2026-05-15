@@ -17,6 +17,7 @@ $message = '';
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    validate_request_csrf();
     $action = $_POST['action'] ?? '';
     $title = sanitize($_POST['title'] ?? '');
     $content = sanitize($_POST['content'] ?? '');
@@ -269,6 +270,7 @@ $all_students = $pdo->query("SELECT id, full_name, admission_number FROM student
                                         <td><?php echo htmlspecialchars(fix_utf8_encoding($msg['content'])); ?></td>
                                         <td>
                                             <form method="POST" onsubmit="return confirm('Are you sure you want to delete this message?');" style="display:inline;">
+                                                <?php csrf_field(); ?>
                                                 <input type="hidden" name="action" value="delete_message">
                                                 <input type="hidden" name="message_id" value="<?php echo $msg['id']; ?>">
                                                 <button type="submit" class="btn-login" style="background:#dc3545; padding: 5px 10px; font-size: 0.8rem;"><i class="fas fa-trash"></i></button>
@@ -334,6 +336,7 @@ $all_students = $pdo->query("SELECT id, full_name, admission_number FROM student
                                         <td><?php echo htmlspecialchars($msg['content']); ?></td>
                                         <td>
                                             <form method="POST" onsubmit="return confirm('Are you sure you want to delete this message?');" style="display:inline;">
+                                                <?php csrf_field(); ?>
                                                 <input type="hidden" name="action" value="delete_message">
                                                 <input type="hidden" name="message_id" value="<?php echo $msg['id']; ?>">
                                                 <button type="submit" class="btn-login" style="background:#dc3545; padding: 5px 10px; font-size: 0.8rem;"><i class="fas fa-trash"></i></button>
@@ -355,6 +358,7 @@ $all_students = $pdo->query("SELECT id, full_name, admission_number FROM student
             <span class="close-btn" onclick="document.getElementById('msgModal').style.display='none'">&times;</span>
             <h3>Send Announcement to All Parents</h3>
             <form method="POST" action="" style="margin-top: 20px;">
+                <?php csrf_field(); ?>
                 <input type="hidden" name="action" value="broadcast">
                 <div class="form-group">
                     <label>Title / Subject</label>
@@ -379,6 +383,7 @@ $all_students = $pdo->query("SELECT id, full_name, admission_number FROM student
             <h3>Send SMS</h3>
                             <p style="font-size: 0.9rem; color: #666; margin-bottom: 15px;">Send a direct SMS message to parents/guardians.</p>
             <form method="POST" action="" style="margin-top: 10px;">
+                <?php csrf_field(); ?>
                 <input type="hidden" name="action" value="send_sms_only">
                 
                 <div class="form-group">

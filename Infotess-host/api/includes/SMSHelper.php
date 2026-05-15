@@ -44,10 +44,10 @@ class SMSHelper {
             $payloadMessage = mb_substr($payloadMessage, 0, 157) . '...';
         }
 
-        $api_key = '$2y$10$6oYYcjc6Ge3/W.P.1Yqk6eHBs0ERVFR6IaBQ2qpYGBnMYp28B3uPe';
-        $username = 'amanvid'; // using sender ID as username per standard Wigal API docs
-        $sender_id = 'SCHOOL'; // Must be an approved sender ID
-        $endpoint = 'https://frogapi.wigal.com.gh/api/v3/sms/send';
+        $api_key = getenv('SMS_API_KEY') ?: '$2y$10$6oYYcjc6Ge3/W.P.1Yqk6eHBs0ERVFR6IaBQ2qpYGBnMYp28B3uPe';
+        $username = getenv('SMS_USERNAME') ?: 'amanvid';
+        $sender_id = getenv('SMS_SENDER_ID') ?: 'SCHOOL';
+        $endpoint = getenv('SMS_ENDPOINT') ?: 'https://frogapi.wigal.com.gh/api/v3/sms/send';
 
         $postData = array(
             'senderid' => $sender_id,

@@ -17,6 +17,7 @@ $error = '';
 
 // Actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    validate_request_csrf();
     if (isset($_POST['delete_user'])) {
         $user_id = intval($_POST['user_id']);
         if ($user_id !== $_SESSION['user_id']) { // Prevent self-delete
@@ -97,6 +98,7 @@ $users = array_slice($allUsers, $offset, $limit);
                                 <td>
                                     <?php if ($user['role'] !== 'super_admin' && $user['id'] !== $_SESSION['user_id']): ?>
                                         <form method="POST" onsubmit="return confirm('Are you sure?');" style="display:inline;">
+                                            <?php csrf_field(); ?>
                                             <input type="hidden" name="user_id" value="<?php echo $user['id']; ?>">
                                             <button type="submit" name="delete_user" class="btn-admin-action btn-admin-danger btn-admin-sm"><i class="fas fa-trash"></i> Delete</button>
                                         </form>

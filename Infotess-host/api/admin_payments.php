@@ -30,6 +30,9 @@ $message = '';
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'record_payment') {
+    // CSRF validation
+    validate_request_csrf();
+    
     $student_id_input = (int)($_POST['student_id'] ?? 0);
     $admission_number = sanitize($_POST['admission_number'] ?? '');
     $class_name = sanitize($_POST['class_name']);
@@ -339,7 +342,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                                 <td><?php echo htmlspecialchars($payment['payment_date']); ?></td>
                                 <td><?php echo htmlspecialchars($payment['payment_method']); ?></td>
                                 <td>
-                                    <a href="../receipts/receipt_<?php echo htmlspecialchars($payment['receipt_number']); ?>.html" target="_blank" class="btn-login" style="padding: 5px 10px; font-size: 0.8rem;">View</a>
+                                    <a href="view_receipt.php?receipt=<?php echo urlencode($payment['receipt_number']); ?>" target="_blank" class="btn-login" style="padding: 5px 10px; font-size: 0.8rem;">View</a>
                                 </td>
                             </tr>
                             <?php endforeach; ?>
@@ -370,7 +373,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 <div class="modal-content">
                     <span class="close-btn">&times;</span>
                     <h3>Record Payment</h3>
-                    <form action="/admin/payments.php" method="POST" style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-top: 15px;">
+                    <form action="payments.php" method="POST" style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-top: 15px;">
                         <input type="hidden" name="action" value="record_payment">
                         
                         <div style="grid-column: span 2;">
@@ -447,6 +450,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                             <input type="date" name="payment_date" class="form-control" value="<?php echo date('Y-m-d'); ?>" required>
                         </div>
 
+                        <?php csrf_field(); ?>
                         <div style="grid-column: span 2; margin-top: 10px;">
                             <button type="submit" class="btn-submit" style="width:100%;">Record Payment &amp; Generate Receipt</button>
                         </div>

@@ -14,6 +14,7 @@ $error = '';
 
 // Handle Add Staff
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'add_staff') {
+    validate_request_csrf();
     $full_name = sanitize($_POST['full_name']);
     $position = sanitize($_POST['position']);
     $department = sanitize($_POST['department'] ?? '');
@@ -239,6 +240,7 @@ $total_pages = $total_rows > 0 ? (int)ceil($total_rows / $limit) : 1;
                     <h3>Add New Staff Member</h3>
                     <form action="staff.php" method="POST" style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-top: 15px;">
                         <input type="hidden" name="action" value="add_staff">
+                        <?php csrf_field(); ?>
                         
                         <div>
                             <label>Full Name</label>

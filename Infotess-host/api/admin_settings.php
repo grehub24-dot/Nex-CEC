@@ -10,6 +10,7 @@ $error = '';
 
 // Handle Settings Update
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_settings') {
+    validate_request_csrf();
     try {
         $pdo->beginTransaction();
         
@@ -211,6 +212,7 @@ $settings = array_merge($defaults, $settings);
             <h2 style="margin-bottom: 20px;">General Settings</h2>
             <form action="settings.php" method="POST">
                 <input type="hidden" name="action" value="update_settings">
+                <?php csrf_field(); ?>
                 
                 <h4 style="margin: 0 0 15px 0; color: #1a5276;">School Information</h4>
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom: 20px;">

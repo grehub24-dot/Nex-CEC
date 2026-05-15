@@ -285,7 +285,7 @@ if (empty($chart_labels)) { $chart_labels = [date('M Y')]; $chart_data = [0]; }
                                     <td><?php echo number_format($payment['amount'], 2); ?></td>
                                     <td><?php echo htmlspecialchars($payment['payment_date']); ?></td>
                                     <td><?php echo htmlspecialchars($payment['payment_method']); ?></td>
-                                    <td><a href="../receipts/receipt_<?php echo $payment['receipt_number']; ?>.html" target="_blank" class="btn-login btn-sm">View</a></td>
+                                    <td><a href="view_receipt.php?receipt=<?php echo urlencode($payment['receipt_number']); ?>" target="_blank" class="btn-login btn-sm">View</a></td>
                                 </tr>
                                 <?php endforeach; ?>
                             <?php endif; ?>

@@ -100,7 +100,7 @@ foreach ($payments as $p) {
                             <td><?php echo htmlspecialchars($payment['academic_year'] . ' — Term ' . $payment['semester']); ?></td>
                             <td><span style="color:#2ecc71; font-weight:bold;">&#10003; Paid</span></td>
                             <td>
-                                <a href="../receipts/receipt_<?php echo htmlspecialchars($payment['receipt_number']); ?>.html" target="_blank" class="btn-sm btn-secondary"><i class="fas fa-download"></i> Receipt</a>
+                                <a href="view_receipt.php?receipt=<?php echo urlencode($payment['receipt_number']); ?>" target="_blank" class="btn-sm btn-secondary"><i class="fas fa-download"></i> Receipt</a>
                             </td>
                         </tr>
                         <?php endforeach; ?>

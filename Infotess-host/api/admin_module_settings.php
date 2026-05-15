@@ -17,21 +17,13 @@ $error = '';
 
 // Handle Actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    validate_request_csrf();
     $action = $_POST['action'] ?? '';
     
     if ($action === 'add_executive') {
         $name = sanitize($_POST['full_name']);
         $pos = sanitize($_POST['position']);
-        $image_url = 'images/aamusted.jpg';
-
-        if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-            $upload_dir = __DIR__ . '/../images/executives/';
-            if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
-            $filename = time() . '_' . $_FILES['image']['name'];
-            if (move_uploaded_file($_FILES['image']['tmp_name'], $upload_dir . $filename)) {
-                $image_url = 'images/executives/' . $filename;
-            }
-        }
+        $image_url = upload_to_supabase_storage($_FILES['image'] ?? [], 'executives', '', 'images/aamusted.jpg');
 
         $stmt = $pdo->prepare("INSERT INTO executives (full_name, position, image_url) VALUES (?, ?, ?)");
         $stmt->execute([$name, $pos, $image_url]);
@@ -39,32 +31,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'add_alumni') {
         $name = sanitize($_POST['full_name']);
         $year = sanitize($_POST['graduation_year']);
-        $image_url = 'images/aamusted.jpg';
-
-        if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-            $upload_dir = __DIR__ . '/../images/alumni/';
-            if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
-            $filename = time() . '_' . $_FILES['image']['name'];
-            if (move_uploaded_file($_FILES['image']['tmp_name'], $upload_dir . $filename)) {
-                $image_url = 'images/alumni/' . $filename;
-            }
-        }
+        $image_url = upload_to_supabase_storage($_FILES['image'] ?? [], 'alumni', '', 'images/aamusted.jpg');
 
         $stmt = $pdo->prepare("INSERT INTO alumni (full_name, graduation_year, image_url) VALUES (?, ?, ?)");
         $stmt->execute([$name, $year, $image_url]);
         $message = "Alumni added successfully!";
     } elseif ($action === 'add_gallery') {
         $title = sanitize($_POST['title']);
-        $image_url = 'images/gallery-placeholder.png';
-
-        if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-            $upload_dir = __DIR__ . '/../images/gallery/';
-            if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
-            $filename = time() . '_' . $_FILES['image']['name'];
-            if (move_uploaded_file($_FILES['image']['tmp_name'], $upload_dir . $filename)) {
-                $image_url = 'images/gallery/' . $filename;
-            }
-        }
+        $image_url = upload_to_supabase_storage($_FILES['image'] ?? [], 'gallery', '', 'images/gallery-placeholder.png');
 
         $stmt = $pdo->prepare("INSERT INTO gallery (title, image_url) VALUES (?, ?)");
         $stmt->execute([$title, $image_url]);
@@ -74,16 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $desc = sanitize($_POST['description']);
         $status = sanitize($_POST['status']);
         $date = sanitize($_POST['project_date']);
-        $image_url = 'images/project-placeholder.png';
-
-        if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-            $upload_dir = __DIR__ . '/../images/projects/';
-            if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
-            $filename = time() . '_' . $_FILES['image']['name'];
-            if (move_uploaded_file($_FILES['image']['tmp_name'], $upload_dir . $filename)) {
-                $image_url = 'images/projects/' . $filename;
-            }
-        }
+        $image_url = upload_to_supabase_storage($_FILES['image'] ?? [], 'projects', '', 'images/project-placeholder.png');
 
         $stmt = $pdo->prepare("INSERT INTO projects (title, description, status, project_date, image_url) VALUES (?, ?, ?, ?, ?)");
         $stmt->execute([$title, $desc, $status, $date, $image_url]);
@@ -114,16 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id = intval($_POST['id']);
         $name = sanitize($_POST['full_name']);
         $pos = sanitize($_POST['position']);
-        $image_url = sanitize($_POST['current_image_url'] ?? '');
-
-        if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-            $upload_dir = __DIR__ . '/../images/executives/';
-            if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
-            $filename = time() . '_' . $_FILES['image']['name'];
-            if (move_uploaded_file($_FILES['image']['tmp_name'], $upload_dir . $filename)) {
-                $image_url = 'images/executives/' . $filename;
-            }
-        }
+        $image_url = upload_to_supabase_storage($_FILES['image'] ?? [], 'executives', '', sanitize($_POST['current_image_url'] ?? 'images/aamusted.jpg'));
 
         $stmt = $pdo->prepare("UPDATE executives SET full_name = ?, position = ?, image_url = ? WHERE id = ?");
         $stmt->execute([$name, $pos, $image_url, $id]);
@@ -137,16 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id = intval($_POST['id']);
         $name = sanitize($_POST['full_name']);
         $year = sanitize($_POST['graduation_year']);
-        $image_url = sanitize($_POST['current_image_url'] ?? '');
-
-        if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-            $upload_dir = __DIR__ . '/../images/alumni/';
-            if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
-            $filename = time() . '_' . $_FILES['image']['name'];
-            if (move_uploaded_file($_FILES['image']['tmp_name'], $upload_dir . $filename)) {
-                $image_url = 'images/alumni/' . $filename;
-            }
-        }
+        $image_url = upload_to_supabase_storage($_FILES['image'] ?? [], 'alumni', '', sanitize($_POST['current_image_url'] ?? 'images/aamusted.jpg'));
 
         $stmt = $pdo->prepare("UPDATE alumni SET full_name = ?, graduation_year = ?, image_url = ? WHERE id = ?");
         $stmt->execute([$name, $year, $image_url, $id]);
@@ -159,16 +106,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'update_gallery') {
         $id = intval($_POST['id']);
         $title = sanitize($_POST['title']);
-        $image_url = sanitize($_POST['current_image_url'] ?? '');
-
-        if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-            $upload_dir = __DIR__ . '/../images/gallery/';
-            if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
-            $filename = time() . '_' . $_FILES['image']['name'];
-            if (move_uploaded_file($_FILES['image']['tmp_name'], $upload_dir . $filename)) {
-                $image_url = 'images/gallery/' . $filename;
-            }
-        }
+        $image_url = upload_to_supabase_storage($_FILES['image'] ?? [], 'gallery', '', sanitize($_POST['current_image_url'] ?? 'images/gallery-placeholder.png'));
 
         $stmt = $pdo->prepare("UPDATE gallery SET title = ?, image_url = ? WHERE id = ?");
         $stmt->execute([$title, $image_url, $id]);
@@ -184,16 +122,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $desc = sanitize($_POST['description']);
         $status = sanitize($_POST['status']);
         $date = sanitize($_POST['project_date']);
-        $image_url = sanitize($_POST['current_image_url'] ?? '');
-
-        if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-            $upload_dir = __DIR__ . '/../images/projects/';
-            if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
-            $filename = time() . '_' . $_FILES['image']['name'];
-            if (move_uploaded_file($_FILES['image']['tmp_name'], $upload_dir . $filename)) {
-                $image_url = 'images/projects/' . $filename;
-            }
-        }
+        $image_url = upload_to_supabase_storage($_FILES['image'] ?? [], 'projects', '', sanitize($_POST['current_image_url'] ?? 'images/project-placeholder.png'));
 
         $stmt = $pdo->prepare("UPDATE projects SET title = ?, description = ?, status = ?, project_date = ?, image_url = ? WHERE id = ?");
         $stmt->execute([$title, $desc, $status, $date, $image_url, $id]);
@@ -309,6 +238,7 @@ $submissions = []; try { $submissions = $pdo->query("SELECT * FROM contact_submi
                                         <button onclick="document.getElementById('edit-sub-<?php echo $sub['id']; ?>').style.display='block'" class="btn-admin-action btn-admin-secondary btn-admin-sm" style="margin-top:6px;"><i class="fas fa-pen"></i> Edit</button>
                                         <div id="resp-<?php echo $sub['id']; ?>" style="display:none; margin-top:10px;">
                                             <form method="POST">
+                                                <?php csrf_field(); ?>
                                                 <input type="hidden" name="action" value="respond_contact">
                                                 <input type="hidden" name="submission_id" value="<?php echo $sub['id']; ?>">
                                                 <textarea name="response" class="form-control" placeholder="Type response..."></textarea>
@@ -317,6 +247,7 @@ $submissions = []; try { $submissions = $pdo->query("SELECT * FROM contact_submi
                                         </div>
                                         <div id="edit-sub-<?php echo $sub['id']; ?>" style="display:none; margin-top:10px;">
                                             <form method="POST">
+                                                <?php csrf_field(); ?>
                                                 <input type="hidden" name="action" value="update_contact_submission">
                                                 <input type="hidden" name="id" value="<?php echo $sub['id']; ?>">
                                                 <input type="text" name="name" class="form-control" value="<?php echo htmlspecialchars($sub['name']); ?>" style="margin-bottom:8px;" required>
@@ -350,23 +281,25 @@ $submissions = []; try { $submissions = $pdo->query("SELECT * FROM contact_submi
                         <tbody>
                             <?php foreach ($executives as $exec): ?>
                                 <tr>
-                                    <td><img src="../<?php echo $exec['image_url'] ?: 'images/aamusted.jpg'; ?>" style="width:40px; height:40px; border-radius:50%; object-fit:cover;"></td>
+                                    <td><img src="<?php echo resolve_storage_url($exec['image_url'] ?? ''); ?>" style="width:40px; height:40px; border-radius:50%; object-fit:cover;"></td>
                                     <td><?php echo htmlspecialchars($exec['full_name']); ?></td>
                                     <td><?php echo htmlspecialchars($exec['position']); ?></td>
                                     <td>
                                         <button type="button" onclick="document.getElementById('edit-exec-<?php echo $exec['id']; ?>').style.display='block'" class="btn-admin-action btn-admin-secondary btn-admin-sm"><i class="fas fa-pen"></i> Edit</button>
                                         <form method="POST" onsubmit="return confirm('Are you sure you want to delete this executive?');" style="display:inline;">
+                                            <?php csrf_field(); ?>
                                             <input type="hidden" name="action" value="delete_executive">
                                             <input type="hidden" name="id" value="<?php echo $exec['id']; ?>">
                                             <button type="submit" class="btn-login" style="background:#dc3545; padding: 5px 10px; font-size: 0.8rem;"><i class="fas fa-trash"></i></button>
                                         </form>
                                         <div id="edit-exec-<?php echo $exec['id']; ?>" style="display:none; margin-top:10px;">
                                             <form method="POST" enctype="multipart/form-data">
+                                                <?php csrf_field(); ?>
                                                 <input type="hidden" name="action" value="update_executive">
                                                 <input type="hidden" name="id" value="<?php echo $exec['id']; ?>">
                                                 <input type="hidden" name="current_image_url" value="<?php echo htmlspecialchars($exec['image_url'] ?: 'images/aamusted.jpg'); ?>">
-                                                <img id="editExecPreview-<?php echo $exec['id']; ?>" src="../<?php echo htmlspecialchars($exec['image_url'] ?: 'images/aamusted.jpg'); ?>" class="upload-preview" alt="Executive image">
-                                                <input type="file" name="image" class="form-control image-upload-input" accept="image/*" data-preview-target="editExecPreview-<?php echo $exec['id']; ?>" data-file-name-target="editExecFileName-<?php echo $exec['id']; ?>" data-default-src="../<?php echo htmlspecialchars($exec['image_url'] ?: 'images/aamusted.jpg'); ?>" style="margin-bottom:8px;">
+                                                <img id="editExecPreview-<?php echo $exec['id']; ?>" src="<?php echo resolve_storage_url($exec['image_url'] ?? ''); ?>" class="upload-preview" alt="Executive image">
+                                                <input type="file" name="image" class="form-control image-upload-input" accept="image/*" data-preview-target="editExecPreview-<?php echo $exec['id']; ?>" data-file-name-target="editExecFileName-<?php echo $exec['id']; ?>" data-default-src="<?php echo resolve_storage_url($exec['image_url'] ?? ''); ?>" style="margin-bottom:8px;">
                                                 <div id="editExecFileName-<?php echo $exec['id']; ?>" class="upload-file-name" style="margin-bottom:8px;">No image selected</div>
                                                 <input type="text" name="full_name" class="form-control" value="<?php echo htmlspecialchars($exec['full_name']); ?>" style="margin-bottom:8px;" required>
                                                 <input type="text" name="position" class="form-control" value="<?php echo htmlspecialchars($exec['position']); ?>" style="margin-bottom:8px;" required>
@@ -393,23 +326,25 @@ $submissions = []; try { $submissions = $pdo->query("SELECT * FROM contact_submi
                         <tbody>
                             <?php foreach ($alumni as $alum): ?>
                                 <tr>
-                                    <td><img src="../<?php echo $alum['image_url'] ?: 'images/aamusted.jpg'; ?>" style="width:40px; height:40px; border-radius:50%; object-fit:cover;"></td>
+                                    <td><img src="<?php echo resolve_storage_url($alum['image_url'] ?? ''); ?>" style="width:40px; height:40px; border-radius:50%; object-fit:cover;"></td>
                                     <td><?php echo htmlspecialchars($alum['full_name']); ?></td>
                                     <td><?php echo htmlspecialchars($alum['graduation_year']); ?></td>
                                     <td>
                                         <button type="button" onclick="document.getElementById('edit-alum-<?php echo $alum['id']; ?>').style.display='block'" class="btn-admin-action btn-admin-secondary btn-admin-sm"><i class="fas fa-pen"></i> Edit</button>
                                         <form method="POST" onsubmit="return confirm('Are you sure you want to delete this alumni?');" style="display:inline;">
+                                            <?php csrf_field(); ?>
                                             <input type="hidden" name="action" value="delete_alumni">
                                             <input type="hidden" name="id" value="<?php echo $alum['id']; ?>">
                                             <button type="submit" class="btn-login" style="background:#dc3545; padding: 5px 10px; font-size: 0.8rem;"><i class="fas fa-trash"></i></button>
                                         </form>
                                         <div id="edit-alum-<?php echo $alum['id']; ?>" style="display:none; margin-top:10px;">
                                             <form method="POST" enctype="multipart/form-data">
+                                                <?php csrf_field(); ?>
                                                 <input type="hidden" name="action" value="update_alumni">
                                                 <input type="hidden" name="id" value="<?php echo $alum['id']; ?>">
                                                 <input type="hidden" name="current_image_url" value="<?php echo htmlspecialchars($alum['image_url'] ?: 'images/aamusted.jpg'); ?>">
-                                                <img id="editAlumPreview-<?php echo $alum['id']; ?>" src="../<?php echo htmlspecialchars($alum['image_url'] ?: 'images/aamusted.jpg'); ?>" class="upload-preview" alt="Alumni image">
-                                                <input type="file" name="image" class="form-control image-upload-input" accept="image/*" data-preview-target="editAlumPreview-<?php echo $alum['id']; ?>" data-file-name-target="editAlumFileName-<?php echo $alum['id']; ?>" data-default-src="../<?php echo htmlspecialchars($alum['image_url'] ?: 'images/aamusted.jpg'); ?>" style="margin-bottom:8px;">
+                                                <img id="editAlumPreview-<?php echo $alum['id']; ?>" src="<?php echo resolve_storage_url($alum['image_url'] ?? ''); ?>" class="upload-preview" alt="Alumni image">
+                                                <input type="file" name="image" class="form-control image-upload-input" accept="image/*" data-preview-target="editAlumPreview-<?php echo $alum['id']; ?>" data-file-name-target="editAlumFileName-<?php echo $alum['id']; ?>" data-default-src="<?php echo resolve_storage_url($alum['image_url'] ?? ''); ?>" style="margin-bottom:8px;">
                                                 <div id="editAlumFileName-<?php echo $alum['id']; ?>" class="upload-file-name" style="margin-bottom:8px;">No image selected</div>
                                                 <input type="text" name="full_name" class="form-control" value="<?php echo htmlspecialchars($alum['full_name']); ?>" style="margin-bottom:8px;" required>
                                                 <input type="text" name="graduation_year" class="form-control" value="<?php echo htmlspecialchars($alum['graduation_year']); ?>" style="margin-bottom:8px;" required>
@@ -438,22 +373,24 @@ $submissions = []; try { $submissions = $pdo->query("SELECT * FROM contact_submi
                         <tbody>
                             <?php foreach ($gallery as $item): ?>
                                 <tr>
-                                    <td><img src="../<?php echo $item['image_url']; ?>" style="width:60px; height:40px; object-fit:cover; border-radius:4px;"></td>
+                                    <td><img src="<?php echo resolve_storage_url($item['image_url'] ?? ''); ?>" style="width:60px; height:40px; object-fit:cover; border-radius:4px;"></td>
                                     <td><?php echo htmlspecialchars($item['title']); ?></td>
                                     <td>
                                         <button type="button" onclick="document.getElementById('edit-gallery-<?php echo $item['id']; ?>').style.display='block'" class="btn-admin-action btn-admin-secondary btn-admin-sm"><i class="fas fa-pen"></i> Edit</button>
                                         <form method="POST" onsubmit="return confirm('Are you sure you want to delete this gallery item?');" style="display:inline;">
+                                            <?php csrf_field(); ?>
                                             <input type="hidden" name="action" value="delete_gallery">
                                             <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
                                             <button type="submit" class="btn-login" style="background:#dc3545; padding: 5px 10px; font-size: 0.8rem;"><i class="fas fa-trash"></i></button>
                                         </form>
                                         <div id="edit-gallery-<?php echo $item['id']; ?>" style="display:none; margin-top:10px;">
                                             <form method="POST" enctype="multipart/form-data">
+                                                <?php csrf_field(); ?>
                                                 <input type="hidden" name="action" value="update_gallery">
                                                 <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
                                                 <input type="hidden" name="current_image_url" value="<?php echo htmlspecialchars($item['image_url']); ?>">
-                                                <img id="editGalleryPreview-<?php echo $item['id']; ?>" src="../<?php echo htmlspecialchars($item['image_url']); ?>" class="upload-preview" alt="Gallery image">
-                                                <input type="file" name="image" class="form-control image-upload-input" accept="image/*" data-preview-target="editGalleryPreview-<?php echo $item['id']; ?>" data-file-name-target="editGalleryFileName-<?php echo $item['id']; ?>" data-default-src="../<?php echo htmlspecialchars($item['image_url']); ?>" style="margin-bottom:8px;">
+                                                <img id="editGalleryPreview-<?php echo $item['id']; ?>" src="<?php echo resolve_storage_url($item['image_url'] ?? ''); ?>" class="upload-preview" alt="Gallery image">
+                                                <input type="file" name="image" class="form-control image-upload-input" accept="image/*" data-preview-target="editGalleryPreview-<?php echo $item['id']; ?>" data-file-name-target="editGalleryFileName-<?php echo $item['id']; ?>" data-default-src="<?php echo resolve_storage_url($item['image_url'] ?? ''); ?>" style="margin-bottom:8px;">
                                                 <div id="editGalleryFileName-<?php echo $item['id']; ?>" class="upload-file-name" style="margin-bottom:8px;">No image selected</div>
                                                 <input type="text" name="title" class="form-control" value="<?php echo htmlspecialchars($item['title']); ?>" style="margin-bottom:8px;" required>
                                                 <button type="submit" class="btn-submit">Save Changes</button>
@@ -479,23 +416,25 @@ $submissions = []; try { $submissions = $pdo->query("SELECT * FROM contact_submi
                         <tbody>
                             <?php foreach ($projects as $project): ?>
                                 <tr>
-                                    <td><img src="../<?php echo $project['image_url'] ?: 'images/project-placeholder.png'; ?>" style="width:60px; height:40px; object-fit:cover; border-radius:4px;"></td>
+                                    <td><img src="<?php echo resolve_storage_url($project['image_url'] ?? '', 'images/project-placeholder.png'); ?>" style="width:60px; height:40px; object-fit:cover; border-radius:4px;"></td>
                                     <td><?php echo htmlspecialchars($project['title']); ?></td>
                                     <td><span class="badge" style="background:#17a2b8; color:white; padding:2px 6px; border-radius:4px; font-size:0.75rem;"><?php echo ucfirst($project['status']); ?></span></td>
                                     <td>
                                         <button type="button" onclick="document.getElementById('edit-project-<?php echo $project['id']; ?>').style.display='block'" class="btn-admin-action btn-admin-secondary btn-admin-sm"><i class="fas fa-pen"></i> Edit</button>
                                         <form method="POST" onsubmit="return confirm('Are you sure you want to delete this project?');" style="display:inline;">
+                                            <?php csrf_field(); ?>
                                             <input type="hidden" name="action" value="delete_project">
                                             <input type="hidden" name="id" value="<?php echo $project['id']; ?>">
                                             <button type="submit" class="btn-login" style="background:#dc3545; padding: 5px 10px; font-size: 0.8rem;"><i class="fas fa-trash"></i></button>
                                         </form>
                                         <div id="edit-project-<?php echo $project['id']; ?>" style="display:none; margin-top:10px;">
                                             <form method="POST" enctype="multipart/form-data">
+                                                <?php csrf_field(); ?>
                                                 <input type="hidden" name="action" value="update_project">
                                                 <input type="hidden" name="id" value="<?php echo $project['id']; ?>">
                                                 <input type="hidden" name="current_image_url" value="<?php echo htmlspecialchars($project['image_url'] ?: 'images/project-placeholder.png'); ?>">
-                                                <img id="editProjectPreview-<?php echo $project['id']; ?>" src="../<?php echo htmlspecialchars($project['image_url'] ?: 'images/project-placeholder.png'); ?>" class="upload-preview" alt="Project image">
-                                                <input type="file" name="image" class="form-control image-upload-input" accept="image/*" data-preview-target="editProjectPreview-<?php echo $project['id']; ?>" data-file-name-target="editProjectFileName-<?php echo $project['id']; ?>" data-default-src="../<?php echo htmlspecialchars($project['image_url'] ?: 'images/project-placeholder.png'); ?>" style="margin-bottom:8px;">
+                                                <img id="editProjectPreview-<?php echo $project['id']; ?>" src="<?php echo resolve_storage_url($project['image_url'] ?? '', 'images/project-placeholder.png'); ?>" class="upload-preview" alt="Project image">
+                                                <input type="file" name="image" class="form-control image-upload-input" accept="image/*" data-preview-target="editProjectPreview-<?php echo $project['id']; ?>" data-file-name-target="editProjectFileName-<?php echo $project['id']; ?>" data-default-src="<?php echo resolve_storage_url($project['image_url'] ?? '', 'images/project-placeholder.png'); ?>" style="margin-bottom:8px;">
                                                 <div id="editProjectFileName-<?php echo $project['id']; ?>" class="upload-file-name" style="margin-bottom:8px;">No image selected</div>
                                                 <input type="text" name="title" class="form-control" value="<?php echo htmlspecialchars($project['title']); ?>" style="margin-bottom:8px;" required>
                                                 <textarea name="description" class="form-control" rows="3" style="margin-bottom:8px;"><?php echo htmlspecialchars($project['description']); ?></textarea>
@@ -524,6 +463,7 @@ $submissions = []; try { $submissions = $pdo->query("SELECT * FROM contact_submi
             <span class="close-btn" onclick="document.getElementById('execModal').style.display='none'">&times;</span>
             <h3>Add Executive</h3>
             <form method="POST" enctype="multipart/form-data" style="margin-top: 15px;">
+                <?php csrf_field(); ?>
                 <input type="hidden" name="action" value="add_executive">
                 <div class="form-group">
                     <label>Profile Picture</label>
@@ -550,6 +490,7 @@ $submissions = []; try { $submissions = $pdo->query("SELECT * FROM contact_submi
             <span class="close-btn" onclick="document.getElementById('alumniModal').style.display='none'">&times;</span>
             <h3>Add Alumni</h3>
             <form method="POST" enctype="multipart/form-data" style="margin-top: 15px;">
+                <?php csrf_field(); ?>
                 <input type="hidden" name="action" value="add_alumni">
                 <div class="form-group">
                     <label>Profile Picture</label>
@@ -576,6 +517,7 @@ $submissions = []; try { $submissions = $pdo->query("SELECT * FROM contact_submi
             <span class="close-btn" onclick="document.getElementById('projectModal').style.display='none'">&times;</span>
             <h3>Add Project</h3>
             <form method="POST" enctype="multipart/form-data" style="margin-top: 15px;">
+                <?php csrf_field(); ?>
                 <input type="hidden" name="action" value="add_project">
                 <div class="form-group">
                     <label>Project Image</label>
@@ -616,6 +558,7 @@ $submissions = []; try { $submissions = $pdo->query("SELECT * FROM contact_submi
             <span class="close-btn" onclick="document.getElementById('galleryModal').style.display='none'">&times;</span>
             <h3>Add Gallery Item</h3>
             <form method="POST" enctype="multipart/form-data" style="margin-top: 15px;">
+                <?php csrf_field(); ?>
                 <input type="hidden" name="action" value="add_gallery">
                 <div class="form-group">
                     <label>Image</label>

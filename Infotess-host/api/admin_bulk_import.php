@@ -17,6 +17,7 @@ $error = '';
 
 // Handle CSV Import
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'import_students') {
+    validate_request_csrf();
     if (isset($_FILES['csv_file']) && $_FILES['csv_file']['error'] === UPLOAD_ERR_OK) {
         $file = $_FILES['csv_file']['tmp_name'];
         $handle = fopen($file, 'r');
@@ -183,6 +184,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     </div>
 
                     <form action="bulk_import.php" method="POST" enctype="multipart/form-data">
+                        <?php csrf_field(); ?>
                         <input type="hidden" name="action" value="import_students">
                         
                         <div class="form-group">

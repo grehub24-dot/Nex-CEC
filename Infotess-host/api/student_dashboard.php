@@ -268,7 +268,7 @@ $status_text = $outstanding <= 0 ? 'Fully Paid' : 'Outstanding';
                                 <td><?php echo htmlspecialchars($payment['academic_year'] . ' — Term ' . $payment['semester']); ?></td>
                                 <td><span class="color-success fw-bold">Paid</span></td>
                                 <td>
-                                    <a href="../receipts/receipt_<?php echo htmlspecialchars($payment['receipt_number']); ?>.html" target="_blank" class="btn-login btn-sm">View Receipt</a>
+                                    <a href="view_receipt.php?receipt=<?php echo urlencode($payment['receipt_number']); ?>" target="_blank" class="btn-login btn-sm">View Receipt</a>
                                 </td>
                             </tr>
                             <?php endforeach; ?>

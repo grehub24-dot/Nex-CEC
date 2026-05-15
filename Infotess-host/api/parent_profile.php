@@ -56,35 +56,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = "Error updating email: " . $e->getMessage();
     }
 
-    // Handle profile picture upload
-    $profile_picture = null;
+    // Handle profile picture upload to Supabase Storage
     if (isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] === UPLOAD_ERR_OK) {
         $file = $_FILES['profile_picture'];
         // Validate file size (max 2MB)
         if ($file['size'] > 2 * 1024 * 1024) {
             $error = "File too large. Maximum size is 2MB.";
         } else {
-            // Validate MIME type and extension
-            $allowed_mime = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-            $allowed_ext = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
             $finfo = finfo_open(FILEINFO_MIME_TYPE);
             $mime = finfo_file($finfo, $file['tmp_name']);
             finfo_close($finfo);
-            $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-            if (!in_array($mime, $allowed_mime) || !in_array($ext, $allowed_ext)) {
+            $allowed_mime = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+            if (!in_array($mime, $allowed_mime)) {
                 $error = "Invalid file type. Only JPG, PNG, GIF, and WebP images are allowed.";
             } else {
-                $upload_dir = __DIR__ . '/../images/profiles/';
-                if (!is_dir($upload_dir)) {
-                    mkdir($upload_dir, 0775, true);
-                }
+                $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
                 $file_name = 'parent_' . $parent_user_id . '_' . time() . '_' . uniqid() . '.' . $ext;
-                $target_file = $upload_dir . $file_name;
-                if (move_uploaded_file($file['tmp_name'], $target_file)) {
-                    $profile_picture = 'images/profiles/' . $file_name;
+                $newUrl = upload_to_supabase_storage($file, 'profiles', $file_name, $profile_pic ?? 'images/aamusted.jpg');
+                if (strpos($newUrl, 'http') === 0) {
                     try {
                         $stmt = $pdo->prepare("UPDATE users SET profile_picture = ? WHERE id = ?");
-                        $stmt->execute([$profile_picture, $parent_user_id]);
+                        $stmt->execute([$newUrl, $parent_user_id]);
                     } catch (Exception $e) {
                         $error = "Error saving profile picture: " . $e->getMessage();
                     }

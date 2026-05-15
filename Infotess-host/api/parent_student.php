@@ -1,5 +1,6 @@
 <?php
 require_once 'includes/db.php';
+require_once 'includes/functions.php';
 
 if (!isLoggedIn() || !isParentOrDual()) {
     redirect('../login.php');
@@ -84,17 +85,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_child_photo'])
             if (!in_array($mime, $allowed_mime) || !in_array($ext, $allowed_ext)) {
                 $upload_error = "Invalid file type. Only JPG, PNG, GIF, and WebP images are allowed.";
             } else {
-                $upload_dir = __DIR__ . '/../images/profiles/';
-                if (!is_dir($upload_dir)) {
-                    mkdir($upload_dir, 0775, true);
-                }
-                $filename = 'student_' . $student_id . '_' . time() . '_' . uniqid() . '.' . $ext;
-                $target = $upload_dir . $filename;
-                if (move_uploaded_file($file['tmp_name'], $target)) {
-                    $path = 'images/profiles/' . $filename;
+                $objectName = 'student_' . $student_id . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+                $url = upload_to_supabase_storage($file, 'profiles', $objectName, '');
+                if ($url !== '' && strpos($url, 'http') === 0) {
                     $stmt = $pdo->prepare("UPDATE students SET profile_picture = ? WHERE id = ?");
-                    $stmt->execute([$path, $student_id]);
-                    $student['profile_picture'] = $path;
+                    $stmt->execute([$url, $student_id]);
+                    $student['profile_picture'] = $url;
                     $upload_message = "Profile picture updated successfully.";
                 } else {
                     $upload_error = "Failed to upload image.";
@@ -231,7 +227,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_child_photo'])
             <div class="student-info">
                 <div class="avatar" id="childAvatarContainer">
                     <?php if (!empty($student['profile_picture'])): ?>
-                        <img src="../<?php echo htmlspecialchars($student['profile_picture']); ?>" alt="Profile" id="childAvatarImg">
+                        <img src="<?php echo htmlspecialchars(resolve_storage_url($student['profile_picture'] ?? null)); ?>" alt="Profile" id="childAvatarImg">
                     <?php else: ?>
                         <span id="childAvatarInitial"><?php echo htmlspecialchars($initial); ?></span>
                     <?php endif; ?>

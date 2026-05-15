@@ -14,6 +14,7 @@ $error = '';
 
 // Handle Generate Payroll
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'generate_payroll') {
+    validate_request_csrf();
     $month = (int)$_POST['month'];
     $year = (int)$_POST['year'];
     
@@ -89,6 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
 // Handle Approve Payroll
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'approve_payroll') {
+    validate_request_csrf();
     $payroll_id = (int)$_POST['payroll_id'];
     try {
         // Bridge doesn't support literal values or NOW() in SET — use ? params for everything
@@ -102,6 +104,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
 // Handle Delete Payroll
 if (isset($_GET['delete']) && is_numeric($_GET['delete'])) {
+    validate_request_csrf();
     $payroll_id = (int)$_GET['delete'];
     try {
         $pdo->prepare("DELETE FROM pay_slips WHERE payroll_id = ?")->execute([$payroll_id]);
@@ -191,6 +194,7 @@ $pending_count = count(array_filter($payroll_records, fn($r) => $r['status'] ===
                     </form>
                     
                     <form method="POST" action="payroll.php" style="margin-left: auto;">
+                        <?php csrf_field(); ?>
                         <input type="hidden" name="action" value="generate_payroll">
                         <input type="hidden" name="month" value="<?php echo $selected_month; ?>">
                         <input type="hidden" name="year" value="<?php echo $selected_year; ?>">
@@ -277,13 +281,14 @@ $pending_count = count(array_filter($payroll_records, fn($r) => $r['status'] ===
                                     <td>
                                         <?php if ($record['status'] === 'pending'): ?>
                                             <form method="POST" action="payroll.php" style="display: inline;">
+                                                <?php csrf_field(); ?>
                                                 <input type="hidden" name="action" value="approve_payroll">
                                                 <input type="hidden" name="payroll_id" value="<?php echo $record['id']; ?>">
                                                 <button type="submit" class="btn-login" style="background: #28a745; padding: 5px 10px; font-size: 0.8rem;">Approve</button>
                                             </form>
                                         <?php endif; ?>
                                         <a href="pay_slip.php?id=<?php echo $record['id']; ?>" class="btn-login" style="background: #17a2b8; padding: 5px 10px; font-size: 0.8rem;">Slip</a>
-                                        <a href="payroll.php?delete=<?php echo $record['id']; ?>" class="btn-login" style="background: #e74c3c; padding: 5px 10px; font-size: 0.8rem;" onclick="return confirm('Delete this payroll record?');">Delete</a>
+                                        <a href="payroll.php?delete=<?php echo $record['id']; ?>&<?php echo csrf_query(); ?>" class="btn-login" style="background: #e74c3c; padding: 5px 10px; font-size: 0.8rem;" onclick="return confirm('Delete this payroll record?');">Delete</a>
                                     </td>
                                 </tr>
                                 <?php endforeach; ?>

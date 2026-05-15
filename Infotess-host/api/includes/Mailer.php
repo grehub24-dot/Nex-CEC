@@ -8,11 +8,18 @@ use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
 class Mailer {
-    // Gmail SMTP Configuration
-    private $smtpHost = 'smtp.gmail.com';
-    private $smtpPort = 465; // Use 465 for SMTPS (SSL) or 587 for STARTTLS
-    private $smtpUsername = 'nexorasystems25@gmail.com'; // Replace with your Gmail address
-    private $smtpPassword = 'wahhorvrinmrcqjk';    // Replace with your 16-character Gmail App Password
+    // Gmail SMTP Configuration — read from environment variables
+    private $smtpHost;
+    private $smtpPort;
+    private $smtpUsername;
+    private $smtpPassword;
+
+    public function __construct() {
+        $this->smtpHost = getenv('SMTP_HOST') ?: 'smtp.gmail.com';
+        $this->smtpPort = (int)(getenv('SMTP_PORT') ?: 465);
+        $this->smtpUsername = getenv('SMTP_USERNAME') ?: '';
+        $this->smtpPassword = getenv('SMTP_PASSWORD') ?: '';
+    }
 
     public function sendHTML($to, $subject, $html, $fromEmail = null, $fromName = 'School Admin') {
         // Save copy locally for reference (skip on read-only filesystem like Vercel)

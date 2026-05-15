@@ -14,6 +14,7 @@ $error = '';
 
 // Handle Save/Update Salary Structure
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'save_salary') {
+    validate_request_csrf();
     $staff_id = (int)$_POST['staff_id'];
     $basic_salary = (float)$_POST['basic_salary'];
     $housing_allowance = (float)$_POST['housing_allowance'];
@@ -40,6 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
 // Handle Add Deduction
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'add_deduction') {
+    validate_request_csrf();
     $staff_id = (int)$_POST['staff_id'];
     $deduction_type = sanitize($_POST['deduction_type']);
     $amount = (float)$_POST['deduction_amount'];
@@ -57,6 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
 // Handle Delete Deduction
 if (isset($_GET['delete_deduction']) && is_numeric($_GET['delete_deduction'])) {
+    validate_request_csrf();
     try {
         $pdo->prepare("DELETE FROM deductions WHERE id = ?")->execute([(int)$_GET['delete_deduction']]);
         $message = "Deduction removed.";
@@ -149,6 +152,7 @@ $net = $gross - $ssnit - $tax - $recurring_deductions;
                     <div class="card-content">
                         <h3><i class="fas fa-money-check-alt" style="color: var(--primary-color);"></i> Salary Structure</h3>
                         <form method="POST" action="salary.php" style="margin-top: 20px;">
+                            <?php csrf_field(); ?>
                             <input type="hidden" name="action" value="save_salary">
                             <input type="hidden" name="staff_id" value="<?php echo $selected_staff_id; ?>">
                             
@@ -227,6 +231,7 @@ $net = $gross - $ssnit - $tax - $recurring_deductions;
                     <h3><i class="fas fa-minus-circle" style="color: #e74c3c;"></i> Deductions</h3>
                     
                     <form method="POST" action="salary.php" style="display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; align-items: flex-end;">
+                        <?php csrf_field(); ?>
                         <input type="hidden" name="action" value="add_deduction">
                         <input type="hidden" name="staff_id" value="<?php echo $selected_staff_id; ?>">
                         <div>
@@ -276,7 +281,7 @@ $net = $gross - $ssnit - $tax - $recurring_deductions;
                                 <td><?php echo $d['is_recurring'] ? '<span style="color: green;">Yes</span>' : 'No'; ?></td>
                                 <td><?php echo date('M d, Y', strtotime($d['created_at'])); ?></td>
                                 <td>
-                                    <a href="salary.php?staff_id=<?php echo $selected_staff_id; ?>&delete_deduction=<?php echo $d['id']; ?>" class="btn-login" style="background: #e74c3c; padding: 5px 10px; font-size: 0.8rem;" onclick="return confirm('Remove this deduction?');">Remove</a>
+                                    <a href="salary.php?staff_id=<?php echo $selected_staff_id; ?>&delete_deduction=<?php echo $d['id']; ?>&<?php echo csrf_query(); ?>" class="btn-login" style="background: #e74c3c; padding: 5px 10px; font-size: 0.8rem;" onclick="return confirm('Remove this deduction?');">Remove</a>
                                 </td>
                             </tr>
                             <?php endforeach; ?>

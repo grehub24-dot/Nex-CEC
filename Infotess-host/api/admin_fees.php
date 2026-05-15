@@ -82,6 +82,7 @@ $error = '';
 
 // Handle Add/Edit Fee
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+    validate_request_csrf();
     $fee_title = sanitize($_POST['fee_title'] ?? '');
     $fee_type = sanitize($_POST['fee_type'] ?? '');
     $amount = floatval($_POST['amount'] ?? 0);
@@ -431,6 +432,7 @@ foreach ($fees as $f) {
                                         <button class="btn-admin-sm" onclick="openEdit(<?php echo htmlspecialchars(json_encode($fee)); ?>)" style="background: #3498db; border: none; margin-right: 5px;">Edit</button>
                                         <form action="fees.php" method="POST" style="display:inline;" onsubmit="return confirm('Delete this fee item?');">
                                             <input type="hidden" name="action" value="delete_fee">
+                                            <?php csrf_field(); ?>
                                             <input type="hidden" name="fee_id" value="<?php echo $fee['id']; ?>">
                                             <input type="hidden" name="year" value="<?php echo htmlspecialchars($filter_year); ?>">
                                             <input type="hidden" name="term" value="<?php echo htmlspecialchars($filter_term); ?>">
@@ -454,6 +456,7 @@ foreach ($fees as $f) {
             <h3>Add New Fee</h3>
             <form action="fees.php" method="POST" class="mt-15" onsubmit="document.getElementById('addFeeBtn').disabled=true; document.getElementById('addFeeBtn').innerHTML='<i class=\'fas fa-spinner fa-pulse\'></i> Adding...';">
                 <input type="hidden" name="action" value="add_fee">
+                <?php csrf_field(); ?>
                 
                 <div class="form-group">
                     <label>Fee Title</label>
@@ -522,6 +525,7 @@ foreach ($fees as $f) {
             <form action="fees.php" method="POST" class="mt-15" onsubmit="document.getElementById('editFeeBtn').disabled=true; document.getElementById('editFeeBtn').innerHTML='<i class=\'fas fa-spinner fa-pulse\'></i> Updating...';">
                 <input type="hidden" name="action" value="edit_fee">
                 <input type="hidden" name="fee_id" id="edit_fee_id">
+                <?php csrf_field(); ?>
                 
                 <div class="form-group">
                     <label>Fee Title</label>

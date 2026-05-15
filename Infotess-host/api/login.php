@@ -27,6 +27,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (empty($identifier) || empty($password)) {
         $error = "Please enter both identifier and password.";
+    } elseif (!validate_csrf_token($_POST['csrf_token'] ?? '')) {
+        $error = "Invalid or expired session. Please refresh the page and try again.";
     } else {
         // Check if it's an email (Admin) or Index Number (Student)
         if (filter_var($identifier, FILTER_VALIDATE_EMAIL)) {
@@ -181,6 +183,7 @@ require_once 'includes/header.php';
                 </div>
             </div>
             
+            <?php csrf_field(); ?>
             <button type="submit" class="btn-submit">Login</button>
             
             <div style="margin-top: 15px; text-align: center;">

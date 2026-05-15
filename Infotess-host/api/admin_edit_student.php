@@ -22,6 +22,7 @@ $error = '';
 
 // Handle Update
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    validate_request_csrf();
     // Student info
     $full_name = sanitize($_POST['full_name'] ?? '');
     $admission_number = sanitize($_POST['admission_number'] ?? '');
@@ -53,15 +54,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $admission_date = sanitize($_POST['admission_date'] ?? '');
     $academic_year = sanitize($_POST['academic_year'] ?? '');
 
-    // Handle Profile Picture
+    // Handle Profile Picture — upload to Supabase Storage
+    $admissionNumberForFile = $admission_number ?: 'student';
     $profile_picture = $_POST['current_picture'] ?? null;
     if (isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] === UPLOAD_ERR_OK) {
-        $upload_dir = __DIR__ . '/../images/profiles/';
-        if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
         $ext = pathinfo($_FILES['profile_picture']['name'], PATHINFO_EXTENSION);
-        $filename = $admission_number . '_' . time() . '.' . $ext;
-        if (move_uploaded_file($_FILES['profile_picture']['tmp_name'], $upload_dir . $filename)) {
-            $profile_picture = 'images/profiles/' . $filename;
+        $filename = $admissionNumberForFile . '_' . time() . '.' . $ext;
+        $newUrl = upload_to_supabase_storage($_FILES['profile_picture'], 'profiles', $filename, $profile_picture ?: 'images/aamusted.jpg');
+        if (strpos($newUrl, 'http') === 0) {
+            $profile_picture = $newUrl;
         }
     }
 
@@ -166,11 +167,12 @@ if (!$student) {
 
             <div class="card">
                 <form action="" method="POST" enctype="multipart/form-data" style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+                    <?php csrf_field(); ?>
                     <input type="hidden" name="current_picture" value="<?php echo htmlspecialchars($student['profile_picture'] ?? ''); ?>">
                     
                     <!-- Profile Picture -->
                     <div style="grid-column: span 2; text-align: center; margin-bottom: 10px;">
-                        <img id="editStudentPreview" src="../<?php echo htmlspecialchars($student['profile_picture'] ?? 'images/aamusted.jpg'); ?>" alt="Current Profile" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 2px solid #ddd; margin-bottom: 10px;">
+                        <img id="editStudentPreview" src="<?php echo resolve_storage_url($student['profile_picture'] ?? ''); ?>" alt="Current Profile" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 2px solid #ddd; margin-bottom: 10px;">
                         <br>
                         <label>Update Profile Picture</label><br>
                         <input type="file" name="profile_picture" id="editStudentUpload" class="form-control" accept="image/*">
@@ -343,7 +345,7 @@ if (!$student) {
         if (editStudentUpload && editStudentPreview && editStudentUploadName) {
             editStudentUpload.addEventListener('change', function() {
                 const file = this.files && this.files[0] ? this.files[0] : null;
-                const defaultSrc = "../<?php echo htmlspecialchars($student['profile_picture'] ?? 'images/aamusted.jpg'); ?>";
+                const defaultSrc = "<?php echo resolve_storage_url($student['profile_picture'] ?? ''); ?>";
                 if (!file) { editStudentPreview.src = defaultSrc; editStudentUploadName.textContent = 'No image selected'; return; }
                 editStudentUploadName.textContent = file.name;
                 if (!file.type.startsWith('image/')) { editStudentPreview.src = defaultSrc; editStudentUploadName.textContent = 'Please select an image file'; this.value = ''; return; }

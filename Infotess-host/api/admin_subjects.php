@@ -156,6 +156,7 @@ function addSubjectIdToMapping(array &$mapping, string $category, int $id): void
 // Handle POST Actions
 // ==========================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    validate_request_csrf();
     $action = $_POST['action'] ?? '';
 
     try {
@@ -465,6 +466,7 @@ if (!isset($categories[$active_tab])) $active_tab = 'creche';
             <div class="top-bar">
                 <h2>Subject Settings by Educational Level</h2>
                 <form method="POST" class="inline-form" onsubmit="return confirm('Seed ALL categories with Ghana curriculum standard subjects? Duplicates will be skipped.');">
+                    <?php csrf_field(); ?>
                     <input type="hidden" name="action" value="seed_all">
                     <button type="submit" class="btn-admin-action btn-admin-success"><i class="fas fa-database"></i> Seed All Defaults</button>
                 </form>
@@ -508,6 +510,7 @@ if (!isset($categories[$active_tab])) $active_tab = 'creche';
                 <div class="card-header flex justify-between items-center" style="padding: 20px;">
                     <h3><i class="fas <?php echo $categories[$current_cat]['icon']; ?>"></i> <?php echo htmlspecialchars($cat_label); ?> — Subjects</h3>
                     <form method="POST" class="inline-form" onsubmit="return confirm('Seed default subjects for <?php echo htmlspecialchars($cat_label); ?>?');">
+                        <?php csrf_field(); ?>
                         <input type="hidden" name="action" value="seed_defaults">
                         <input type="hidden" name="seed_category" value="<?php echo $current_cat; ?>">
                         <button type="submit" class="btn-admin-action btn-admin-sm"><i class="fas fa-magic"></i> Seed Defaults</button>
@@ -517,6 +520,7 @@ if (!isset($categories[$active_tab])) $active_tab = 'creche';
                     <!-- Quick Add -->
                     <div class="add-row">
                         <form method="POST" class="flex items-center gap-10" style="flex-wrap: wrap;">
+                            <?php csrf_field(); ?>
                             <input type="hidden" name="action" value="add_subject">
                             <input type="hidden" name="category" value="<?php echo $current_cat; ?>">
                             <div>
@@ -565,6 +569,7 @@ if (!isset($categories[$active_tab])) $active_tab = 'creche';
                                             <!-- Edit Button triggers inline edit form -->
                                             <button onclick="toggleEdit(<?php echo $subj['id']; ?>)" class="btn-admin-action btn-admin-secondary btn-admin-sm"><i class="fas fa-pen"></i> Edit</button>
                                             <form method="POST" class="inline-form" onsubmit="return confirm('Delete subject &quot;<?php echo htmlspecialchars($subj['name'], ENT_QUOTES); ?>&quot;?');">
+                                                <?php csrf_field(); ?>
                                                 <input type="hidden" name="action" value="delete_subject">
                                                 <input type="hidden" name="id" value="<?php echo $subj['id']; ?>">
                                                 <button type="submit" class="btn-admin-action btn-admin-danger btn-admin-sm"><i class="fas fa-trash"></i></button>
@@ -574,6 +579,7 @@ if (!isset($categories[$active_tab])) $active_tab = 'creche';
                                     <tr id="edit-row-<?php echo $subj['id']; ?>" style="display: none;">
                                         <td colspan="4" style="background: #f8f9fa; padding: 10px 15px;">
                                             <form method="POST" class="flex items-center gap-10" style="flex-wrap: wrap;">
+                                                <?php csrf_field(); ?>
                                                 <input type="hidden" name="action" value="edit_subject">
                                                 <input type="hidden" name="id" value="<?php echo $subj['id']; ?>">
                                                 <input type="hidden" name="category" value="<?php echo $current_cat; ?>">

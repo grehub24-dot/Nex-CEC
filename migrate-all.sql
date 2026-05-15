@@ -282,6 +282,17 @@ END $$;
 -- Fee structures are seeded per-class in seed-data.sql (section 14).
 -- This block just ensures the columns exist — handled above.
 
+-- Rename legacy semester column to term (idempotent)
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'payments' AND column_name = 'semester'
+    ) THEN
+        ALTER TABLE payments RENAME COLUMN semester TO term;
+    END IF;
+END $$;
+
 -- 4. Payments Table — drop and recreate to ensure correct schema + unique constraint
 DO $$
 DECLARE
@@ -301,7 +312,7 @@ CREATE TABLE IF NOT EXISTS payments (
     student_id INTEGER NOT NULL,
     amount NUMERIC(10,2) NOT NULL DEFAULT 0,
     academic_year VARCHAR(20),
-    semester VARCHAR(20),
+    term VARCHAR(20),
     fee_type VARCHAR(50),
     payment_method VARCHAR(50),
     payment_date DATE DEFAULT CURRENT_DATE,

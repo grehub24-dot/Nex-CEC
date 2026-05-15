@@ -54,6 +54,7 @@ if ($selected_class) {
 
 // Handle Save Attendance — use POST-Redirect-GET
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'save_attendance') {
+    validate_request_csrf();
     $class_id = (int)$_POST['class_id'];
     $attendance_date = sanitize($_POST['attendance_date']);
     
@@ -213,6 +214,7 @@ if ($selected_class) {
                     </div>
 
                     <form method="POST" action="/admin/attendance.php">
+                        <?php csrf_field(); ?>
                         <input type="hidden" name="action" value="save_attendance">
                         <input type="hidden" name="class_id" value="<?php echo htmlspecialchars($selected_class); ?>">
                         <input type="hidden" name="attendance_date" value="<?php echo htmlspecialchars($selected_date); ?>">

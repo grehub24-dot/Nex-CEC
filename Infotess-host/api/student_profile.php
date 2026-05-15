@@ -1,5 +1,6 @@
 <?php
 require_once 'includes/db.php';
+require_once 'includes/functions.php';
 
 if (!isLoggedIn() || !isStudent()) {
     redirect('../login.php');
@@ -28,13 +29,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     $profile_picture = null;
     if (isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] === UPLOAD_ERR_OK) {
-        $upload_dir = __DIR__ . '/../images/profiles/';
-        if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
-        $file_extension = pathinfo($_FILES['profile_picture']['name'], PATHINFO_EXTENSION);
-        $file_name = $_SESSION['admission_number'] . '_' . time() . '.' . $file_extension;
-        $target_file = $upload_dir . $file_name;
-        if (move_uploaded_file($_FILES['profile_picture']['tmp_name'], $target_file)) {
-            $profile_picture = 'images/profiles/' . $file_name;
+        $file = $_FILES['profile_picture'];
+        $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        $objectName = $_SESSION['admission_number'] . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+        $url = upload_to_supabase_storage($file, 'profiles', $objectName, null);
+        if ($url !== null && strpos($url, 'http') === 0) {
+            $profile_picture = $url;
         }
     }
 
@@ -118,7 +118,7 @@ if ($student) {
                 <h3>Personal Information</h3>
                 <form method="POST" action="" enctype="multipart/form-data">
                     <div class="form-group" style="text-align:center;">
-                        <img id="profilePicturePreview" src="../<?php echo htmlspecialchars($student['profile_picture'] ?? 'images/aamusted.jpg'); ?>" alt="Profile Picture" style="width:150px; height:150px; border-radius:50%; object-fit:cover; margin-bottom:10px;">
+                        <img id="profilePicturePreview" src="<?php echo htmlspecialchars(resolve_storage_url($student['profile_picture'] ?? null, 'images/aamusted.jpg')); ?>" alt="Profile Picture" style="width:150px; height:150px; border-radius:50%; object-fit:cover; margin-bottom:10px;">
                         <br>
                         <label for="profile_picture" class="btn-login" style="cursor:pointer; display:inline-block;">Change Picture</label>
                         <input type="file" name="profile_picture" id="profile_picture" style="display:none;" accept="image/*">
@@ -185,7 +185,7 @@ if ($student) {
         if (profilePictureInput && profilePicturePreview && profileUploadName) {
             profilePictureInput.addEventListener('change', function() {
                 const file = this.files && this.files[0] ? this.files[0] : null;
-                const defaultSrc = "../<?php echo htmlspecialchars($student['profile_picture'] ?? 'images/aamusted.jpg'); ?>";
+                const defaultSrc = "<?php echo htmlspecialchars(resolve_storage_url($student['profile_picture'] ?? null, 'images/aamusted.jpg')); ?>";
                 if (!file) { profilePicturePreview.src = defaultSrc; profileUploadName.textContent = 'No image selected'; return; }
                 profileUploadName.textContent = file.name;
                 if (!file.type.startsWith('image/')) { profilePicturePreview.src = defaultSrc; profileUploadName.textContent = 'Please select an image file'; this.value = ''; return; }

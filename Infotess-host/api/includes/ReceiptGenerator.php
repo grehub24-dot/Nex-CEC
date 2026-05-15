@@ -3,13 +3,16 @@
 // In production, this would use TCPDF or DOMPDF
 class ReceiptGenerator {
     public function generate($paymentId, $receiptNumber, $student, $amount, $date, $class_name = '', $fee_type = '', $school_name = 'School', $balance = 0, $academicYear = '', $term = '', $paymentMethod = 'Mobile Money') {
-        // Define the path where receipts will be stored
-        $directory = __DIR__ . '/../receipts/';
-        if (!is_dir($directory)) {
-            mkdir($directory, 0777, true);
-        }
-        
         $filename = "receipt_" . $receiptNumber . ".html";
+        
+        // Try receipts/ directory first (production), fall back to /tmp (Vercel serverless)
+        $directory = __DIR__ . '/../receipts/';
+        if (!is_dir($directory) && !@mkdir($directory, 0777, true)) {
+            $directory = sys_get_temp_dir() . '/receipts/';
+            if (!is_dir($directory)) {
+                @mkdir($directory, 0777, true);
+            }
+        }
         $filepath = $directory . $filename;
 
         // Convert local image to base64 for email compatibility
@@ -311,7 +314,8 @@ class ReceiptGenerator {
         </html>
         ";
 
-        file_put_contents($filepath, $html);
+        // Write to disk if possible (for email attachment; graceful failure on Vercel read-only FS)
+        @file_put_contents($filepath, $html);
         return $filename;
     }
 }

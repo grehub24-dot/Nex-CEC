@@ -19,6 +19,9 @@ $registered_student = null;
 
 // Handle Student Registration
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'add_student') {
+    // CSRF validation
+    validate_request_csrf();
+
     // Generate enrollment ID: ENR-YYYY-XXXXXX
     $enrollmentId = 'ENR-' . date('Y') . '-' . strtoupper(substr(bin2hex(random_bytes(3)), 0, 6));
     $admission_number = null; // Will be assigned after payment
@@ -54,15 +57,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $admission_date = sanitize($_POST['admission_date'] ?? date('Y-m-d'));
     $academic_year = sanitize($_POST['academic_year'] ?? date('Y') . '/' . (date('Y') + 1));
     
-    // Handle Profile Picture
+    // Handle Profile Picture — upload to Supabase Storage
     $profile_picture = null;
     if (isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] === UPLOAD_ERR_OK) {
-        $upload_dir = __DIR__ . '/../images/profiles/';
-        if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
         $ext = pathinfo($_FILES['profile_picture']['name'], PATHINFO_EXTENSION);
         $filename = $enrollmentId . '_' . time() . '.' . $ext;
-        if (move_uploaded_file($_FILES['profile_picture']['tmp_name'], $upload_dir . $filename)) {
-            $profile_picture = 'images/profiles/' . $filename;
+        $newUrl = upload_to_supabase_storage($_FILES['profile_picture'], 'profiles', $filename, 'images/aamusted.jpg');
+        if (strpos($newUrl, 'http') === 0) {
+            $profile_picture = $newUrl;
         }
     }
 
@@ -177,6 +179,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
 // Handle Payment Confirmation
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'confirm_payment') {
+    // CSRF validation
+    validate_request_csrf();
     $studentId = (int)$_POST['student_id'];
     $method = sanitize($_POST['payment_method']);
     $enrollmentId = sanitize($_POST['enrollment_id']);
@@ -216,6 +220,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
 // Handle Student Deletion
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete_student') {
+    // CSRF validation
+    validate_request_csrf();
     $studentId = (int)$_POST['student_id'];
     $studentName = sanitize($_POST['student_name'] ?? 'this student');
 
@@ -328,6 +334,7 @@ $total_pages = $total_rows > 0 ? (int)ceil($total_rows / $limit) : 1;
                             <input type="hidden" name="student_id" value="<?php echo $registered_student['id']; ?>">
                             <input type="hidden" name="payment_method" value="MTN MoMo">
                             <input type="hidden" name="enrollment_id" value="<?php echo htmlspecialchars($registered_student['enrollment_id']); ?>">
+                            <?php csrf_field(); ?>
                             <input type="text" name="phone" placeholder="024XXXXXXX" class="form-control" style="margin-bottom: 10px;" required>
                             <button type="submit" class="btn-primary" style="width:100%;">Process Payment</button>
                         </form>
@@ -341,6 +348,7 @@ $total_pages = $total_rows > 0 ? (int)ceil($total_rows / $limit) : 1;
                             <input type="hidden" name="student_id" value="<?php echo $registered_student['id']; ?>">
                             <input type="hidden" name="payment_method" value="Telecel Cash">
                             <input type="hidden" name="enrollment_id" value="<?php echo htmlspecialchars($registered_student['enrollment_id']); ?>">
+                            <?php csrf_field(); ?>
                             <input type="text" name="phone" placeholder="020XXXXXXX" class="form-control" style="margin-bottom: 10px;" required>
                             <button type="submit" class="btn-primary" style="width:100%;">Process Payment</button>
                         </form>
@@ -392,6 +400,7 @@ $total_pages = $total_rows > 0 ? (int)ceil($total_rows / $limit) : 1;
                 form.method = 'POST';
                 form.action = 'students.php';
                 form.innerHTML = '<input type="hidden" name="action" value="confirm_payment">' +
+                    '<input type="hidden" name="csrf_token" value="<?php echo generate_csrf_token(); ?>">' +
                     '<input type="hidden" name="student_id" value="<?php echo $registered_student['id']; ?>">' +
                     '<input type="hidden" name="payment_method" value="Bank/Cash">' +
                     '<input type="hidden" name="enrollment_id" value="<?php echo htmlspecialchars($registered_student['enrollment_id']); ?>">';
@@ -408,6 +417,7 @@ $total_pages = $total_rows > 0 ? (int)ceil($total_rows / $limit) : 1;
                     <h3>Register New Student</h3>
                     <form action="students.php" method="POST" enctype="multipart/form-data" style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-top: 15px;">
                         <input type="hidden" name="action" value="add_student">
+                        <?php csrf_field(); ?>
                         
                         <!-- Profile Picture -->
                         <div style="grid-column: span 2; text-align: center; margin-bottom: 10px;">
@@ -610,7 +620,7 @@ $total_pages = $total_rows > 0 ? (int)ceil($total_rows / $limit) : 1;
                             <?php foreach ($students as $student): ?>
                             <tr>
                                 <td>
-                                    <img src="../<?php echo htmlspecialchars($student['profile_picture'] ?? 'images/aamusted.jpg'); ?>" alt="Profile" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 1px solid #ddd;">
+                                    <img src="<?php echo resolve_storage_url($student['profile_picture'] ?? ''); ?>" alt="Profile" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 1px solid #ddd;">
                                 </td>
                                 <td><strong><?php echo htmlspecialchars($student['admission_number']); ?></strong></td>
                                 <td><?php echo htmlspecialchars($student['full_name']); ?></td>
@@ -768,6 +778,7 @@ $total_pages = $total_rows > 0 ? (int)ceil($total_rows / $limit) : 1;
                     </button>
                     <form id="deleteStudentForm" method="POST" style="margin:0;">
                         <input type="hidden" name="action" value="delete_student">
+                        <?php csrf_field(); ?>
                         <input type="hidden" name="student_id" id="deleteStudentId" value="">
                         <input type="hidden" name="student_name" id="deleteStudentNameHidden" value="">
                         <button type="submit" onclick="document.getElementById('deleteStudentNameHidden').value = document.getElementById('deleteStudentName').textContent;" style="padding:10px 24px; background:#dc3545; color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:14px; font-weight:600;">

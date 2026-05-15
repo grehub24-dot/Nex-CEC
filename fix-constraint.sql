@@ -25,69 +25,44 @@ CREATE UNIQUE INDEX subjects_name_class_id_unique_not_null
     ON subjects(name, class_id) WHERE class_id IS NOT NULL;
 
 -- ==========================================
--- 2. Add UNIQUE constraint on sba_scores
+-- 2-7. Add UNIQUE constraints on remaining tables
 -- ==========================================
--- Prevents duplicate score entries for the same student/subject/term.
 -- NOTE: PostgreSQL does NOT support "IF NOT EXISTS" for ADD CONSTRAINT,
--- so we use a DO block to check pg_constraint first.
-DO $$
+-- so we use a single DO block with named dollar-quoting to safely
+-- check pg_constraint before adding each constraint.
+-- ==========================================
+DO $fix$
 BEGIN
+    -- sba_scores: prevents duplicate score entries for same student/subject/term
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'sba_scores_student_subject_term_key' AND conrelid = 'sba_scores'::regclass) THEN
         ALTER TABLE sba_scores ADD CONSTRAINT sba_scores_student_subject_term_key UNIQUE (student_id, subject_id, term_id);
     END IF;
-END $$;
 
--- ==========================================
--- 3. Add UNIQUE constraint on exam_scores
--- ==========================================
-DO $$
-BEGIN
+    -- exam_scores
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'exam_scores_student_subject_term_key' AND conrelid = 'exam_scores'::regclass) THEN
         ALTER TABLE exam_scores ADD CONSTRAINT exam_scores_student_subject_term_key UNIQUE (student_id, subject_id, term_id);
     END IF;
-END $$;
 
--- ==========================================
--- 4. Add UNIQUE constraint on report_cards
--- ==========================================
--- Ensures only one report card per student per term.
-DO $$
-BEGIN
+    -- report_cards: only one report card per student per term
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'report_cards_student_term_key' AND conrelid = 'report_cards'::regclass) THEN
         ALTER TABLE report_cards ADD CONSTRAINT report_cards_student_term_key UNIQUE (student_id, term_id);
     END IF;
-END $$;
 
--- ==========================================
--- 5. Add UNIQUE constraint on student_attendance
--- ==========================================
--- Ensures one attendance record per student per day.
-DO $$
-BEGIN
+    -- student_attendance: one attendance record per student per day
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'student_attendance_student_attendance_date_key' AND conrelid = 'student_attendance'::regclass) THEN
         ALTER TABLE student_attendance ADD CONSTRAINT student_attendance_student_attendance_date_key UNIQUE (student_id, attendance_date);
     END IF;
-END $$;
 
--- ==========================================
--- 6. Add UNIQUE constraint on staff_attendance
--- ==========================================
-DO $$
-BEGIN
+    -- staff_attendance
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'staff_attendance_staff_attendance_date_key' AND conrelid = 'staff_attendance'::regclass) THEN
         ALTER TABLE staff_attendance ADD CONSTRAINT staff_attendance_staff_attendance_date_key UNIQUE (staff_id, attendance_date);
     END IF;
-END $$;
 
--- ==========================================
--- 7. Add UNIQUE constraint on message_reads
--- ==========================================
-DO $$
-BEGIN
+    -- message_reads
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'message_reads_message_user_key' AND conrelid = 'message_reads'::regclass) THEN
         ALTER TABLE message_reads ADD CONSTRAINT message_reads_message_user_key UNIQUE (message_id, user_id);
     END IF;
-END $$;
+END $fix$;
 
 -- ==========================================
 -- VERIFICATION QUERIES

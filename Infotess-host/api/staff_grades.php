@@ -48,6 +48,91 @@ try {
     }
 } catch (Exception $e) {}
 
+// Auto-seed subject_categories if empty (same logic as admin_grades.php)
+if (empty($subject_category_mapping)) {
+    $all_subjects_for_seed = $pdo->query("SELECT * FROM subjects");
+    $all_subjects_for_seed = $all_subjects_for_seed ? $all_subjects_for_seed->fetchAll() : [];
+    if (!empty($all_subjects_for_seed)) {
+        $category_matchers = [
+            'creche'       => [
+                'Early Stimulation & Sensory Play', 'Responsive Caregiving & Nurturing',
+                'Health, Hygiene & Nutrition', 'Safety & Security Awareness',
+                'Physical & Motor Development', 'Cognitive Development & Exploration',
+                'Language & Communication Skills', 'Social & Emotional Development',
+            ],
+            'nursery'      => [
+                'Language & Literacy', 'Numeracy', 'Creative Activities',
+                'Environmental Studies', 'Our World Our People (OWOP)',
+                'Movement, Music, Drama & PE',
+            ],
+            'kindergarten' => [
+                'Language and Literacy', 'Numeracy', 'Creative Arts',
+                'Environmental Studies', 'Our World Our People (OWOP)',
+                'Movement, Music, Drama & PE',
+            ],
+            'primary'      => [
+                'English Language', 'Mathematics', 'Science', 'Ghanaian Language',
+                'History of Ghana', 'Religious and Moral Education', 'Creative Arts',
+                'Computing', 'French', 'Physical Education',
+            ],
+            'jhs'          => [
+                'English Language', 'Mathematics', 'Science', 'Social Studies',
+                'Religious and Moral Education', 'Ghanaian Language',
+                'Creative Arts and Design', 'Career Technology', 'Computing',
+                'French', 'Physical Education',
+            ],
+        ];
+        $subjects_by_name = [];
+        $subjects_by_keyword = [];
+        foreach ($all_subjects_for_seed as $s) {
+            $sid = (int)$s['id'];
+            $name_lower = strtolower(trim($s['name']));
+            $name_clean = strtolower(trim(preg_replace('/\s*\(.*?\)\s*/', '', $s['name'])));
+            $subjects_by_name[$name_lower] = $sid;
+            $subjects_by_name[$name_clean] = $sid;
+            foreach (explode(' ', $name_clean) as $word) {
+                $word = trim($word);
+                if (strlen($word) >= 4) { $subjects_by_keyword[$word] = $sid; }
+            }
+        }
+        foreach ($category_matchers as $cat => $names) {
+            $subject_category_mapping[$cat] = [];
+            $seen_ids = [];
+            foreach ($names as $name) {
+                $key = strtolower(trim($name));
+                $matched_id = null;
+                if (isset($subjects_by_name[$key])) { $matched_id = $subjects_by_name[$key]; }
+                if ($matched_id === null) {
+                    foreach (explode(' ', $key) as $word) {
+                        $word = trim($word);
+                        if (strlen($word) >= 4 && isset($subjects_by_keyword[$word])) {
+                            $matched_id = $subjects_by_keyword[$word]; break;
+                        }
+                    }
+                }
+                if ($matched_id !== null && !in_array($matched_id, $seen_ids)) {
+                    $subject_category_mapping[$cat][] = $matched_id;
+                    $seen_ids[] = $matched_id;
+                }
+            }
+        }
+        try {
+            $json = json_encode($subject_category_mapping);
+            $stmt = $pdo->prepare("SELECT setting_key FROM system_settings WHERE setting_key = ?");
+            $stmt->execute(['subject_categories']);
+            if ($stmt->fetch()) {
+                $stmt = $pdo->prepare("UPDATE system_settings SET setting_value = ? WHERE setting_key = ?");
+                $stmt->execute([$json, 'subject_categories']);
+            } else {
+                $stmt = $pdo->prepare("INSERT INTO system_settings (setting_key, setting_value) VALUES (?, ?)");
+                $stmt->execute(['subject_categories', $json]);
+            }
+        } catch (Exception $e) {
+            error_log("staff_grades.php auto-seed error: " . $e->getMessage());
+        }
+    }
+}
+
 $selected_class = $_GET['class_id'] ?? '';
 $selected_term = $_GET['term_id'] ?? '';
 $selected_subject = $_GET['subject_id'] ?? '';
@@ -234,7 +319,7 @@ if (!empty($students)) {
                 <form method="GET" action="../staff/grades.php" style="display:flex;gap:15px;align-items:flex-end;flex-wrap:wrap;">
                     <div>
                         <label><strong>Class</strong></label>
-                        <select name="class_id" class="form-control" style="width:200px;" required>
+                        <select name="class_id" id="class_select" class="form-control" style="width:200px;" required onchange="filterSubjectsByClass()">
                             <option value="">-- Select Class --</option>
                             <?php foreach ($classes as $c): ?>
                                 <option value="<?php echo $c['id']; ?>" <?php echo $selected_class == $c['id'] ? 'selected' : ''; ?>><?php echo htmlspecialchars($c['name']); ?></option>
@@ -252,7 +337,7 @@ if (!empty($students)) {
                     </div>
                     <div>
                         <label><strong>Subject</strong></label>
-                        <select name="subject_id" class="form-control" style="width:200px;" required>
+                        <select name="subject_id" id="subject_select" class="form-control" style="width:200px;" required>
                             <option value="">-- Select Subject --</option>
                             <?php foreach ($subjects as $s): ?>
                                 <option value="<?php echo $s['id']; ?>" <?php echo $selected_subject == $s['id'] ? 'selected' : ''; ?>><?php echo htmlspecialchars($s['name']); ?> (<?php echo htmlspecialchars($s['code']); ?>)</option>
@@ -350,7 +435,62 @@ if (!empty($students)) {
         else if (total >= 50) cell.style.color = '#f39c12';
         else cell.style.color = '#e74c3c';
     }
+
+    /**
+     * Fetch subjects for the selected class via AJAX
+     * and populate the subject dropdown dynamically.
+     */
+    function filterSubjectsByClass() {
+        var classSelect = document.getElementById('class_select');
+        var subjectSelect = document.getElementById('subject_select');
+        var classId = classSelect ? classSelect.value : '';
+
+        subjectSelect.innerHTML = '<option value="">-- Select Subject --</option>';
+
+        if (!classId) {
+            return;
+        }
+
+        subjectSelect.innerHTML = '<option value="">Loading subjects...</option>';
+
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', '/ajax_get_subjects_by_class.php?class_id=' + encodeURIComponent(classId), true);
+        xhr.setRequestHeader('Accept', 'application/json');
+
+        xhr.onload = function() {
+            if (xhr.status >= 200 && xhr.status < 400) {
+                try {
+                    var subjects = JSON.parse(xhr.responseText);
+                    subjectSelect.innerHTML = '<option value="">-- Select Subject --</option>';
+
+                    subjects.forEach(function(s) {
+                        var opt = document.createElement('option');
+                        opt.value = s.id;
+                        opt.textContent = s.name + ' (' + (s.code || '---') + ')';
+                        subjectSelect.appendChild(opt);
+                    });
+                } catch (e) {
+                    subjectSelect.innerHTML = '<option value="">-- Select Subject --</option>';
+                }
+            } else {
+                subjectSelect.innerHTML = '<option value="">-- Select Subject --</option>';
+            }
+        };
+
+        xhr.onerror = function() {
+            subjectSelect.innerHTML = '<option value="">-- Select Subject --</option>';
+        };
+
+        xhr.send();
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
+        // If a class is already selected, load the subjects via AJAX
+        var classSelect = document.getElementById('class_select');
+        if (classSelect && classSelect.value) {
+            filterSubjectsByClass();
+        }
+
         document.querySelectorAll('.score-input').forEach(function(inp) {
             var sid = inp.getAttribute('data-student');
             inp.addEventListener('input', function() { recalcStudent(sid); });

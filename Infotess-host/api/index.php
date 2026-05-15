@@ -73,6 +73,7 @@ foreach ($studentPages as $page) {
 // Direct AJAX / utility routes
 $routes['mark_message_read.php'] = 'mark_message_read.php';
 $routes['report_card_pdf.php'] = 'report_card_pdf.php';
+$routes['ajax_get_subjects_by_class.php'] = 'ajax_get_subjects_by_class.php';
 
 // Staff routes
 $staffPages = ['dashboard', 'payslip', 'attendance', 'grades', 'profile', 'messaging'];

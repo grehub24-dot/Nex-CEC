@@ -74,37 +74,37 @@ WHERE NOT EXISTS (SELECT 1 FROM terms WHERE name = 'Term 3' AND academic_year = 
 -- ==========================================
 INSERT INTO subjects (name, code, class_id)
 SELECT 'English Language', 'ENG', NULL
-WHERE NOT EXISTS (SELECT 1 FROM subjects WHERE name = 'English Language' AND (class_id IS NULL));
+WHERE NOT EXISTS (SELECT 1 FROM subjects WHERE name = 'English Language' AND class_id IS NULL);
 INSERT INTO subjects (name, code, class_id)
 SELECT 'Mathematics', 'MATH', NULL
-WHERE NOT EXISTS (SELECT 1 FROM subjects WHERE name = 'Mathematics' AND (class_id IS NULL));
+WHERE NOT EXISTS (SELECT 1 FROM subjects WHERE name = 'Mathematics' AND class_id IS NULL);
 INSERT INTO subjects (name, code, class_id)
-SELECT 'Integrated Science', 'SCI', NULL
-WHERE NOT EXISTS (SELECT 1 FROM subjects WHERE name = 'Integrated Science' AND (class_id IS NULL));
+SELECT 'Science', 'SCI', NULL
+WHERE NOT EXISTS (SELECT 1 FROM subjects WHERE name = 'Science' AND class_id IS NULL);
 INSERT INTO subjects (name, code, class_id)
 SELECT 'Social Studies', 'SST', NULL
-WHERE NOT EXISTS (SELECT 1 FROM subjects WHERE name = 'Social Studies' AND (class_id IS NULL));
+WHERE NOT EXISTS (SELECT 1 FROM subjects WHERE name = 'Social Studies' AND class_id IS NULL);
 INSERT INTO subjects (name, code, class_id)
 SELECT 'French', 'FRE', NULL
-WHERE NOT EXISTS (SELECT 1 FROM subjects WHERE name = 'French' AND (class_id IS NULL));
+WHERE NOT EXISTS (SELECT 1 FROM subjects WHERE name = 'French' AND class_id IS NULL);
 INSERT INTO subjects (name, code, class_id)
-SELECT 'Creative Arts & Design', 'CAD', NULL
-WHERE NOT EXISTS (SELECT 1 FROM subjects WHERE name = 'Creative Arts & Design' AND (class_id IS NULL));
+SELECT 'Creative Arts', 'CAD', NULL
+WHERE NOT EXISTS (SELECT 1 FROM subjects WHERE name = 'Creative Arts' AND class_id IS NULL);
 INSERT INTO subjects (name, code, class_id)
-SELECT 'Ghanaian Language (Twi)', 'GL', NULL
-WHERE NOT EXISTS (SELECT 1 FROM subjects WHERE name = 'Ghanaian Language (Twi)' AND (class_id IS NULL));
+SELECT 'Ghanaian Language', 'GL', NULL
+WHERE NOT EXISTS (SELECT 1 FROM subjects WHERE name = 'Ghanaian Language' AND class_id IS NULL);
 INSERT INTO subjects (name, code, class_id)
 SELECT 'Computing', 'COMP', NULL
-WHERE NOT EXISTS (SELECT 1 FROM subjects WHERE name = 'Computing' AND (class_id IS NULL));
+WHERE NOT EXISTS (SELECT 1 FROM subjects WHERE name = 'Computing' AND class_id IS NULL);
 INSERT INTO subjects (name, code, class_id)
 SELECT 'Physical Education', 'PE', NULL
-WHERE NOT EXISTS (SELECT 1 FROM subjects WHERE name = 'Physical Education' AND (class_id IS NULL));
+WHERE NOT EXISTS (SELECT 1 FROM subjects WHERE name = 'Physical Education' AND class_id IS NULL);
 INSERT INTO subjects (name, code, class_id)
-SELECT 'Religious & Moral Education', 'RME', NULL
-WHERE NOT EXISTS (SELECT 1 FROM subjects WHERE name = 'Religious & Moral Education' AND (class_id IS NULL));
+SELECT 'Religious and Moral Education', 'RME', NULL
+WHERE NOT EXISTS (SELECT 1 FROM subjects WHERE name = 'Religious and Moral Education' AND class_id IS NULL);
 INSERT INTO subjects (name, code, class_id)
 SELECT 'Career Technology', 'CT', NULL
-WHERE NOT EXISTS (SELECT 1 FROM subjects WHERE name = 'Career Technology' AND (class_id IS NULL));
+WHERE NOT EXISTS (SELECT 1 FROM subjects WHERE name = 'Career Technology' AND class_id IS NULL);
 
 -- ==========================================
 -- 5. USERS (admin, bursar)

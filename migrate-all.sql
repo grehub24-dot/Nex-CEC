@@ -226,14 +226,17 @@ BEGIN
         ALTER TABLE terms ADD CONSTRAINT terms_academic_year_name_key UNIQUE (academic_year, name);
     END IF;
     
-    -- subjects table
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'subjects_name_class_id_key' AND conrelid = 'subjects'::regclass) THEN
-        DELETE FROM subjects a USING subjects b
-            WHERE a.id > b.id
-            AND a.name = b.name
-            AND (a.class_id = b.class_id OR (a.class_id IS NULL AND b.class_id IS NULL));
-        ALTER TABLE subjects ADD CONSTRAINT subjects_name_class_id_key UNIQUE (name, class_id);
+    -- subjects table: ensure proper unique indexes exist
+    -- (replaces the old UNIQUE(name, class_id) which allowed NULL duplicates)
+    -- Drop the old flawed constraint if it still exists
+    IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'subjects_name_class_id_key' AND conrelid = 'subjects'::regclass) THEN
+        ALTER TABLE subjects DROP CONSTRAINT subjects_name_class_id_key;
     END IF;
+    -- Create or verify partial unique indexes
+    CREATE UNIQUE INDEX IF NOT EXISTS subjects_name_unique_null_class_id 
+        ON subjects(name) WHERE class_id IS NULL;
+    CREATE UNIQUE INDEX IF NOT EXISTS subjects_name_class_id_unique_not_null 
+        ON subjects(name, class_id) WHERE class_id IS NOT NULL;
     
     -- sba_scores table
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'sba_scores_student_subject_term_key' AND conrelid = 'sba_scores'::regclass) THEN
@@ -505,15 +508,18 @@ CREATE TABLE IF NOT EXISTS subjects (
     code VARCHAR(20),
     class_id INTEGER REFERENCES classes(id),
     teacher_id INTEGER REFERENCES staff(id),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    UNIQUE(name, class_id)
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+CREATE UNIQUE INDEX IF NOT EXISTS subjects_name_unique_null_class_id 
+    ON subjects(name) WHERE class_id IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS subjects_name_class_id_unique_not_null 
+    ON subjects(name, class_id) WHERE class_id IS NOT NULL;
 
--- Seed basic school subjects
+-- Seed basic school subjects (NULL class_id = global/uncategorized)
 INSERT INTO subjects (name, code, class_id) VALUES
 ('English Language', 'ENG', NULL),
 ('Mathematics', 'MATH', NULL),
-('Integrated Science', 'SCI', NULL),
+('Science', 'SCI', NULL),
 ('Social Studies', 'SST', NULL),
 ('French', 'FRE', NULL),
 ('Creative Arts', 'CA', NULL),
@@ -522,7 +528,7 @@ INSERT INTO subjects (name, code, class_id) VALUES
 ('Physical Education', 'PE', NULL),
 ('Religious and Moral Education', 'RME', NULL),
 ('Career Technology', 'CT', NULL)
-ON CONFLICT ON CONSTRAINT subjects_name_class_id_key DO NOTHING;
+ON CONFLICT (name) WHERE class_id IS NULL DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS grade_boundaries (
     id SERIAL PRIMARY KEY,

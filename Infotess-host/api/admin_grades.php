@@ -82,6 +82,115 @@ usort($all_subjects, function($a, $b) {
     return strcmp($a['name'] ?? '', $b['name'] ?? '');
 });
 
+// -------------------------------------------------------
+// AUTO-SEED: If subject_categories mapping is empty, auto-generate it
+// by matching existing subject names to known category defaults.
+// This ensures grades.php works immediately without needing to
+// manually click "Seed All Defaults" in Subject Settings.
+// -------------------------------------------------------
+if (empty($subject_category_mapping) && !empty($all_subjects)) {
+    $category_matchers = [
+        'creche'       => [
+            'Early Stimulation & Sensory Play', 'Responsive Caregiving & Nurturing',
+            'Health, Hygiene & Nutrition', 'Safety & Security Awareness',
+            'Physical & Motor Development', 'Cognitive Development & Exploration',
+            'Language & Communication Skills', 'Social & Emotional Development',
+        ],
+        'nursery'      => [
+            'Language & Literacy', 'Numeracy', 'Creative Activities',
+            'Environmental Studies', 'Our World Our People (OWOP)',
+            'Movement, Music, Drama & PE',
+        ],
+        'kindergarten' => [
+            'Language and Literacy', 'Numeracy', 'Creative Arts',
+            'Environmental Studies', 'Our World Our People (OWOP)',
+            'Movement, Music, Drama & PE',
+        ],
+        'primary'      => [
+            'English Language', 'Mathematics', 'Science', 'Ghanaian Language',
+            'History of Ghana', 'Religious and Moral Education', 'Creative Arts',
+            'Computing', 'French', 'Physical Education',
+        ],
+        'jhs'          => [
+            'English Language', 'Mathematics', 'Science', 'Social Studies',
+            'Religious and Moral Education', 'Ghanaian Language',
+            'Creative Arts and Design', 'Career Technology', 'Computing',
+            'French', 'Physical Education',
+        ],
+    ];
+
+    // Build lookup: map normalized names, short names, and core keywords to subject IDs
+    // so we can match subjects even when names differ slightly (e.g. "Science" matches
+    // "Integrated Science", "Ghanaian Language" matches "Ghanaian Language (Twi)").
+    $subjects_by_name = [];
+    $subjects_by_keyword = [];
+    foreach ($all_subjects as $s) {
+        $sid = (int)$s['id'];
+        $name_lower = strtolower(trim($s['name']));
+        $name_clean = strtolower(trim(preg_replace('/\s*\(.*?\)\s*/', '', $s['name'])));
+        
+        // Store by exact name
+        $subjects_by_name[$name_lower] = $sid;
+        // Store by name without parenthetical
+        $subjects_by_name[$name_clean] = $sid;
+        
+        // Store individual keywords for fallback matching (words >= 4 chars)
+        foreach (explode(' ', $name_clean) as $word) {
+            $word = trim($word);
+            if (strlen($word) >= 4) {
+                $subjects_by_keyword[$word] = $sid;
+            }
+        }
+    }
+
+    foreach ($category_matchers as $cat => $names) {
+        $subject_category_mapping[$cat] = [];
+        $seen_ids = [];
+        foreach ($names as $name) {
+            $key = strtolower(trim($name));
+            $matched_id = null;
+            
+            // 1st pass: exact match (name or cleaned name)
+            if (isset($subjects_by_name[$key])) {
+                $matched_id = $subjects_by_name[$key];
+            }
+            
+            // 2nd pass: keyword match (any word >= 4 chars in the matcher name
+            // that matches a subject keyword)
+            if ($matched_id === null) {
+                foreach (explode(' ', $key) as $word) {
+                    $word = trim($word);
+                    if (strlen($word) >= 4 && isset($subjects_by_keyword[$word])) {
+                        $matched_id = $subjects_by_keyword[$word];
+                        break;
+                    }
+                }
+            }
+            
+            if ($matched_id !== null && !in_array($matched_id, $seen_ids)) {
+                $subject_category_mapping[$cat][] = $matched_id;
+                $seen_ids[] = $matched_id;
+            }
+        }
+    }
+
+    // Persist the auto-generated mapping
+    try {
+        $json = json_encode($subject_category_mapping);
+        $stmt = $pdo->prepare("SELECT setting_key FROM system_settings WHERE setting_key = ?");
+        $stmt->execute(['subject_categories']);
+        if ($stmt->fetch()) {
+            $stmt = $pdo->prepare("UPDATE system_settings SET setting_value = ? WHERE setting_key = ?");
+            $stmt->execute([$json, 'subject_categories']);
+        } else {
+            $stmt = $pdo->prepare("INSERT INTO system_settings (setting_key, setting_value) VALUES (?, ?)");
+            $stmt->execute(['subject_categories', $json]);
+        }
+    } catch (Exception $e) {
+        error_log("admin_grades.php auto-seed error: " . $e->getMessage());
+    }
+}
+
 // Filter subjects by category when a class is selected.
 // Uses the subject-to-category mapping set in admin_subjects.php (stored in system_settings).
 // If no mapping exists or filtering yields no results, ALL subjects are shown (never empty).
@@ -230,7 +339,7 @@ if (!empty($students)) {
                     <form method="GET" action="grades.php" style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
                         <div>
                             <label><strong>Class</strong></label>
-                            <select name="class_id" class="form-control" style="width: 200px;" required>
+                            <select name="class_id" id="class_select" class="form-control" style="width: 200px;" required onchange="filterSubjectsByClass()">
                                 <option value="">-- Select Class --</option>
                                 <?php foreach ($classes as $c): ?>
                                     <option value="<?php echo $c['id']; ?>" <?php echo $selected_class == $c['id'] ? 'selected' : ''; ?>><?php echo htmlspecialchars($c['name']); ?></option>
@@ -248,7 +357,7 @@ if (!empty($students)) {
                         </div>
                         <div>
                             <label><strong>Subject</strong></label>
-                            <select name="subject_id" class="form-control" style="width: 200px;" required>
+                            <select name="subject_id" id="subject_select" class="form-control" style="width: 200px;" required>
                                 <option value="">-- Select Subject --</option>
                                 <?php foreach ($subjects as $s): ?>
                                     <option value="<?php echo $s['id']; ?>" <?php echo $selected_subject == $s['id'] ? 'selected' : ''; ?>><?php echo htmlspecialchars($s['name']); ?> (<?php echo htmlspecialchars($s['code']); ?>)</option>
@@ -375,8 +484,64 @@ if (!empty($students)) {
         else overallCell.style.color = '#e74c3c';
     }
 
+    /**
+     * Fetch subjects for the selected class via AJAX
+     * and populate the subject dropdown dynamically.
+     */
+    function filterSubjectsByClass() {
+        var classSelect = document.getElementById('class_select');
+        var subjectSelect = document.getElementById('subject_select');
+        var classId = classSelect ? classSelect.value : '';
+
+        // Clear current subject options
+        subjectSelect.innerHTML = '<option value="">-- Select Subject --</option>';
+
+        if (!classId) {
+            return;
+        }
+
+        // Show loading state
+        subjectSelect.innerHTML = '<option value="">Loading subjects...</option>';
+
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', '/ajax_get_subjects_by_class.php?class_id=' + encodeURIComponent(classId), true);
+        xhr.setRequestHeader('Accept', 'application/json');
+
+        xhr.onload = function() {
+            if (xhr.status >= 200 && xhr.status < 400) {
+                try {
+                    var subjects = JSON.parse(xhr.responseText);
+                    subjectSelect.innerHTML = '<option value="">-- Select Subject --</option>';
+                    
+                    subjects.forEach(function(s) {
+                        var opt = document.createElement('option');
+                        opt.value = s.id;
+                        opt.textContent = s.name + ' (' + (s.code || '---') + ')';
+                        subjectSelect.appendChild(opt);
+                    });
+                } catch (e) {
+                    subjectSelect.innerHTML = '<option value="">-- Select Subject --</option>';
+                }
+            } else {
+                subjectSelect.innerHTML = '<option value="">-- Select Subject --</option>';
+            }
+        };
+
+        xhr.onerror = function() {
+            subjectSelect.innerHTML = '<option value="">-- Select Subject --</option>';
+        };
+
+        xhr.send();
+    }
+
     // Attach event listeners and recalc all on page load
     document.addEventListener('DOMContentLoaded', function() {
+        // If a class is already selected, load the subjects via AJAX
+        var classSelect = document.getElementById('class_select');
+        if (classSelect && classSelect.value) {
+            filterSubjectsByClass();
+        }
+
         document.querySelectorAll('.score-input').forEach(function(inp) {
             var sid = inp.getAttribute('data-student');
             inp.addEventListener('input', function() { recalcStudent(sid); });

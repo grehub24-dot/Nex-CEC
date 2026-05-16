@@ -14,21 +14,15 @@ $message = '';
 $error = '';
 
 // Ensure profile_picture column exists in staff table
-try {
-    $stmt = $pdo->query("SHOW COLUMNS FROM staff LIKE 'profile_picture'");
-    if ($stmt->rowCount() == 0) {
-        try {
-            $pdo->exec("ALTER TABLE staff ADD COLUMN profile_picture TEXT");
-        } catch (Exception $e2) {
-            try {
-                $pdo->exec("ALTER TABLE staff ADD COLUMN profile_picture VARCHAR(255) DEFAULT NULL");
-            } catch (Exception $e3) {}
-        }
-    }
-} catch (Exception $e) {
+// ALTER TABLE cannot run through the PDO bridge (DDL skipped), so use Supabase SQL API directly
+global $supabase;
+if ($supabase && $supabase instanceof SupabaseClient) {
     try {
-        $pdo->exec("ALTER TABLE staff ADD COLUMN profile_picture TEXT");
-    } catch (Exception $e2) {}
+        $supabase->executeSql("ALTER TABLE staff ADD COLUMN IF NOT EXISTS profile_picture TEXT");
+    } catch (Exception $e) {
+        error_log("profile_picture migration: " . $e->getMessage());
+        // Non-fatal — the UPDATE below will fail with a clear error if column is missing
+    }
 }
 
 // Handle profile picture upload
@@ -87,9 +81,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             }
                             $newUrl = $supabase->getPublicUrl('profiles', $file_name);
 
-                            // Save to database
-                            $stmt = $pdo->prepare("UPDATE staff SET profile_picture = ? WHERE user_id = ?");
-                            $stmt->execute([$newUrl, $user_id]);
+                            // Save to database (use SupabaseClient directly — PDO bridge can't handle DDL
+                            // and the PGRST204 column-stripping retry would silently produce empty data)
+                            $supabase->table('staff')->where('user_id', $user_id)->update(['profile_picture' => $newUrl]);
                             $_SESSION['profile_picture'] = $newUrl;
                             $message = "Profile picture updated successfully!";
                         } catch (Exception $e) {

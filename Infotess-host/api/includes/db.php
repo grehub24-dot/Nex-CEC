@@ -225,12 +225,18 @@ class LegacyStatement {
                 try {
                     $this->result = $query->update($data);
                 } catch (Exception $updateEx) {
-                    // Strip unknown columns and retry (handles schema mismatches gracefully)
+                    // Strip unknown columns and retry (handles schema mismatches gracefully).
+                    // This DOES NOT retry if stripping leaves $data empty — instead it surfaces
+                    // a clear "column not found" error so the caller knows to add the column.
                     if (strpos($updateEx->getMessage(), 'Could not find') !== false || strpos($updateEx->getMessage(), 'PGRST204') !== false) {
                         // Extract unknown column name from error: "Could not find the 'col' column"
                         if (preg_match("/the '(\w+)' column/", $updateEx->getMessage(), $colMatch)) {
                             $badCol = $colMatch[1];
                             unset($data[$badCol]);
+                            if (empty($data)) {
+                                // All columns were stripped — column genuinely doesn't exist in DB
+                                throw new PDOException("Column '$badCol' does not exist in table '$this->table'. Add it to the database first.");
+                            }
                             error_log("Supabase Update: Stripped unknown column '$badCol', retrying...");
                             $this->result = $query->update($data);
                         } else {

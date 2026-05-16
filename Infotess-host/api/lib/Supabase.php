@@ -247,6 +247,51 @@ class SupabaseClient {
         return $this->request('DELETE', $url);
     }
 
+    /**
+     * Execute raw SQL via Supabase's SQL endpoint.
+     * Only works with the service_role key. Designed for DDL (ALTER TABLE, etc.)
+     * that cannot be run through PostgREST.
+     *
+     * @param string $sql Raw SQL statement to execute
+     * @return array      Decoded JSON response
+     * @throws Exception  On failure
+     */
+    public function executeSql(string $sql): array {
+        $url = "$this->url/sql";
+        $body = json_encode(['query' => $sql]);
+
+        $ch = curl_init();
+        $headers = [
+            "apikey: {$this->key}",
+            "Authorization: Bearer {$this->key}",
+            "Content-Type: application/json"
+        ];
+
+        curl_setopt_array($ch, [
+            CURLOPT_URL => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CUSTOMREQUEST => 'POST',
+            CURLOPT_HTTPHEADER => $headers,
+            CURLOPT_POSTFIELDS => $body,
+            CURLOPT_SSL_VERIFYPEER => true
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+        curl_close($ch);
+
+        if ($response === false) {
+            throw new Exception("Supabase SQL curl error: " . ($curlError ?: 'unknown'));
+        }
+
+        if ($httpCode >= 400) {
+            throw new Exception("Supabase SQL Error (HTTP $httpCode): $response");
+        }
+
+        return json_decode($response, true) ?: [];
+    }
+
     private function request($method, $url, $data = null) {
         $ch = curl_init();
         $headers = [
@@ -264,8 +309,15 @@ class SupabaseClient {
             CURLOPT_SSL_VERIFYPEER => true
         ]);
 
-        if ($data && in_array($method, ['POST', 'PATCH'])) {
-            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+        // Send JSON body for POST/PATCH only when data is provided.
+        // Use array() !== null check so that [] (empty array) is still sent
+        // (PostgREST rejects empty-body requests with PGRST102).
+        if ($data !== null && in_array($method, ['POST', 'PATCH'])) {
+            $encoded = json_encode($data);
+            if ($encoded === false) {
+                throw new Exception("Supabase API Error: Failed to encode request data as JSON.");
+            }
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $encoded);
         }
 
         $response = curl_exec($ch);

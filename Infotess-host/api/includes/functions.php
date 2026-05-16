@@ -390,7 +390,7 @@ function renderStaffSidebar($currentPage = '', $schoolName = 'Nex CEC', $unreadC
         ['href' => '../staff/payslip.php',   'icon' => 'fas fa-file-invoice-dollar','label' => 'Pay Slips',  'key' => 'payslip'],
         ['href' => '../staff/profile.php',   'icon' => 'fas fa-user-cog',   'label' => 'Profile',           'key' => 'profile'],
         ['href' => '../staff/messaging.php', 'icon' => 'fas fa-envelope',    'label' => 'Messages',          'key' => 'messaging',   'badge' => $unreadCount],
-        ['href' => '../admin/attendance.php','icon' => 'fas fa-user-check', 'label' => 'Student Attendance','key' => 'student_attendance', 'teacherOnly' => true],
+        ['href' => '../staff/student_attendance.php','icon' => 'fas fa-user-check', 'label' => 'Student Attendance','key' => 'student_attendance', 'teacherOnly' => true],
         ['href' => '../logout.php',          'icon' => 'fas fa-sign-out-alt','label' => 'Logout',            'key' => 'logout'],
     ];
     

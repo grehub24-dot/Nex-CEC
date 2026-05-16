@@ -80,6 +80,7 @@ $staffPages = ['dashboard', 'payslip', 'attendance', 'grades', 'profile', 'messa
 foreach ($staffPages as $page) {
     $routes["staff/$page.php"] = "staff_$page.php";
 }
+$routes["staff/student_attendance.php"] = "admin_attendance.php";
 
 // Parent routes
 $parentPages = ['dashboard', 'student', 'fees', 'report_card', 'messages', 'profile', 'password-reset'];

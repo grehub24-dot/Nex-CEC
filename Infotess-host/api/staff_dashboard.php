@@ -156,38 +156,7 @@ $unread_count = count($unread_message_ids);
     </style>
 </head>
 <body>
-    <button class="hamburger-menu" id="hamburgerBtn" onclick="document.getElementById('sidebar').classList.toggle('open')">
-        <i class="fas fa-bars"></i>
-    </button>
-
-    <aside class="staff-sidebar" id="sidebar">
-        <div class="sidebar-header">
-            <img src="../images/school-logo.png" alt="Logo" onerror="this.src='../images/aamusted.jpg'">
-            <h3><?php echo htmlspecialchars($school_name); ?></h3>
-            <p>Staff Portal</p>
-        </div>
-        <ul>
-            <li><a href="../staff/dashboard.php" class="active"><i class="fas fa-home"></i> Dashboard</a></li>
-            <?php if (isTeacher()): ?>
-            <li><a href="../staff/grades.php"><i class="fas fa-clipboard-list"></i> SBA / Grades</a></li>
-            <?php endif; ?>
-            <li><a href="../staff/attendance.php"><i class="fas fa-calendar-check"></i> My Attendance</a></li>
-            <li><a href="../staff/payslip.php"><i class="fas fa-file-invoice-dollar"></i> Pay Slips</a></li>
-            <li><a href="../staff/profile.php"><i class="fas fa-user-cog"></i> Profile</a></li>
-            <li>
-                <a href="../staff/messaging.php">
-                    <i class="fas fa-envelope"></i> Messages
-                    <?php if ($unread_count > 0): ?>
-                        <span class="msg-count"><?php echo $unread_count; ?></span>
-                    <?php endif; ?>
-                </a>
-            </li>
-            <?php if (isTeacher()): ?>
-            <li><a href="../admin/attendance.php"><i class="fas fa-user-check"></i> Student Attendance</a></li>
-            <?php endif; ?>
-            <li><a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
-        </ul>
-    </aside>
+    <?php echo renderStaffSidebar('dashboard', $school_name, $unread_count); ?>
 
     <div class="staff-main">
         <div class="top-bar">
@@ -293,19 +262,6 @@ $unread_count = count($unread_message_ids);
         <?php endif; ?>
     </div>
 
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        document.getElementById('hamburgerBtn').addEventListener('click', function() {
-            document.getElementById('sidebar').classList.toggle('open');
-        });
-        document.addEventListener('click', function(e) {
-            var sidebar = document.getElementById('sidebar');
-            var btn = document.getElementById('hamburgerBtn');
-            if (window.innerWidth <= 768 && !sidebar.contains(e.target) && !btn.contains(e.target)) {
-                sidebar.classList.remove('open');
-            }
-        });
-    });
-    </script>
+
 </body>
 </html>

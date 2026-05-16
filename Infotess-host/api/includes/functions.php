@@ -360,6 +360,87 @@ function renderSidebar($currentPage = '', $schoolName = 'Nex CEC') {
     return $html;
 }
 
+/**
+ * Render sidebar for staff pages (consistent across all staff/* pages).
+ */
+function renderStaffSidebar($currentPage = '', $schoolName = 'Nex CEC', $unreadCount = 0) {
+    $isTchr = \isTeacher();
+    
+    $html = '';
+    
+    // Hamburger button (visible on mobile)
+    $html .= '<button class="hamburger-menu" id="hamburgerBtn" onclick="document.getElementById(\'sidebar\').classList.toggle(\'open\')">';
+    $html .= '<i class="fas fa-bars"></i>';
+    $html .= '</button>';
+    
+    // Sidebar
+    $html .= '<aside class="staff-sidebar" id="sidebar">';
+    $html .= '<div class="sidebar-header">';
+    $html .= '<img src="../images/school-logo.png" alt="Logo" onerror="this.src=\'../images/aamusted.jpg\'">';
+    $html .= '<h3>' . htmlspecialchars($schoolName) . '</h3>';
+    $html .= '<p>Staff Portal</p>';
+    $html .= '</div>';
+    $html .= '<ul>';
+    
+    // Build menu items
+    $items = [
+        ['href' => '../staff/dashboard.php', 'icon' => 'fas fa-home',        'label' => 'Dashboard',        'key' => 'dashboard'],
+        ['href' => '../staff/grades.php',    'icon' => 'fas fa-clipboard-list', 'label' => 'SBA / Grades',    'key' => 'grades',      'teacherOnly' => true],
+        ['href' => '../staff/attendance.php','icon' => 'fas fa-calendar-check','label' => 'My Attendance',   'key' => 'attendance'],
+        ['href' => '../staff/payslip.php',   'icon' => 'fas fa-file-invoice-dollar','label' => 'Pay Slips',  'key' => 'payslip'],
+        ['href' => '../staff/profile.php',   'icon' => 'fas fa-user-cog',   'label' => 'Profile',           'key' => 'profile'],
+        ['href' => '../staff/messaging.php', 'icon' => 'fas fa-envelope',    'label' => 'Messages',          'key' => 'messaging',   'badge' => $unreadCount],
+        ['href' => '../admin/attendance.php','icon' => 'fas fa-user-check', 'label' => 'Student Attendance','key' => 'student_attendance', 'teacherOnly' => true],
+        ['href' => '../logout.php',          'icon' => 'fas fa-sign-out-alt','label' => 'Logout',            'key' => 'logout'],
+    ];
+    
+    foreach ($items as $item) {
+        // Skip teacher-only items for non-teachers
+        if (!empty($item['teacherOnly']) && !$isTchr) {
+            continue;
+        }
+        
+        $active = ($currentPage === $item['key']) ? ' class="active"' : '';
+        $html .= '<li><a href="' . htmlspecialchars($item['href']) . '"' . $active . '>';
+        $html .= '<i class="' . $item['icon'] . '"></i> ' . htmlspecialchars($item['label']);
+        if (!empty($item['badge']) && $item['badge'] > 0) {
+            $html .= ' <span class="msg-count">' . (int)$item['badge'] . '</span>';
+        }
+        $html .= '</a></li>';
+    }
+    
+    $html .= '</ul></aside>';
+    
+    // Mobile sidebar toggle script
+    $html .= '<script>
+    (function() {
+        var hamburger = document.getElementById("hamburgerBtn");
+        var sidebar = document.getElementById("sidebar");
+        if (!hamburger || !sidebar) return;
+        hamburger.addEventListener("click", function(e) {
+            e.stopPropagation();
+            sidebar.classList.toggle("open");
+        });
+        document.addEventListener("click", function(e) {
+            if (window.innerWidth <= 768 && !sidebar.contains(e.target) && !hamburger.contains(e.target)) {
+                sidebar.classList.remove("open");
+            }
+        });
+        var links = sidebar.querySelectorAll("a");
+        for (var i = 0; i < links.length; i++) {
+            links[i].addEventListener("click", function() {
+                if (window.innerWidth <= 768) sidebar.classList.remove("open");
+            });
+        }
+        document.addEventListener("keydown", function(e) {
+            if (e.key === "Escape") sidebar.classList.remove("open");
+        });
+    })();
+    </script>';
+    
+    return $html;
+}
+
 function redirect($url) {
     if (strpos($url, 'http') !== 0) {
         $basePath = defined('BASE_PATH') ? BASE_PATH : getBasePath();

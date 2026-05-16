@@ -144,11 +144,51 @@ if ($selected_class) {
         .status-btn.late.active { border-color: #d68910; background: #e67e22; color: #fff; }
         .status-btn:hover { opacity: 0.8; }
         .quick-actions { display: flex; gap: 10px; margin-bottom: 15px; }
+        <?php if (isTeacher()): ?>
+        /* Staff sidebar styles for teacher access */
+        .staff-sidebar {
+            width: 250px; background: #1a5276; color: white; position: fixed;
+            top: 0; left: 0; height: 100vh; overflow-y: auto; z-index: 100;
+        }
+        .staff-sidebar .sidebar-header { padding: 25px 15px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .staff-sidebar .sidebar-header img { width: 64px; height: 64px; border-radius: 50%; background: white; padding: 3px; margin-bottom: 10px; object-fit: cover; }
+        .staff-sidebar .sidebar-header h3 { font-size: 15px; margin: 0; }
+        .staff-sidebar .sidebar-header p { font-size: 12px; opacity: 0.8; margin: 5px 0 0; }
+        .staff-sidebar ul { list-style: none; padding: 0; margin: 0; }
+        .staff-sidebar ul li { border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .staff-sidebar ul li a {
+            display: block; padding: 14px 20px; color: rgba(255,255,255,0.85); text-decoration: none;
+            font-size: 14px; transition: all 0.2s; position: relative;
+        }
+        .staff-sidebar ul li a:hover, .staff-sidebar ul li a.active { background: rgba(255,255,255,0.1); color: white; padding-left: 25px; }
+        .staff-sidebar ul li a i { width: 22px; text-align: center; margin-right: 8px; }
+        .staff-sidebar .msg-count {
+            position: absolute; right: 15px; top: 50%; transform: translateY(-50%);
+            background: #e74c3c; color: white; padding: 1px 8px;
+            border-radius: 10px; font-size: 11px; font-weight: 700; line-height: 1.5;
+            min-width: 20px; text-align: center;
+        }
+        .hamburger-menu { display: none; position: fixed; top: 15px; left: 15px; z-index: 200;
+            background: #1a5276; color: white; border: none; width: 40px; height: 40px;
+            border-radius: 8px; font-size: 18px; cursor: pointer;
+        }
+        @media (max-width: 768px) {
+            .staff-sidebar { left: -250px; transition: left 0.3s; }
+            .staff-sidebar.open { left: 0; }
+            .hamburger-menu { display: block; }
+            .main-content { margin-left: 0 !important; padding-top: 60px; }
+        }
+        <?php endif; ?>
     </style>
 </head>
 <body>
+    <?php if (isTeacher()): ?>
+        <?php echo renderStaffSidebar('student_attendance', $school_name, 0); ?>
+        <style>.main-content { margin-left: 250px; }</style>
+    <?php else: ?>
     <div class="dashboard-container">
-            <?php echo renderSidebar('attendance', $school_name); ?>
+        <?php echo renderSidebar('attendance', $school_name); ?>
+    <?php endif; ?>
 
         <main class="main-content">
             <div class="top-bar">
@@ -263,7 +303,9 @@ if ($selected_class) {
                 </div>
             <?php endif; ?>
         </main>
+    <?php if (!isTeacher()): ?>
     </div>
+    <?php endif; ?>
 
     <script>
     console.log('Student Attendance JS loaded');

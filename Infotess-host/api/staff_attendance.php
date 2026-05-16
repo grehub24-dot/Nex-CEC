@@ -106,28 +106,7 @@ $attendance_rate = $total_all > 0 ? round(($total_present / $total_all) * 100, 1
     </style>
 </head>
 <body>
-    <button class="hamburger-menu" onclick="document.getElementById('sidebar').classList.toggle('open')">
-        <i class="fas fa-bars"></i>
-    </button>
-
-    <aside class="staff-sidebar" id="sidebar">
-        <div class="sidebar-header">
-            <img src="../images/school-logo.png" alt="Logo" onerror="this.src='../images/aamusted.jpg'">
-            <h3><?php echo htmlspecialchars($school_name); ?></h3>
-            <p>Staff Portal</p>
-        </div>
-        <ul>
-            <li><a href="../staff/dashboard.php"><i class="fas fa-home"></i> Dashboard</a></li>
-            <?php if (isTeacher()): ?>
-            <li><a href="../staff/grades.php"><i class="fas fa-clipboard-list"></i> SBA / Grades</a></li>
-            <?php endif; ?>
-            <li><a href="../staff/attendance.php" class="active"><i class="fas fa-calendar-check"></i> My Attendance</a></li>
-            <li><a href="../staff/payslip.php"><i class="fas fa-file-invoice-dollar"></i> Pay Slips</a></li>
-            <li><a href="../staff/profile.php"><i class="fas fa-user-cog"></i> Profile</a></li>
-            <li><a href="../staff/messaging.php"><i class="fas fa-envelope"></i> Messages</a></li>
-            <li><a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
-        </ul>
-    </aside>
+    <?php echo renderStaffSidebar('attendance', $school_name, 0); ?>
 
     <div class="staff-main">
         <div class="top-bar">

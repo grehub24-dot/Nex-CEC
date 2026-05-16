@@ -316,33 +316,7 @@ if (!empty($students)) {
     </style>
 </head>
 <body>
-    <button class="hamburger-menu" onclick="document.getElementById('sidebar').classList.toggle('open')">
-        <i class="fas fa-bars"></i>
-    </button>
-
-    <aside class="staff-sidebar" id="sidebar">
-        <div class="sidebar-header">
-            <img src="../images/school-logo.png" alt="Logo" onerror="this.src='../images/aamusted.jpg'">
-            <h3><?php echo htmlspecialchars($school_name); ?></h3>
-            <p>Staff Portal</p>
-        </div>
-        <ul>
-            <li><a href="../staff/dashboard.php"><i class="fas fa-home"></i> Dashboard</a></li>
-            <li><a href="../staff/grades.php" class="active"><i class="fas fa-clipboard-list"></i> SBA / Grades</a></li>
-            <li><a href="../staff/attendance.php"><i class="fas fa-calendar-check"></i> My Attendance</a></li>
-            <li><a href="../staff/payslip.php"><i class="fas fa-file-invoice-dollar"></i> Pay Slips</a></li>
-            <li><a href="../staff/profile.php"><i class="fas fa-user-cog"></i> Profile</a></li>
-            <li>
-                <a href="../staff/messaging.php">
-                    <i class="fas fa-envelope"></i> Messages
-                    <?php if ($unread_count > 0): ?>
-                        <span class="msg-count"><?php echo $unread_count; ?></span>
-                    <?php endif; ?>
-                </a>
-            </li>
-            <li><a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
-        </ul>
-    </aside>
+    <?php echo renderStaffSidebar('grades', $school_name, $unread_count); ?>
 
     <div class="staff-main">
         <div class="top-bar">

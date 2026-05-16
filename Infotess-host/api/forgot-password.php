@@ -64,11 +64,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo->beginTransaction();
                 
                 // Update user password and set is_password_reset to 0 (forces them to reset on next login)
-                $stmt = $pdo->prepare("UPDATE users SET password = :password, is_password_reset = 0 WHERE id = :id");
-                $stmt->execute([
-                    'password' => $password_hash,
-                    'id' => $user['id']
-                ]);
+                $stmt = $pdo->prepare("UPDATE users SET password = ?, is_password_reset = 0 WHERE id = ?");
+                $stmt->execute([$password_hash, $user['id']]);
 
                 // Send Email
                 $mailer = new Mailer();

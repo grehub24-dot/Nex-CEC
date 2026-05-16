@@ -35,12 +35,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $hasColumn = true; // Assume column exists if check fails
             }
             if ($hasColumn) {
-                $stmt = $pdo->prepare("UPDATE users SET password = :password, is_password_reset = true WHERE id = :id");
-                $stmt->execute(['password' => $hash, 'id' => $user_id]);
+                $stmt = $pdo->prepare("UPDATE users SET password = ?, is_password_reset = true WHERE id = ?");
+                $stmt->execute([$hash, $user_id]);
             } else {
                 // Fallback: update password without is_password_reset column
-                $stmt = $pdo->prepare("UPDATE users SET password = :password WHERE id = :id");
-                $stmt->execute(['password' => $hash, 'id' => $user_id]);
+                $stmt = $pdo->prepare("UPDATE users SET password = ? WHERE id = ?");
+                $stmt->execute([$hash, $user_id]);
             }
 
             // Update session flag

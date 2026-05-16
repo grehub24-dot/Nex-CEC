@@ -87,6 +87,7 @@ class LegacyStatement {
     private $isUpdate = false;
     private $isDelete = false;
     private $updateColumns = [];
+    private $updateValues = []; // Values side of SET clause (for named-param resolution)
     private $affectedRows = 0;
 
     public function __construct($client, $sql, $pdoRef) {
@@ -106,11 +107,16 @@ class LegacyStatement {
         } elseif (preg_match('/^UPDATE\s+(\w+)/i', $sql, $m)) {
             $this->table = $m[1];
             $this->isUpdate = true;
-            // Extract SET columns
+            // Extract SET columns and values
             if (preg_match('/SET\s+([\s\S]+?)\s+WHERE/i', $sql, $setMatch)) {
                 $setPart = $setMatch[1];
-                preg_match_all('/(\w+)\s*=/i', $setPart, $colMatches);
-                $this->updateColumns = $colMatches[1] ?? [];
+                preg_match_all('/(\w+)\s*=\s*([^,]+)/i', $setPart, $parts, PREG_SET_ORDER);
+                $this->updateColumns = [];
+                $this->updateValues = [];
+                foreach ($parts as $p) {
+                    $this->updateColumns[] = $p[1];
+                    $this->updateValues[] = trim($p[2]);
+                }
             }
         } elseif (preg_match('/^DELETE\s+FROM\s+(\w+)/i', $sql, $m)) {
             $this->table = $m[1];
@@ -165,14 +171,26 @@ class LegacyStatement {
                 $this->result = $res;
             } elseif ($this->isUpdate) {
                 // UPDATE table SET col1 = ?, col2 = ? WHERE id = ?
-                // Build data object from SET columns + params
+                // UPDATE table SET col1 = :named1, col2 = :named2 WHERE id = :id
+                // Build data object from SET columns + params (supports both positional ? and :named)
                 $data = [];
                 $paramIndex = 0;
                 
-                // SET columns consume params first
-                foreach ($this->updateColumns as $col) {
-                    $data[$col] = $this->params[$paramIndex] ?? null;
-                    $paramIndex++;
+                // SET columns consume params (named or positional)
+                foreach ($this->updateColumns as $i => $col) {
+                    $valExpr = $this->updateValues[$i] ?? '?';
+                    if ($valExpr === '?') {
+                        // Positional parameter
+                        $data[$col] = $this->params[$paramIndex] ?? null;
+                        $paramIndex++;
+                    } elseif (strpos($valExpr, ':') === 0) {
+                        // Named parameter like :password
+                        $paramName = substr($valExpr, 1);
+                        $data[$col] = $this->params[$paramName] ?? null;
+                    } else {
+                        // Literal value like 'true', '0', etc — strip quotes
+                        $data[$col] = trim($valExpr, "' \"");
+                    }
                 }
                 
                 // Parse WHERE clause for the filter
@@ -192,6 +210,13 @@ class LegacyStatement {
                                     $query = $query->where($col, $paramVal);
                                 }
                                 $paramIndex++;
+                            } elseif (strpos($val, ':') === 0) {
+                                // Named parameter like :id
+                                $paramName = substr($val, 1);
+                                $paramVal = $this->params[$paramName] ?? null;
+                                if ($paramVal !== null && $paramVal !== '') {
+                                    $query = $query->where($col, $paramVal);
+                                }
                             }
                         }
                     }

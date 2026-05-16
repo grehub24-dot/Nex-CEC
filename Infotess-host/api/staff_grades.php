@@ -17,6 +17,36 @@ $staff = $stmt->fetch();
 if (!$staff) { redirect('../logout.php'); }
 $staff_id = (int)$staff['id'];
 
+// Fetch unread messages
+$stmt = $pdo->prepare("SELECT id FROM messages WHERE receiver_id = ?");
+$stmt->execute([$user_id]);
+$direct_ids = array_map(fn($r) => (int)$r['id'], $stmt->fetchAll());
+$stmt = $pdo->prepare("SELECT id FROM messages WHERE is_broadcast = ?");
+$stmt->execute([1]);
+$broadcast_ids = array_map(fn($r) => (int)$r['id'], $stmt->fetchAll());
+$all_msg_ids = array_unique(array_merge($direct_ids, $broadcast_ids));
+$stmt = $pdo->prepare("SELECT message_id FROM message_reads WHERE user_id = ?");
+$stmt->execute([$user_id]);
+$read_ids = array_map(fn($r) => (int)$r['message_id'], $stmt->fetchAll());
+// Start by counting messages NOT in message_reads table
+$unread_message_ids = [];
+foreach ($all_msg_ids as $mid) {
+    if (!in_array($mid, $read_ids)) {
+        $unread_message_ids[] = $mid;
+    }
+}
+// Remove legacy-read messages (read_at set but not in message_reads)
+foreach (array_chunk($unread_message_ids, 50) as $chunk) {
+    if (empty($chunk)) continue;
+    $placeholders = implode(',', array_fill(0, count($chunk), '?'));
+    $stmt = $pdo->prepare("SELECT id FROM messages WHERE id IN ($placeholders) AND read_at IS NOT NULL");
+    $stmt->execute($chunk);
+    foreach ($stmt->fetchAll() as $r) {
+        $unread_message_ids = array_diff($unread_message_ids, [(int)$r['id']]);
+    }
+}
+$unread_count = count($unread_message_ids);
+
 // Get teacher's assigned class IDs
 $teacher_class_ids = getTeacherClassIds($pdo);
 
@@ -260,7 +290,13 @@ if (!empty($students)) {
         .staff-sidebar .sidebar-header p { font-size: 12px; opacity: 0.8; margin: 5px 0 0; }
         .staff-sidebar ul { list-style: none; padding: 0; margin: 0; }
         .staff-sidebar ul li { border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .staff-sidebar ul li a { display: block; padding: 14px 20px; color: rgba(255,255,255,0.85); text-decoration: none; font-size: 14px; transition: all 0.2s; }
+        .staff-sidebar ul li a { display: block; padding: 14px 20px; color: rgba(255,255,255,0.85); text-decoration: none; font-size: 14px; transition: all 0.2s; position: relative; }
+        .staff-sidebar .msg-count {
+            position: absolute; right: 15px; top: 50%; transform: translateY(-50%);
+            background: #e74c3c; color: white; padding: 1px 8px;
+            border-radius: 10px; font-size: 11px; font-weight: 700; line-height: 1.5;
+            min-width: 20px; text-align: center;
+        }
         .staff-sidebar ul li a:hover, .staff-sidebar ul li a.active { background: rgba(255,255,255,0.1); color: white; padding-left: 25px; }
         .staff-sidebar ul li a i { width: 22px; text-align: center; margin-right: 8px; }
         .staff-main { flex: 1; padding: 30px; background: #f4f6f9; margin-left: 250px; }
@@ -296,7 +332,14 @@ if (!empty($students)) {
             <li><a href="../staff/attendance.php"><i class="fas fa-calendar-check"></i> My Attendance</a></li>
             <li><a href="../staff/payslip.php"><i class="fas fa-file-invoice-dollar"></i> Pay Slips</a></li>
             <li><a href="../staff/profile.php"><i class="fas fa-user-cog"></i> Profile</a></li>
-            <li><a href="../staff/messaging.php"><i class="fas fa-envelope"></i> Messages</a></li>
+            <li>
+                <a href="../staff/messaging.php">
+                    <i class="fas fa-envelope"></i> Messages
+                    <?php if ($unread_count > 0): ?>
+                        <span class="msg-count"><?php echo $unread_count; ?></span>
+                    <?php endif; ?>
+                </a>
+            </li>
             <li><a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
         </ul>
     </aside>

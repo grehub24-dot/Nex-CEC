@@ -644,7 +644,7 @@ function upload_to_supabase_storage(array $file, string $bucket, string $filenam
 
         $fileData = file_get_contents($tmpPath);
         if ($fileData === false) {
-            throw new Exception("Cannot read uploaded file");
+            throw new Exception("Cannot read uploaded file from " . $tmpPath);
         }
 
         // Detect content type
@@ -652,10 +652,14 @@ function upload_to_supabase_storage(array $file, string $bucket, string $filenam
         $contentType = finfo_file($finfo, $tmpPath);
         finfo_close($finfo);
 
-        $supabase->uploadFile($bucket, $filename, $fileData, $contentType);
+        $supabase->uploadFile($bucket, $filename, $fileData, $contentType ?: 'application/octet-stream');
         return $supabase->getPublicUrl($bucket, $filename);
     } catch (Exception $e) {
-        error_log("Supabase Storage upload error (" . $bucket . "/" . $filename . "): " . $e->getMessage());
+        $msg = "Supabase Storage upload error (" . $bucket . "/" . $filename . "): " . $e->getMessage();
+        error_log($msg);
+        if (defined('VERBOSE_ERRORS') && VERBOSE_ERRORS) {
+            error_log("Upload fallback used: " . ($fallback ?: 'none'));
+        }
         return $fallback;
     }
 }

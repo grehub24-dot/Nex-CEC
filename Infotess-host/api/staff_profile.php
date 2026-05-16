@@ -44,32 +44,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($file['size'] > 2 * 1024 * 1024) {
                 $error = "File too large. Maximum size is 2MB.";
             } else {
-                $finfo = finfo_open(FILEINFO_MIME_TYPE);
-                $mime = finfo_file($finfo, $file['tmp_name']);
-                finfo_close($finfo);
+                $finfo = @finfo_open(FILEINFO_MIME_TYPE);
+                if ($finfo !== false) {
+                    $mime = finfo_file($finfo, $file['tmp_name']);
+                    finfo_close($finfo);
+                } else {
+                    // Fallback: guess from extension
+                    $extMap = ['jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png', 'gif' => 'image/gif', 'webp' => 'image/webp'];
+                    $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+                    $mime = $extMap[$ext] ?? 'application/octet-stream';
+                }
                 $allowed_mime = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
                 if (!in_array($mime, $allowed_mime)) {
                     $error = "Invalid file type. Only JPG, PNG, GIF, and WebP images are allowed.";
                 } else {
                     $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
                     $file_name = 'staff_' . $user_id . '_' . time() . '_' . uniqid() . '.' . $ext;
-                    // Fetch existing picture for fallback
-                    $stmt = $pdo->prepare("SELECT profile_picture FROM staff WHERE user_id = ?");
-                    $stmt->execute([$user_id]);
-                    $old = $stmt->fetchColumn();
-                    $newUrl = upload_to_supabase_storage($file, 'profiles', $file_name, $old ?: 'images/aamusted.jpg');
-                    if (strpos($newUrl, 'http') === 0) {
+
+                    // Check if Supabase client is available before attempting upload
+                    global $supabase;
+                    if (!$supabase || !($supabase instanceof SupabaseClient)) {
+                        $error = "Upload service not available (Supabase not connected).";
+                    } else {
                         try {
+                            // Read file data (MIME already detected above as $mime)
+                            $fileData = file_get_contents($file['tmp_name']);
+                            if ($fileData === false) {
+                                throw new Exception("Cannot read uploaded file.");
+                            }
+
+                            // Upload directly via Supabase client
+                            $supabase->uploadFile('profiles', $file_name, $fileData, $mime ?: 'image/jpeg');
+                            $newUrl = $supabase->getPublicUrl('profiles', $file_name);
+
+                            // Save to database
                             $stmt = $pdo->prepare("UPDATE staff SET profile_picture = ? WHERE user_id = ?");
                             $stmt->execute([$newUrl, $user_id]);
-                            // Update session so sidebar picks it up immediately
                             $_SESSION['profile_picture'] = $newUrl;
                             $message = "Profile picture updated successfully!";
                         } catch (Exception $e) {
-                            $error = "Error saving profile picture: " . $e->getMessage();
+                            $error = "Upload failed: " . $e->getMessage();
                         }
-                    } else {
-                        $error = "Failed to upload image.";
                     }
                 }
             }

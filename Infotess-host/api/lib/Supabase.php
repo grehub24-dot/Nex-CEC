@@ -49,10 +49,15 @@ class SupabaseClient {
 
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
         curl_close($ch);
 
+        if ($response === false) {
+            throw new Exception("Supabase Storage curl error: " . ($curlError ?: 'unknown'));
+        }
+
         if ($httpCode >= 400) {
-            throw new Exception("Supabase Storage Upload Error: $httpCode - $response");
+            throw new Exception("Supabase Storage Upload Error (HTTP $httpCode): $response");
         }
 
         return json_decode($response, true) ?: [];

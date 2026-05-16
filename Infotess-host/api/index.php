@@ -59,7 +59,7 @@ $routes['forgot-password.php'] = 'forgot-password.php';
 $routes['route_selector.php'] = 'route_selector.php';
 
 // Admin routes
-$adminPages = ['dashboard','students','staff','edit_staff','payments','fees','payroll','pay_slip','salary','grades','attendance','staff_attendance','reports','settings','users','edit_student','inbox','messaging','module_settings','subjects','verify','bulk_import','enrollments'];
+$adminPages = ['dashboard','students','staff','edit_staff','payments','fees','payroll','pay_slip','salary','grades','attendance','staff_attendance','reports','settings','users','edit_student','inbox','messaging','module_settings','subjects','verify','bulk_import','enrollments','role_permissions'];
 foreach ($adminPages as $page) {
     $routes["admin/$page.php"] = "admin_$page.php";
 }

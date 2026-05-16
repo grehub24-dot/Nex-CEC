@@ -99,6 +99,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 } elseif (in_array($user['role'], ['teacher', 'staff', 'bursar'])) {
                     $_SESSION['name'] = ucfirst($user['role']);
 
+                    // If staff, check if they are a Class Teacher (so isTeacher() works without role='teacher')
+                    if ($user['role'] === 'staff') {
+                        $stmt_t = $pdo->prepare("SELECT position FROM staff WHERE user_id = ?");
+                        $stmt_t->execute([$user['id']]);
+                        $staffRow = $stmt_t->fetch();
+                        $_SESSION['is_class_teacher'] = ($staffRow && strpos($staffRow['position'], 'Class Teacher') !== false);
+                    } else {
+                        $_SESSION['is_class_teacher'] = false;
+                    }
+
+                    // Check if password needs reset (for staff/teacher/bursar too)
+                    $is_reset = isset($user['is_password_reset']) ? $user['is_password_reset'] : 0;
+                    $_SESSION['is_password_reset'] = $is_reset;
+
+                    if ($is_reset == 0) {
+                        redirect('password-reset.php');
+                    }
+
                     // Check if this user also has children (dual-role: staff + parent)
                     $stmt_hc = $pdo->prepare("SELECT id FROM parent_students WHERE parent_user_id = ? LIMIT 1");
                     $stmt_hc->execute([$user['id']]);

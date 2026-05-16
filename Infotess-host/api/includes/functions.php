@@ -81,7 +81,8 @@ function isParent() {
 }
 
 function isTeacher() {
-    return isset($_SESSION['role']) && $_SESSION['role'] === 'teacher';
+    return (isset($_SESSION['role']) && $_SESSION['role'] === 'teacher')
+        || (isset($_SESSION['is_class_teacher']) && $_SESSION['is_class_teacher'] === true);
 }
 
 function isStaff() {
@@ -124,6 +125,7 @@ function getAccessControl() {
         'settings' => ['admin', 'super_admin'],
         'module_settings' => ['admin', 'super_admin'],
         'users' => ['admin', 'super_admin'],
+        'role_permissions' => ['admin', 'super_admin'],
         'bulk_import' => ['admin', 'super_admin'],
         
         // Admin + Teacher
@@ -189,6 +191,11 @@ function canAccessPage($page) {
     // If page not in ACL, default: only full admins
     $allowed = $acl[$page] ?? ['admin', 'super_admin'];
     
+    // Staff who are class teachers get the same access as 'teacher' role
+    if (isTeacher() && in_array('teacher', $allowed)) {
+        return true;
+    }
+    
     return in_array($role, $allowed);
 }
 
@@ -213,7 +220,7 @@ function requireAccess($page) {
 function getSidebarMenu($currentPage = '') {
     $role = $_SESSION['role'] ?? '';
     $isFullAdmin = in_array($role, ['admin', 'super_admin']);
-    $isTeacher = in_array($role, ['teacher']);
+    $isTeacher = \isTeacher();
     $isStaff = in_array($role, ['staff']);
     
     // Build all potential items with their ACL page keys
@@ -246,6 +253,7 @@ function getSidebarMenu($currentPage = '') {
     
     if ($isFullAdmin) {
         $allItems[] = ['href' => 'users.php', 'icon' => 'fas fa-users-cog', 'label' => 'User Management', 'acl' => 'users'];
+        $allItems[] = ['href' => 'role_permissions.php', 'icon' => 'fas fa-user-shield', 'label' => 'Role Permissions', 'acl' => 'role_permissions'];
     }
     
     $allItems[] = ['href' => 'messaging.php', 'icon' => 'fas fa-envelope', 'label' => 'Communications', 'acl' => 'messaging'];
@@ -417,14 +425,15 @@ function flash($name, $message = '', $class = 'success') {
 }
 
 /**
- * Enforce password reset for students who haven't reset their temporary password.
+ * Enforce password reset for users who haven't reset their temporary password.
+ * Works for students, staff, teachers, and bursars.
  */
 function enforcePasswordReset() {
     if (isset($_SESSION['is_password_reset']) && $_SESSION['is_password_reset'] == 0) {
         // Only redirect if not already on the password reset page
         $currentScript = $_SERVER['REQUEST_URI'] ?? '';
         if (strpos($currentScript, 'password-reset') === false) {
-            redirect('student/password-reset.php');
+            redirect('password-reset.php');
         }
     }
 }

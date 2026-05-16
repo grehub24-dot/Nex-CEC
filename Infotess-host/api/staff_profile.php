@@ -74,7 +74,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             }
 
                             // Upload directly via Supabase client
-                            $supabase->uploadFile('profiles', $file_name, $fileData, $mime ?: 'image/jpeg');
+                            try {
+                                $supabase->uploadFile('profiles', $file_name, $fileData, $mime ?: 'image/jpeg');
+                            } catch (Exception $e) {
+                                // If bucket doesn't exist, create it and retry once
+                                if (strpos($e->getMessage(), 'Bucket not found') !== false) {
+                                    $supabase->createBucket('profiles');
+                                    $supabase->uploadFile('profiles', $file_name, $fileData, $mime ?: 'image/jpeg');
+                                } else {
+                                    throw $e; // Re-throw non-bucket errors
+                                }
+                            }
                             $newUrl = $supabase->getPublicUrl('profiles', $file_name);
 
                             // Save to database

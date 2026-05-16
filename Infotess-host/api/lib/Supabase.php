@@ -82,6 +82,56 @@ class SupabaseClient {
      * @return array          Decoded JSON response
      * @throws Exception      On deletion failure
      */
+    /**
+     * Create a new Storage bucket (idempotent — safe to call if it already exists).
+     *
+     * @param string $bucket Bucket name (e.g. 'profiles')
+     * @param bool   $public Whether the bucket should be publicly readable (default true)
+     * @return array         Decoded JSON response
+     * @throws Exception     On creation failure (other than conflict)
+     */
+    public function createBucket(string $bucket, bool $public = true): array {
+        $url = "$this->url/storage/v1/bucket";
+        $body = json_encode([
+            'name' => $bucket,
+            'public' => $public,
+            'file_size_limit' => 2 * 1024 * 1024, // 2 MB
+            'allowed_mime_types' => ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+        ]);
+
+        $ch = curl_init();
+        $headers = [
+            "apikey: {$this->key}",
+            "Authorization: Bearer {$this->key}",
+            "Content-Type: application/json"
+        ];
+
+        curl_setopt_array($ch, [
+            CURLOPT_URL => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CUSTOMREQUEST => 'POST',
+            CURLOPT_HTTPHEADER => $headers,
+            CURLOPT_POSTFIELDS => $body,
+            CURLOPT_SSL_VERIFYPEER => true
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+        curl_close($ch);
+
+        if ($response === false) {
+            throw new Exception("Supabase Storage createBucket curl error: " . ($curlError ?: 'unknown'));
+        }
+
+        // 409 Conflict means the bucket already exists — that's fine
+        if ($httpCode >= 400 && $httpCode !== 409) {
+            throw new Exception("Supabase Storage createBucket Error (HTTP $httpCode): $response");
+        }
+
+        return json_decode($response, true) ?: [];
+    }
+
     public function deleteFile(string $bucket, string $path): array {
         $url = "$this->url/storage/v1/object/$bucket/$path";
         $ch = curl_init();

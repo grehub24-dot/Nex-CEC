@@ -316,7 +316,7 @@ if (!empty($students)) {
     </style>
 </head>
 <body>
-    <?php echo renderStaffSidebar('grades', $school_name, $unread_count); ?>
+    <?php echo renderStaffSidebar('grades', $school_name, $unread_count, $staff['profile_picture'] ?? '', $staff['full_name'] ?? ''); ?>
 
     <div class="staff-main">
         <div class="top-bar">

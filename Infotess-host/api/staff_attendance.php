@@ -106,7 +106,7 @@ $attendance_rate = $total_all > 0 ? round(($total_present / $total_all) * 100, 1
     </style>
 </head>
 <body>
-    <?php echo renderStaffSidebar('attendance', $school_name, 0); ?>
+    <?php echo renderStaffSidebar('attendance', $school_name, 0, $staff['profile_picture'] ?? '', $staff['full_name'] ?? ''); ?>
 
     <div class="staff-main">
         <div class="top-bar">

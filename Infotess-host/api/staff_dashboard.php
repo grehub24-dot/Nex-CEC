@@ -156,7 +156,7 @@ $unread_count = count($unread_message_ids);
     </style>
 </head>
 <body>
-    <?php echo renderStaffSidebar('dashboard', $school_name, $unread_count); ?>
+    <?php echo renderStaffSidebar('dashboard', $school_name, $unread_count, $staff['profile_picture'] ?? '', $staff['full_name'] ?? ''); ?>
 
     <div class="staff-main">
         <div class="top-bar">

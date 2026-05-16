@@ -244,7 +244,7 @@ unset($m);
     </style>
 </head>
 <body>
-    <?php echo renderStaffSidebar('messaging', $school_name, $unread_count); ?>
+    <?php echo renderStaffSidebar('messaging', $school_name, $unread_count, $staff['profile_picture'] ?? '', $staff['full_name'] ?? ''); ?>
 
     <div class="staff-main">
         <div class="top-bar">

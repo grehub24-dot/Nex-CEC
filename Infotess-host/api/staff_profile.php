@@ -10,6 +10,75 @@ $school_name = $settings['school_name'] ?? 'Nex CEC';
 
 $user_id = $_SESSION['user_id'];
 
+$message = '';
+$error = '';
+
+// Ensure profile_picture column exists in staff table
+try {
+    $stmt = $pdo->query("SHOW COLUMNS FROM staff LIKE 'profile_picture'");
+    if ($stmt->rowCount() == 0) {
+        try {
+            $pdo->exec("ALTER TABLE staff ADD COLUMN profile_picture TEXT");
+        } catch (Exception $e2) {
+            try {
+                $pdo->exec("ALTER TABLE staff ADD COLUMN profile_picture VARCHAR(255) DEFAULT NULL");
+            } catch (Exception $e3) {}
+        }
+    }
+} catch (Exception $e) {
+    try {
+        $pdo->exec("ALTER TABLE staff ADD COLUMN profile_picture TEXT");
+    } catch (Exception $e2) {}
+}
+
+// Handle profile picture upload
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Verify CSRF token
+    if (!isset($_POST['csrf_token']) || !validate_csrf_token($_POST['csrf_token'])) {
+        $error = 'Invalid security token. Please try again.';
+    } else {
+        // Handle profile picture upload to Supabase Storage
+        if (isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] === UPLOAD_ERR_OK) {
+            $file = $_FILES['profile_picture'];
+            // Validate file size (max 2MB)
+            if ($file['size'] > 2 * 1024 * 1024) {
+                $error = "File too large. Maximum size is 2MB.";
+            } else {
+                $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                $mime = finfo_file($finfo, $file['tmp_name']);
+                finfo_close($finfo);
+                $allowed_mime = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+                if (!in_array($mime, $allowed_mime)) {
+                    $error = "Invalid file type. Only JPG, PNG, GIF, and WebP images are allowed.";
+                } else {
+                    $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+                    $file_name = 'staff_' . $user_id . '_' . time() . '_' . uniqid() . '.' . $ext;
+                    // Fetch existing picture for fallback
+                    $stmt = $pdo->prepare("SELECT profile_picture FROM staff WHERE user_id = ?");
+                    $stmt->execute([$user_id]);
+                    $old = $stmt->fetchColumn();
+                    $newUrl = upload_to_supabase_storage($file, 'profiles', $file_name, $old ?: 'images/aamusted.jpg');
+                    if (strpos($newUrl, 'http') === 0) {
+                        try {
+                            $stmt = $pdo->prepare("UPDATE staff SET profile_picture = ? WHERE user_id = ?");
+                            $stmt->execute([$newUrl, $user_id]);
+                            // Update session so sidebar picks it up immediately
+                            $_SESSION['profile_picture'] = $newUrl;
+                            $message = "Profile picture updated successfully!";
+                        } catch (Exception $e) {
+                            $error = "Error saving profile picture: " . $e->getMessage();
+                        }
+                    } else {
+                        $error = "Failed to upload image.";
+                    }
+                }
+            }
+        } else {
+            $error = "No file selected or upload error.";
+        }
+    }
+}
+
 // Fetch staff record
 $stmt = $pdo->prepare("SELECT * FROM staff WHERE user_id = ?");
 $stmt->execute([$user_id]);
@@ -21,6 +90,9 @@ if (!$staff) {
 }
 
 $staff_id = (int)$staff['id'];
+
+// Profile picture from DB (fall back to session cache, then empty)
+$profile_pic = $staff['profile_picture'] ?? ($_SESSION['profile_picture'] ?? '');
 
 // Fetch user record
 $stmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
@@ -47,6 +119,9 @@ $unread_count = 0;
 foreach ($all_msg_ids as $mid) {
     if (!in_array($mid, $read_ids)) $unread_count++;
 }
+
+// CSRF token
+$csrf_token = generate_csrf_token();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -81,6 +156,14 @@ foreach ($all_msg_ids as $mid) {
         .info-grid .item { font-size: 14px; }
         .info-grid .item .label { color: #888; display: block; font-size: 12px; }
         .info-grid .item .value { font-weight: 600; color: #333; }
+        .profile-pic-section { text-align: center; padding: 20px; }
+        .profile-pic-section img { width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid #1a5276; margin-bottom: 10px; }
+        .profile-pic-section .upload-label { display: inline-block; padding: 8px 20px; background: #1a5276; color: white; border-radius: 6px; cursor: pointer; font-size: 14px; transition: background 0.2s; }
+        .profile-pic-section .upload-label:hover { background: #154360; }
+        .profile-pic-section .upload-label i { margin-right: 5px; }
+        .alert { padding: 12px 18px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; }
+        .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .alert-error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
         @media (max-width: 768px) {
             .staff-sidebar { left: -250px; transition: left 0.3s; }
             .staff-sidebar.open { left: 0; }
@@ -93,7 +176,7 @@ foreach ($all_msg_ids as $mid) {
     </style>
 </head>
 <body>
-    <?php echo renderStaffSidebar('profile', $school_name, $unread_count); ?>
+    <?php echo renderStaffSidebar('profile', $school_name, $unread_count, $profile_pic, $staff['full_name'] ?? ''); ?>
 
     <div class="staff-main">
         <div class="top-bar">
@@ -102,6 +185,29 @@ foreach ($all_msg_ids as $mid) {
                 <p class="subtitle" style="font-size:13px;color:#888;margin:3px 0 0;"><?php echo htmlspecialchars($staff['position'] ?? ''); ?> &bull; <?php echo htmlspecialchars($staff['department'] ?? 'General'); ?></p>
             </div>
             <span style="font-size:13px;color:#888;">Staff ID: <?php echo htmlspecialchars($staff['staff_id'] ?? 'N/A'); ?></span>
+        </div>
+
+        <?php if ($message): ?>
+            <div class="alert alert-success"><?php echo htmlspecialchars($message); ?></div>
+        <?php endif; ?>
+        <?php if ($error): ?>
+            <div class="alert alert-error"><?php echo htmlspecialchars($error); ?></div>
+        <?php endif; ?>
+
+        <!-- Profile Picture -->
+        <div class="profile-section">
+            <h3><i class="fas fa-camera"></i> Profile Picture</h3>
+            <div class="profile-pic-section">
+                <form method="POST" enctype="multipart/form-data" id="pictureForm">
+                    <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
+                    <img id="profilePreview" src="<?php echo htmlspecialchars(resolve_storage_url($profile_pic, 'images/aamusted.jpg')); ?>" alt="Profile Picture">
+                    <div style="margin-top:8px;">
+                        <label for="profile_picture" class="upload-label"><i class="fas fa-camera"></i> Change Picture</label>
+                        <input type="file" name="profile_picture" id="profile_picture" style="display:none;" accept="image/*">
+                    </div>
+                    <p style="font-size:12px;color:#888;margin-top:8px;">Max 2MB. JPG, PNG, GIF, or WebP.</p>
+                </form>
+            </div>
         </div>
 
         <!-- Personal Information -->
@@ -162,5 +268,21 @@ foreach ($all_msg_ids as $mid) {
         </div>
         <?php endif; ?>
     </div>
+
+    <script>
+    // Auto-submit form when file is selected
+    document.getElementById('profile_picture').addEventListener('change', function() {
+        if (this.files && this.files[0]) {
+            // Show preview immediately
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('profilePreview').src = e.target.result;
+            };
+            reader.readAsDataURL(this.files[0]);
+            // Submit form
+            document.getElementById('pictureForm').submit();
+        }
+    });
+    </script>
 </body>
 </html>

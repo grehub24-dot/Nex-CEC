@@ -26,6 +26,19 @@ if (isTeacher()) {
     $classes = $all_classes;
 }
 
+// Fetch staff record for profile pic (needed by renderStaffSidebar for teachers)
+$staff_pp = '';
+$staff_name = '';
+if (isTeacher() && !empty($_SESSION['user_id'])) {
+    $stmt = $pdo->prepare("SELECT profile_picture, full_name FROM staff WHERE user_id = ?");
+    $stmt->execute([$_SESSION['user_id']]);
+    $s = $stmt->fetch();
+    if ($s) {
+        $staff_pp = $s['profile_picture'] ?? '';
+        $staff_name = $s['full_name'] ?? '';
+    }
+}
+
 $selected_class = $_GET['class_id'] ?? '';
 $selected_date = $_GET['date'] ?? date('Y-m-d');
 
@@ -183,7 +196,7 @@ if ($selected_class) {
 </head>
 <body>
     <?php if (isTeacher()): ?>
-        <?php echo renderStaffSidebar('student_attendance', $school_name, 0); ?>
+        <?php echo renderStaffSidebar('student_attendance', $school_name, 0, $staff_pp, $staff_name); ?>
         <style>.main-content { margin-left: 250px; }</style>
     <?php else: ?>
     <div class="dashboard-container">

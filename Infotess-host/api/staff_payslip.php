@@ -107,7 +107,7 @@ $deductions = $stmt->fetchAll();
     </style>
 </head>
 <body>
-    <?php echo renderStaffSidebar('payslip', $school_name, 0); ?>
+    <?php echo renderStaffSidebar('payslip', $school_name, 0, $staff['profile_picture'] ?? '', $staff['full_name'] ?? ''); ?>
 
     <div class="staff-main">
         <div class="top-bar">

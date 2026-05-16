@@ -362,8 +362,14 @@ function renderSidebar($currentPage = '', $schoolName = 'Nex CEC') {
 
 /**
  * Render sidebar for staff pages (consistent across all staff/* pages).
+ *
+ * @param string $currentPage  Active page key for highlighting
+ * @param string $schoolName   School name displayed in header
+ * @param int    $unreadCount  Unread messages badge count
+ * @param string $profilePic   Staff profile picture URL (absolute or relative)
+ * @param string $staffName    Staff display name (shown instead of "Staff Portal")
  */
-function renderStaffSidebar($currentPage = '', $schoolName = 'Nex CEC', $unreadCount = 0) {
+function renderStaffSidebar($currentPage = '', $schoolName = 'Nex CEC', $unreadCount = 0, $profilePic = '', $staffName = '') {
     $isTchr = \isTeacher();
     
     $html = '';
@@ -376,9 +382,13 @@ function renderStaffSidebar($currentPage = '', $schoolName = 'Nex CEC', $unreadC
     // Sidebar
     $html .= '<aside class="staff-sidebar" id="sidebar">';
     $html .= '<div class="sidebar-header">';
-    $html .= '<img src="../images/school-logo.png" alt="Logo" onerror="this.src=\'../images/aamusted.jpg\'">';
+    if (!empty($profilePic)) {
+        $html .= '<img src="' . htmlspecialchars(resolve_storage_url($profilePic, '')) . '" alt="Profile" onerror="this.src=\'../images/aamusted.jpg\'">';
+    } else {
+        $html .= '<img src="../images/school-logo.png" alt="Logo" onerror="this.src=\'../images/aamusted.jpg\'">';
+    }
     $html .= '<h3>' . htmlspecialchars($schoolName) . '</h3>';
-    $html .= '<p>Staff Portal</p>';
+    $html .= '<p>' . ($staffName ? htmlspecialchars($staffName) : 'Staff Portal') . '</p>';
     $html .= '</div>';
     $html .= '<ul>';
     

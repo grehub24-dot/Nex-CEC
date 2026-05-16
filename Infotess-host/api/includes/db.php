@@ -202,7 +202,7 @@ class LegacyStatement {
                     foreach ($conditions as $cond) {
                         $parts = preg_split('/\s*=\s*/', trim($cond));
                         if (count($parts) === 2) {
-                            $col = $parts[0];
+                            $col = preg_replace('/^\w+\./', '', $parts[0]); // strip table alias
                             $val = trim($parts[1]);
                             if ($val === '?') {
                                 $paramVal = $this->params[$paramIndex] ?? null;
@@ -252,7 +252,7 @@ class LegacyStatement {
                     foreach ($conditions as $cond) {
                         $parts = preg_split('/\s*=\s*/', trim($cond));
                         if (count($parts) === 2) {
-                            $col = $parts[0];
+                            $col = preg_replace('/^\w+\./', '', $parts[0]); // strip table alias
                             $val = trim($parts[1]);
                             if ($val === '?') {
                                 $paramVal = $this->params[$paramIndex] ?? null;
@@ -285,7 +285,7 @@ class LegacyStatement {
                     foreach ($conditions as $cond) {
                         $parts = preg_split('/\s*=\s*/', trim($cond));
                         if (count($parts) === 2) {
-                            $col = $parts[0];
+                            $col = preg_replace('/^\w+\./', '', $parts[0]); // strip table alias: s.teacher_id → teacher_id
                             $val = trim($parts[1]);
                             if ($val === '?') {
                                 $paramVal = $this->params[$currentParamIndex] ?? null;

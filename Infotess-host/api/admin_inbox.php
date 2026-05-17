@@ -134,7 +134,7 @@ $total_pages = ceil($total_emails / $limit);
             border: 1px solid #ddd;
             border-radius: 4px;
             text-decoration: none;
-            color: #333;
+            color: #000;
         }
         .pagination a.active {
             background: #007bff;

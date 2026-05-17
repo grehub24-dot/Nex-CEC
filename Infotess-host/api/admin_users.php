@@ -113,17 +113,17 @@ $users = array_slice($allUsers, $offset, $limit);
                 <?php if ($total_pages > 1): ?>
                 <div style="display: flex; justify-content: center; margin-top: 20px; gap: 5px;">
                     <?php if ($page > 1): ?>
-                        <a href="?page=<?php echo $page - 1; ?>" class="btn-login" style="background: #f8f9fa; color: #333; border: 1px solid #ddd;">&laquo; Prev</a>
+                        <a href="?page=<?php echo $page - 1; ?>" class="btn-login" style="background: #f8f9fa; color: #000; border: 1px solid #ddd;">&laquo; Prev</a>
                     <?php endif; ?>
                     
                     <?php for ($i = 1; $i <= $total_pages; $i++): ?>
-                        <a href="?page=<?php echo $i; ?>" class="btn-login" style="<?php echo $i == $page ? 'background: var(--primary-color);' : 'background: #f8f9fa; color: #333; border: 1px solid #ddd;'; ?>">
+                        <a href="?page=<?php echo $i; ?>" class="btn-login" style="<?php echo $i == $page ? 'background: var(--primary-color);' : 'background: #f8f9fa; color: #000; border: 1px solid #ddd;'; ?>">
                             <?php echo $i; ?>
                         </a>
                     <?php endfor; ?>
 
                     <?php if ($page < $total_pages): ?>
-                        <a href="?page=<?php echo $page + 1; ?>" class="btn-login" style="background: #f8f9fa; color: #333; border: 1px solid #ddd;">Next &raquo;</a>
+                        <a href="?page=<?php echo $page + 1; ?>" class="btn-login" style="background: #f8f9fa; color: #000; border: 1px solid #ddd;">Next &raquo;</a>
                     <?php endif; ?>
                 </div>
                 <?php endif; ?>

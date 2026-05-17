@@ -59,7 +59,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Bridge doesn't support NOW() in SET — use PHP timestamp
         $stmt = $pdo->prepare("UPDATE contact_submissions SET response = ?, responded_at = ? WHERE id = ?");
         $stmt->execute([$response, date('Y-m-d H:i:s'), $sub_id]);
-        $message = "Response saved successfully!";
+        $redirectPage = isset($_POST['sub_page']) ? '?sub_page=' . (int)$_POST['sub_page'] : '';
+        header("Location: module_settings.php{$redirectPage}");
+        exit;
     } elseif ($action === 'update_contact_submission') {
         $id = intval($_POST['id']);
         $name = sanitize($_POST['name']);
@@ -69,7 +71,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $response = sanitize($_POST['response'] ?? '');
         $stmt = $pdo->prepare("UPDATE contact_submissions SET name = ?, email = ?, subject = ?, message = ?, response = ? WHERE id = ?");
         $stmt->execute([$name, $email, $subject, $msg, $response, $id]);
-        $message = "Submission updated successfully!";
+        $redirectPage = isset($_POST['sub_page']) ? '?sub_page=' . (int)$_POST['sub_page'] : '';
+        header("Location: module_settings.php{$redirectPage}");
+        exit;
     } elseif ($action === 'delete_executive') {
         $id = intval($_POST['id']);
         $stmt = $pdo->prepare("DELETE FROM executives WHERE id = ?");
@@ -136,6 +140,14 @@ $alumni = []; try { $alumni = $pdo->query("SELECT * FROM alumni")->fetchAll(); }
 $gallery = []; try { $gallery = $pdo->query("SELECT * FROM gallery ORDER BY created_at DESC")->fetchAll(); } catch (Exception $e) { $gallery = []; }
 $projects = []; try { $projects = $pdo->query("SELECT * FROM projects ORDER BY project_date DESC")->fetchAll(); } catch (Exception $e) { $projects = []; }
 $submissions = []; try { $submissions = $pdo->query("SELECT * FROM contact_submissions ORDER BY created_at DESC")->fetchAll(); } catch (Exception $e) { $submissions = []; }
+
+// Pagination for contact submissions
+$sub_limit = 15;
+$sub_page = isset($_GET['sub_page']) ? max(1, (int)$_GET['sub_page']) : 1;
+$sub_offset = ($sub_page - 1) * $sub_limit;
+$sub_total = count($submissions);
+$sub_total_pages = max(1, ceil($sub_total / $sub_limit));
+$submissions_paginated = array_slice($submissions, $sub_offset, $sub_limit);
 ?>
 
 <!DOCTYPE html>
@@ -226,7 +238,7 @@ $submissions = []; try { $submissions = $pdo->query("SELECT * FROM contact_submi
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($submissions as $sub): ?>
+                            <?php foreach ($submissions_paginated as $sub): ?>
                                 <tr>
                                     <td><?php echo htmlspecialchars($sub['name']); ?></td>
                                     <td><?php echo htmlspecialchars($sub['email']); ?></td>
@@ -239,6 +251,7 @@ $submissions = []; try { $submissions = $pdo->query("SELECT * FROM contact_submi
                                         <div id="resp-<?php echo $sub['id']; ?>" style="display:none; margin-top:10px;">
                                             <form method="POST">
                                                 <?php csrf_field(); ?>
+                                                <input type="hidden" name="sub_page" value="<?php echo $sub_page; ?>">
                                                 <input type="hidden" name="action" value="respond_contact">
                                                 <input type="hidden" name="submission_id" value="<?php echo $sub['id']; ?>">
                                                 <textarea name="response" class="form-control" placeholder="Type response..."></textarea>
@@ -248,6 +261,7 @@ $submissions = []; try { $submissions = $pdo->query("SELECT * FROM contact_submi
                                         <div id="edit-sub-<?php echo $sub['id']; ?>" style="display:none; margin-top:10px;">
                                             <form method="POST">
                                                 <?php csrf_field(); ?>
+                                                <input type="hidden" name="sub_page" value="<?php echo $sub_page; ?>">
                                                 <input type="hidden" name="action" value="update_contact_submission">
                                                 <input type="hidden" name="id" value="<?php echo $sub['id']; ?>">
                                                 <input type="text" name="name" class="form-control" value="<?php echo htmlspecialchars($sub['name']); ?>" style="margin-bottom:8px;" required>
@@ -263,6 +277,33 @@ $submissions = []; try { $submissions = $pdo->query("SELECT * FROM contact_submi
                             <?php endforeach; ?>
                         </tbody>
                     </table>
+
+                    <!-- Pagination -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px; flex-wrap:wrap; gap:10px;">
+                        <span style="color:#666; font-size:0.85rem;">
+                            Showing <?php echo count($submissions_paginated); ?> of <?php echo $sub_total; ?> submissions
+                            <?php if ($sub_total > 0): ?>
+                                (Page <?php echo $sub_page; ?> of <?php echo $sub_total_pages; ?>)
+                            <?php endif; ?>
+                        </span>
+                        <div style="display:flex; gap:5px; align-items:center;">
+                            <?php if ($sub_page > 1): ?>
+                                <a href="?sub_page=1" style="padding:6px 10px; border:1px solid #ddd; border-radius:4px; text-decoration:none; color:#000; font-size:0.85rem;" title="First">&laquo;&laquo;</a>
+                                <a href="?sub_page=<?php echo $sub_page - 1; ?>" style="padding:6px 10px; border:1px solid #ddd; border-radius:4px; text-decoration:none; color:#000; font-size:0.85rem;" title="Previous">&laquo;</a>
+                            <?php endif; ?>
+                            <?php
+                            $start_page = max(1, $sub_page - 2);
+                            $end_page = min($sub_total_pages, $sub_page + 2);
+                            for ($i = $start_page; $i <= $end_page; $i++):
+                            ?>
+                                <a href="?sub_page=<?php echo $i; ?>" style="padding:6px 12px; border:1px solid #ddd; border-radius:4px; text-decoration:none; <?php echo $i === $sub_page ? 'background:#003366; color:#fff; border-color:#003366;' : 'color:#000;'; ?> font-size:0.85rem;"><?php echo $i; ?></a>
+                            <?php endfor; ?>
+                            <?php if ($sub_page < $sub_total_pages): ?>
+                                <a href="?sub_page=<?php echo $sub_page + 1; ?>" style="padding:6px 10px; border:1px solid #ddd; border-radius:4px; text-decoration:none; color:#000; font-size:0.85rem;" title="Next">&raquo;</a>
+                                <a href="?sub_page=<?php echo $sub_total_pages; ?>" style="padding:6px 10px; border:1px solid #ddd; border-radius:4px; text-decoration:none; color:#000; font-size:0.85rem;" title="Last">&raquo;&raquo;</a>
+                            <?php endif; ?>
+                        </div>
+                    </div>
                 </div>
             </div>
 

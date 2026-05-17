@@ -149,6 +149,33 @@ $total_net = array_sum(array_map(fn($r) => (float)$r['net_pay'], $payroll_record
 $total_deductions = array_sum(array_map(fn($r) => (float)$r['total_deductions'], $payroll_records));
 $approved_count = count(array_filter($payroll_records, fn($r) => $r['status'] === 'approved'));
 $pending_count = count(array_filter($payroll_records, fn($r) => $r['status'] === 'pending'));
+
+// Fetch all active staff with their salary structures for preview
+$all_staff_raw = $pdo->query("SELECT id, staff_id, full_name, position, status FROM staff")->fetchAll();
+$active_for_preview = array_filter($all_staff_raw, fn($s) => ($s['status'] ?? '') === 'active');
+usort($active_for_preview, fn($a, $b) => strcmp($a['full_name'] ?? '', $b['full_name'] ?? ''));
+
+$staff_structures = [];
+foreach ($active_for_preview as $s) {
+    $stmt = $pdo->prepare("SELECT * FROM salary_structures WHERE staff_id = ? ORDER BY created_at DESC LIMIT 1");
+    $stmt->execute([$s['id']]);
+    $salary = $stmt->fetch();
+    $staff_structures[] = [
+        'id'             => $s['id'],
+        'staff_id'       => $s['staff_id'],
+        'full_name'      => $s['full_name'],
+        'position'       => $s['position'],
+        'configured'     => $salary ? true : false,
+        'basic'          => $salary ? (float)$salary['basic_salary'] : 0,
+        'housing'        => $salary ? (float)$salary['housing_allowance'] : 0,
+        'transport'      => $salary ? (float)$salary['transport_allowance'] : 0,
+        'other_allow'    => $salary ? (float)$salary['other_allowances'] : 0,
+        'ssnit_rate'     => $salary ? (float)$salary['ssnit_rate'] : 0,
+        'tax_rate'       => $salary ? (float)$salary['tax_rate'] : 0,
+    ];
+}
+$configured_count = count(array_filter($staff_structures, fn($s) => $s['configured']));
+$unconfigured_count = count(array_filter($staff_structures, fn($s) => !$s['configured']));
 ?>
 
 <!DOCTYPE html>
@@ -226,6 +253,75 @@ $pending_count = count(array_filter($payroll_records, fn($r) => $r['status'] ===
                 <div class="stat-card">
                     <div class="stat-icon"><i class="fas fa-clock" style="color: #f39c12;"></i></div>
                     <div class="stat-details"><h3><?php echo $pending_count; ?> / <?php echo $approved_count; ?></h3><p>Pending / Approved</p></div>
+                </div>
+            </div>
+
+            <!-- Current Salary Structures Preview -->
+            <div class="card" style="margin-bottom: 30px;">
+                <div class="card-content">
+                    <h3><i class="fas fa-cogs" style="color: var(--primary-color);"></i> Current Salary Structures
+                        <span style="font-size: 0.85rem; font-weight: normal; color: #666; margin-left: 10px;">
+                            <?php echo $configured_count; ?> configured
+                            <?php if ($unconfigured_count > 0): ?>
+                                · <span style="color: #e74c3c;"><?php echo $unconfigured_count; ?> missing</span>
+                            <?php endif; ?>
+                        </span>
+                    </h3>
+                    <div class="table-responsive" style="margin-top: 15px;">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Staff ID</th>
+                                    <th>Name</th>
+                                    <th>Position</th>
+                                    <th style="text-align: right;">Basic (GHS)</th>
+                                    <th style="text-align: right;">Housing (GHS)</th>
+                                    <th style="text-align: right;">Transport (GHS)</th>
+                                    <th style="text-align: right;">Other (GHS)</th>
+                                    <th style="text-align: center;">Gross (GHS)</th>
+                                    <th style="text-align: center;">SSNIT Rate</th>
+                                    <th style="text-align: center;">Tax Rate</th>
+                                    <th style="text-align: center;">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($staff_structures as $s): 
+                                    $gross_preview = $s['basic'] + $s['housing'] + $s['transport'] + $s['other_allow'];
+                                ?>
+                                <tr>
+                                    <td><?php echo htmlspecialchars($s['staff_id']); ?></td>
+                                    <td><strong><?php echo htmlspecialchars($s['full_name']); ?></strong></td>
+                                    <td><?php echo htmlspecialchars($s['position']); ?></td>
+                                    <td style="text-align: right;"><?php echo number_format($s['basic'], 2); ?></td>
+                                    <td style="text-align: right;"><?php echo number_format($s['housing'], 2); ?></td>
+                                    <td style="text-align: right;"><?php echo number_format($s['transport'], 2); ?></td>
+                                    <td style="text-align: right;"><?php echo number_format($s['other_allow'], 2); ?></td>
+                                    <td style="text-align: center;"><strong><?php echo number_format($gross_preview, 2); ?></strong></td>
+                                    <td style="text-align: center;"><?php echo $s['configured'] ? $s['ssnit_rate'] . '%' : '<span style="color:#e74c3c;">—</span>'; ?></td>
+                                    <td style="text-align: center;"><?php echo $s['configured'] ? $s['tax_rate'] . '%' : '<span style="color:#e74c3c;">—</span>'; ?></td>
+                                    <td style="text-align: center;">
+                                        <?php if ($s['configured']): ?>
+                                            <span style="background: #d4edda; color: #155724; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem;">Ready</span>
+                                        <?php else: ?>
+                                            <span style="background: #f8d7da; color: #721c24; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem;">No Structure</span>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                            <tfoot>
+                                <tr style="background: #f8f9fa; font-weight: bold;">
+                                    <td colspan="3" style="padding: 12px;">TOTAL</td>
+                                    <td style="padding: 12px; text-align: right;">GHS <?php echo number_format(array_sum(array_map(fn($s) => $s['basic'], $staff_structures)), 2); ?></td>
+                                    <td style="padding: 12px; text-align: right;">GHS <?php echo number_format(array_sum(array_map(fn($s) => $s['housing'], $staff_structures)), 2); ?></td>
+                                    <td style="padding: 12px; text-align: right;">GHS <?php echo number_format(array_sum(array_map(fn($s) => $s['transport'], $staff_structures)), 2); ?></td>
+                                    <td style="padding: 12px; text-align: right;">GHS <?php echo number_format(array_sum(array_map(fn($s) => $s['other_allow'], $staff_structures)), 2); ?></td>
+                                    <td style="padding: 12px; text-align: center;">GHS <?php echo number_format(array_sum(array_map(fn($s) => $s['basic'] + $s['housing'] + $s['transport'] + $s['other_allow'], $staff_structures)), 2); ?></td>
+                                    <td colspan="3"></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
                 </div>
             </div>
 

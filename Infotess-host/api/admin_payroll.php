@@ -115,6 +115,27 @@ if (isset($_GET['delete']) && is_numeric($_GET['delete'])) {
     }
 }
 
+// Handle Bulk Delete Payroll
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'bulk_delete_payroll') {
+    validate_request_csrf();
+    $ids = $_POST['payroll_ids'] ?? [];
+    if (!empty($ids) && is_array($ids)) {
+        try {
+            $pdo->beginTransaction();
+            $placeholders = implode(',', array_fill(0, count($ids), '?'));
+            $stmt = $pdo->prepare("DELETE FROM pay_slips WHERE payroll_id IN ($placeholders)");
+            $stmt->execute($ids);
+            $stmt = $pdo->prepare("DELETE FROM payroll WHERE id IN ($placeholders)");
+            $stmt->execute($ids);
+            $pdo->commit();
+            $message = count($ids) . " payroll record(s) deleted.";
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            $error = "Error: " . $e->getMessage();
+        }
+    }
+}
+
 // View current payroll
 $selected_month = (int)($_GET['month'] ?? date('n'));
 $selected_year = (int)($_GET['year'] ?? date('Y'));
@@ -334,10 +355,20 @@ $unconfigured_count = count(array_filter($staff_structures, fn($s) => !$s['confi
                         <i class="fas fa-info-circle"></i> No payroll records found for this period. Click "Generate Payroll" to create records for all active staff.
                     </div>
                 <?php else: ?>
-                    <div class="table-responsive">
+                    <form method="POST" action="payroll.php?month=<?php echo $selected_month; ?>&year=<?php echo $selected_year; ?>" id="bulk-payroll-form">
+                        <?php csrf_field(); ?>
+                        <input type="hidden" name="action" value="bulk_delete_payroll">
+                        <div style="margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                            <button type="button" onclick="if(confirm('Delete all selected payroll records?')){var f=document.getElementById('bulk-payroll-form');var cbs=f.querySelectorAll('input[name=\'payroll_ids[]\']:checked');if(cbs.length===0){alert('No records selected.');return;}f.submit();}" style="background:#e74c3c;color:#fff;border:none;padding:8px 16px;border-radius:4px;cursor:pointer;font-size:0.9rem;">
+                                <i class="fas fa-trash"></i> Delete Selected
+                            </button>
+                            <span id="selected-count" style="color:#666;font-size:0.85rem;">0 selected</span>
+                        </div>
+                        <div class="table-responsive">
                         <table class="table">
                             <thead>
                                 <tr>
+                                    <th style="width: 40px;"><input type="checkbox" id="select-all" onchange="var cbs=document.querySelectorAll('input[name=\'payroll_ids[]\']');cbs.forEach(function(cb){cb.checked=this.checked},this);updateSelectedCount();"></th>
                                     <th>Staff ID</th>
                                     <th>Name</th>
                                     <th>Position</th>
@@ -355,6 +386,7 @@ $unconfigured_count = count(array_filter($staff_structures, fn($s) => !$s['confi
                             <tbody>
                                 <?php foreach ($payroll_records as $record): ?>
                                 <tr>
+                                    <td style="text-align: center;"><input type="checkbox" name="payroll_ids[]" value="<?php echo $record['id']; ?>" onchange="updateSelectedCount()"></td>
                                     <td><?php echo htmlspecialchars($record['staff_id']); ?></td>
                                     <td><strong><?php echo htmlspecialchars($record['full_name']); ?></strong></td>
                                     <td><?php echo htmlspecialchars($record['position']); ?></td>
@@ -391,7 +423,8 @@ $unconfigured_count = count(array_filter($staff_structures, fn($s) => !$s['confi
                             </tbody>
                             <tfoot>
                                 <tr style="background: #f8f9fa; font-weight: bold;">
-                                    <td colspan="3" style="padding: 15px;">TOTAL</td>
+                                    <td style="padding: 15px;"></td>
+                                    <td colspan="2" style="padding: 15px;">TOTAL</td>
                                     <td style="padding: 15px; text-align: right;">GHS <?php echo number_format(array_sum(array_map(fn($r) => (float)$r['basic_salary'], $payroll_records)), 2); ?></td>
                                     <td style="padding: 15px; text-align: right;">GHS <?php echo number_format($total_gross - array_sum(array_map(fn($r) => (float)$r['basic_salary'], $payroll_records)), 2); ?></td>
                                     <td style="padding: 15px; text-align: right;">GHS <?php echo number_format($total_gross, 2); ?></td>
@@ -404,6 +437,13 @@ $unconfigured_count = count(array_filter($staff_structures, fn($s) => !$s['confi
                             </tfoot>
                         </table>
                     </div>
+                    </form>
+                    <script>
+                    function updateSelectedCount() {
+                        var cbs = document.querySelectorAll('input[name="payroll_ids[]"]:checked');
+                        document.getElementById('selected-count').textContent = cbs.length + ' selected';
+                    }
+                    </script>
                 <?php endif; ?>
             </div>
         </main>

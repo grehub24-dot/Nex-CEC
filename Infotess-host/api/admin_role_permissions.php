@@ -92,7 +92,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $new_level_label = getAccessLevelLabel($new_position, $new_role);
                 error_log("Role permission change: Staff #$staff_id ($name) from '$old_level_label' to '$new_level_label' by user #{$_SESSION['user_id']}");
 
-                $message = "Updated <strong>" . htmlspecialchars($name) . "</strong> → <strong>" . ucfirst($new_access) . "</strong> access.";
+                $redirectPage = isset($_POST['page']) ? '?page=' . (int)$_POST['page'] : '';
+                header("Location: role_permissions.php{$redirectPage}");
+                exit;
             }
         } catch (Exception $e) {
             $error = "Error updating role: " . $e->getMessage();
@@ -113,6 +115,14 @@ try {
 } catch (Exception $e) {
     $error = "Database error: " . $e->getMessage();
 }
+
+// Pagination for staff table
+$staff_limit = 15;
+$staff_page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+$staff_offset = ($staff_page - 1) * $staff_limit;
+$staff_total = count($allStaff);
+$staff_total_pages = max(1, ceil($staff_total / $staff_limit));
+$allStaffPaginated = array_slice($allStaff, $staff_offset, $staff_limit);
 
 /**
  * Get human-readable access level label for a staff member.
@@ -327,7 +337,10 @@ function levelIcon($level) {
             <div class="card">
                 <h3><i class="fas fa-users"></i> All Staff Members</h3>
                 <p style="color:#666; margin-bottom: 16px;">
-                    Total: <strong><?php echo count($allStaff); ?></strong> staff members.
+                    Total: <strong><?php echo $staff_total; ?></strong> staff members.
+                    <?php if ($staff_total_pages > 1): ?>
+                        (Page <?php echo $staff_page; ?> of <?php echo $staff_total_pages; ?>)
+                    <?php endif; ?>
                     Changes take effect on <strong>next login</strong>.
                 </p>
 
@@ -344,7 +357,7 @@ function levelIcon($level) {
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($allStaff as $staff): 
+                            <?php foreach ($allStaffPaginated as $staff): 
                                 $hasUser = !empty($staff['user_id']);
                                 $userRole = $staff['user_role'] ?? '';
                                 $position = $staff['position'] ?? '';
@@ -375,6 +388,7 @@ function levelIcon($level) {
                                             <form method="POST" class="role-form" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
                                                 <input type="hidden" name="action" value="update_role">
                                                 <input type="hidden" name="staff_id" value="<?php echo $staff['id']; ?>">
+                                                <input type="hidden" name="page" value="<?php echo $staff_page; ?>">
                                                 <?php csrf_field(); ?>
                                                 <select name="access_level" class="level-select <?php echo strtolower($level); ?>" onchange="highlightSelect(this)">
                                                     <option value="staff" <?php echo $level === 'Staff' ? 'selected' : ''; ?>>Staff</option>
@@ -408,6 +422,20 @@ function levelIcon($level) {
                             <?php endif; ?>
                         </tbody>
                     </table>
+
+                    <?php if ($staff_total_pages > 1): ?>
+                    <div style="display:flex; justify-content:center; gap:5px; margin-top:20px; flex-wrap:wrap;">
+                        <?php if ($staff_page > 1): ?>
+                            <a href="?page=<?php echo $staff_page - 1; ?>" style="display:inline-flex; align-items:center; gap:5px; padding:8px 16px; background:#f8f9fa; color:#000; border:1px solid #ddd; border-radius:6px; text-decoration:none; font-size:14px;">&laquo; Prev</a>
+                        <?php endif; ?>
+                        <?php for ($i = 1; $i <= $staff_total_pages; $i++): ?>
+                            <a href="?page=<?php echo $i; ?>" style="display:inline-flex; align-items:center; justify-content:center; min-width:38px; padding:8px 12px; background:<?php echo $i == $staff_page ? '#1a5276' : '#f8f9fa'; ?>; color:<?php echo $i == $staff_page ? '#fff' : '#000'; ?>; border:1px solid <?php echo $i == $staff_page ? '#1a5276' : '#ddd'; ?>; border-radius:6px; text-decoration:none; font-size:14px; font-weight:<?php echo $i == $staff_page ? '700' : '400'; ?>;"><?php echo $i; ?></a>
+                        <?php endfor; ?>
+                        <?php if ($staff_page < $staff_total_pages): ?>
+                            <a href="?page=<?php echo $staff_page + 1; ?>" style="display:inline-flex; align-items:center; gap:5px; padding:8px 16px; background:#f8f9fa; color:#000; border:1px solid #ddd; border-radius:6px; text-decoration:none; font-size:14px;">Next &raquo;</a>
+                        <?php endif; ?>
+                    </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </main>

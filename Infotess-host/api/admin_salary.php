@@ -102,6 +102,22 @@ $taxable = $gross - $ssnit;
 $tax = $salary ? round($taxable * ((float)$salary['tax_rate'] / 100), 2) : 0;
 $recurring_deductions = array_sum(array_map(fn($d) => (float)$d['amount'], array_filter($deductions, fn($d) => $d['is_recurring'])));
 $net = $gross - $ssnit - $tax - $recurring_deductions;
+
+// Ghana SSNIT breakdown constants
+$ssnit_employee_rate   = 5.5;
+$ssnit_employer_rate   = 13.0;
+$ssnit_total_rate      = $ssnit_employee_rate + $ssnit_employer_rate; // 18.5%
+$tier1_pension_rate    = 11.0;
+$tier1_nhia_rate       = 2.5;
+$tier2_private_rate    = 5.0;
+$basic_for_ssnit       = $salary ? (float)$salary['basic_salary'] : 0;
+$employee_contribution = round($basic_for_ssnit * ($ssnit_employee_rate / 100), 2);
+$employer_contribution = round($basic_for_ssnit * ($ssnit_employer_rate / 100), 2);
+$total_contribution    = $employee_contribution + $employer_contribution;
+$tier1_pension_amt     = round($basic_for_ssnit * ($tier1_pension_rate / 100), 2);
+$tier1_nhia_amt        = round($basic_for_ssnit * ($tier1_nhia_rate / 100), 2);
+$tier2_private_amt     = round($basic_for_ssnit * ($tier2_private_rate / 100), 2);
+$net_after_ssnit       = round($basic_for_ssnit - $employee_contribution, 2);
 ?>
 
 <!DOCTYPE html>
@@ -209,7 +225,9 @@ $net = $gross - $ssnit - $tax - $recurring_deductions;
                                 <span><strong>Gross Pay</strong></span><strong style="color: var(--primary-color);">GHS <?php echo number_format($gross, 2); ?></strong>
                             </div>
                             <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; color: #e74c3c;">
-                                <span>SSNIT (<?php echo $salary ? $salary['ssnit_rate'] : '13.5'; ?>%)</span><strong>- GHS <?php echo number_format($ssnit, 2); ?></strong>
+                                <span>SSNIT (<?php echo $salary ? $salary['ssnit_rate'] : '13.5'; ?>%)
+                                    <a href="#" onclick="event.preventDefault(); document.getElementById('ssnit-breakdown').style.display = document.getElementById('ssnit-breakdown').style.display === 'none' ? 'block' : 'none';" style="color: var(--primary-color); font-size: 0.8rem; text-decoration: underline; margin-left: 5px;">Breakdown</a>
+                                </span><strong>- GHS <?php echo number_format($ssnit, 2); ?></strong>
                             </div>
                             <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; color: #e74c3c;">
                                 <span>PAYE Tax (<?php echo $salary ? $salary['tax_rate'] : '0'; ?>%)</span><strong>- GHS <?php echo number_format($tax, 2); ?></strong>
@@ -290,6 +308,121 @@ $net = $gross - $ssnit - $tax - $recurring_deductions;
                     <?php endif; ?>
                 </div>
             </div>
+            <!-- SSNIT Breakdown (hidden by default) -->
+            <div id="ssnit-breakdown" class="card" style="margin-top: 30px; display: none;">
+                <div class="card-content">
+                    <h3><i class="fas fa-calculator" style="color: var(--primary-color);"></i> SSNIT Contribution Breakdown</h3>
+                    <p style="color: #666; margin-bottom: 20px; font-size: 0.9rem;">
+                        Based on a basic salary of <strong>GHS <?php echo number_format($basic_for_ssnit, 2); ?></strong> using standard Ghana SSNIT rates.
+                        <a href="#" onclick="event.preventDefault(); document.getElementById('ssnit-breakdown').style.display='none';" style="margin-left: 10px; font-size: 0.8rem;">Hide</a>
+                    </p>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
+                        <!-- Table 1: Contribution Split -->
+                        <div style="background: #f9f9f9; border-radius: 8px; padding: 15px;">
+                            <h4 style="margin-bottom: 10px; font-size: 1rem;">Contribution Split</h4>
+                            <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                                <thead>
+                                    <tr style="background: var(--primary-color); color: #fff;">
+                                        <th style="padding: 8px; text-align: left;">Party</th>
+                                        <th style="padding: 8px; text-align: center;">Rate</th>
+                                        <th style="padding: 8px; text-align: right;">Amount (GH¢)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr style="border-bottom: 1px solid #ddd;">
+                                        <td style="padding: 8px;">Employee <span style="color: #888; font-size: 0.8rem;">(deducted from salary)</span></td>
+                                        <td style="padding: 8px; text-align: center;"><?php echo $ssnit_employee_rate; ?>%</td>
+                                        <td style="padding: 8px; text-align: right; color: #e74c3c;">GH¢ <?php echo number_format($employee_contribution, 2); ?></td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid #ddd;">
+                                        <td style="padding: 8px;">Employer <span style="color: #888; font-size: 0.8rem;">(paid by company)</span></td>
+                                        <td style="padding: 8px; text-align: center;"><?php echo $ssnit_employer_rate; ?>%</td>
+                                        <td style="padding: 8px; text-align: right; color: #e67e22;">GH¢ <?php echo number_format($employer_contribution, 2); ?></td>
+                                    </tr>
+                                    <tr style="font-weight: bold; background: #f0f0f0;">
+                                        <td style="padding: 8px;">Total Monthly Contribution</td>
+                                        <td style="padding: 8px; text-align: center;"><?php echo $ssnit_total_rate; ?>%</td>
+                                        <td style="padding: 8px; text-align: right; color: var(--primary-color);">GH¢ <?php echo number_format($total_contribution, 2); ?></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Table 2: Where the Money Goes -->
+                        <div style="background: #f9f9f9; border-radius: 8px; padding: 15px;">
+                            <h4 style="margin-bottom: 10px; font-size: 1rem;">Where the Money Goes</h4>
+                            <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                                <thead>
+                                    <tr style="background: var(--primary-color); color: #fff;">
+                                        <th style="padding: 8px; text-align: left;">Tier</th>
+                                        <th style="padding: 8px; text-align: left;">Destination</th>
+                                        <th style="padding: 8px; text-align: center;">Rate</th>
+                                        <th style="padding: 8px; text-align: right;">Amount (GH¢)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr style="border-bottom: 1px solid #ddd;">
+                                        <td style="padding: 8px;">Tier 1</td>
+                                        <td style="padding: 8px;">SSNIT (Pension Fund)</td>
+                                        <td style="padding: 8px; text-align: center;"><?php echo $tier1_pension_rate; ?>%</td>
+                                        <td style="padding: 8px; text-align: right;">GH¢ <?php echo number_format($tier1_pension_amt, 2); ?></td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid #ddd;">
+                                        <td style="padding: 8px;">Tier 1</td>
+                                        <td style="padding: 8px;">NHIA (Health Insurance)</td>
+                                        <td style="padding: 8px; text-align: center;"><?php echo $tier1_nhia_rate; ?>%</td>
+                                        <td style="padding: 8px; text-align: right;">GH¢ <?php echo number_format($tier1_nhia_amt, 2); ?></td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid #ddd;">
+                                        <td style="padding: 8px;">Tier 2</td>
+                                        <td style="padding: 8px;">Private Corporate Trustee</td>
+                                        <td style="padding: 8px; text-align: center;"><?php echo $tier2_private_rate; ?>%</td>
+                                        <td style="padding: 8px; text-align: right;">GH¢ <?php echo number_format($tier2_private_amt, 2); ?></td>
+                                    </tr>
+                                    <tr style="font-weight: bold; background: #f0f0f0;">
+                                        <td style="padding: 8px;"></td>
+                                        <td style="padding: 8px;">Total</td>
+                                        <td style="padding: 8px; text-align: center;"><?php echo $ssnit_total_rate; ?>%</td>
+                                        <td style="padding: 8px; text-align: right; color: var(--primary-color);">GH¢ <?php echo number_format($total_contribution, 2); ?></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Table 3: What the Employee Actually Receives -->
+                        <div style="background: #f9f9f9; border-radius: 8px; padding: 15px;">
+                            <h4 style="margin-bottom: 10px; font-size: 1rem;">What the Employee Actually Receives</h4>
+                            <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                                <thead>
+                                    <tr style="background: var(--primary-color); color: #fff;">
+                                        <th style="padding: 8px; text-align: left;">Item</th>
+                                        <th style="padding: 8px; text-align: right;">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr style="border-bottom: 1px solid #ddd;">
+                                        <td style="padding: 8px;">Basic Salary</td>
+                                        <td style="padding: 8px; text-align: right;">GH¢ <?php echo number_format($basic_for_ssnit, 2); ?></td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid #ddd;">
+                                        <td style="padding: 8px;">Less: Employee SSNIT Contribution</td>
+                                        <td style="padding: 8px; text-align: right; color: #e74c3c;">– GH¢ <?php echo number_format($employee_contribution, 2); ?></td>
+                                    </tr>
+                                    <tr style="font-weight: bold; background: #e8f5e9;">
+                                        <td style="padding: 10px;">Net Salary (before tax)</td>
+                                        <td style="padding: 10px; text-align: right; color: #27ae60; font-size: 1.1rem;">GH¢ <?php echo number_format($net_after_ssnit, 2); ?></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <p style="margin-top: 10px; font-size: 0.8rem; color: #888; font-style: italic;">
+                                The employer pays an additional GH¢ <?php echo number_format($employer_contribution, 2); ?> on top of the GH¢ <?php echo number_format($basic_for_ssnit, 2); ?>, so the total cost to the employer for this worker is <strong>GH¢ <?php echo number_format($basic_for_ssnit + $employer_contribution, 2); ?></strong> per month.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <?php else: ?>
                 <div class="alert alert-info">
                     <i class="fas fa-info-circle"></i> Select a staff member above to manage their salary structure.

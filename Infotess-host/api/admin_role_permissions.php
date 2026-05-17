@@ -297,6 +297,33 @@ function levelIcon($level) {
                 </div>
             </div>
 
+            <!-- Quick summary -->
+            <?php
+            $counts = ['Admin' => 0, 'Bursar' => 0, 'Teacher' => 0, 'Staff' => 0];
+            foreach ($allStaff as $s) {
+                $lvl = getAccessLevelLabel($s['position'] ?? '', $s['user_role'] ?? '');
+                $counts[$lvl] = ($counts[$lvl] ?? 0) + 1;
+            }
+            ?>
+            <div style="display:flex; gap:16px; flex-wrap:wrap; margin-bottom:24px;">
+                <div style="flex:1; min-width:140px; background:#1a5276; color:#fff; padding:16px 20px; border-radius:10px; text-align:center;">
+                    <div style="font-size:1.6rem; font-weight:700;"><?php echo $counts['Admin']; ?></div>
+                    <div style="font-size:0.85rem; opacity:0.85;">Admins</div>
+                </div>
+                <div style="flex:1; min-width:140px; background:#d4a017; color:#fff; padding:16px 20px; border-radius:10px; text-align:center;">
+                    <div style="font-size:1.6rem; font-weight:700;"><?php echo $counts['Bursar']; ?></div>
+                    <div style="font-size:0.85rem; opacity:0.85;">Bursars</div>
+                </div>
+                <div style="flex:1; min-width:140px; background:#27ae60; color:#fff; padding:16px 20px; border-radius:10px; text-align:center;">
+                    <div style="font-size:1.6rem; font-weight:700;"><?php echo $counts['Teacher']; ?></div>
+                    <div style="font-size:0.85rem; opacity:0.85;">Class Teachers</div>
+                </div>
+                <div style="flex:1; min-width:140px; background:#95a5a6; color:#fff; padding:16px 20px; border-radius:10px; text-align:center;">
+                    <div style="font-size:1.6rem; font-weight:700;"><?php echo $counts['Staff']; ?></div>
+                    <div style="font-size:0.85rem; opacity:0.85;">Staff</div>
+                </div>
+            </div>
+
             <div class="card">
                 <h3><i class="fas fa-users"></i> All Staff Members</h3>
                 <p style="color:#666; margin-bottom: 16px;">
@@ -381,33 +408,6 @@ function levelIcon($level) {
                             <?php endif; ?>
                         </tbody>
                     </table>
-                </div>
-            </div>
-
-            <!-- Quick summary -->
-            <?php
-            $counts = ['Admin' => 0, 'Bursar' => 0, 'Teacher' => 0, 'Staff' => 0];
-            foreach ($allStaff as $s) {
-                $lvl = getAccessLevelLabel($s['position'] ?? '', $s['user_role'] ?? '');
-                $counts[$lvl] = ($counts[$lvl] ?? 0) + 1;
-            }
-            ?>
-            <div style="display:flex; gap:16px; flex-wrap:wrap; margin-top:20px;">
-                <div style="flex:1; min-width:140px; background:#1a5276; color:#fff; padding:16px 20px; border-radius:10px; text-align:center;">
-                    <div style="font-size:1.6rem; font-weight:700;"><?php echo $counts['Admin']; ?></div>
-                    <div style="font-size:0.85rem; opacity:0.85;">Admins</div>
-                </div>
-                <div style="flex:1; min-width:140px; background:#d4a017; color:#fff; padding:16px 20px; border-radius:10px; text-align:center;">
-                    <div style="font-size:1.6rem; font-weight:700;"><?php echo $counts['Bursar']; ?></div>
-                    <div style="font-size:0.85rem; opacity:0.85;">Bursars</div>
-                </div>
-                <div style="flex:1; min-width:140px; background:#27ae60; color:#fff; padding:16px 20px; border-radius:10px; text-align:center;">
-                    <div style="font-size:1.6rem; font-weight:700;"><?php echo $counts['Teacher']; ?></div>
-                    <div style="font-size:0.85rem; opacity:0.85;">Class Teachers</div>
-                </div>
-                <div style="flex:1; min-width:140px; background:#95a5a6; color:#fff; padding:16px 20px; border-radius:10px; text-align:center;">
-                    <div style="font-size:1.6rem; font-weight:700;"><?php echo $counts['Staff']; ?></div>
-                    <div style="font-size:0.85rem; opacity:0.85;">Staff</div>
                 </div>
             </div>
         </main>

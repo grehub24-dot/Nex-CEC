@@ -83,9 +83,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                             // Save to database (use SupabaseClient directly — PDO bridge can't handle DDL
                             // and the PGRST204 column-stripping retry would silently produce empty data)
-                            $supabase->table('staff')->where('user_id', $user_id)->update(['profile_picture' => $newUrl]);
-                            $_SESSION['profile_picture'] = $newUrl;
-                            $message = "Profile picture updated successfully!";
+                            try {
+                                $supabase->table('staff')->where('user_id', $user_id)->update(['profile_picture' => $newUrl]);
+                                $_SESSION['profile_picture'] = $newUrl;
+                                $message = "Profile picture updated successfully!";
+                            } catch (Exception $e) {
+                                if (strpos($e->getMessage(), 'profile_picture') !== false && 
+                                    (strpos($e->getMessage(), 'Could not find') !== false || 
+                                     strpos($e->getMessage(), 'PGRST204') !== false)) {
+                                    $error = "Database column missing. Please run this SQL in Supabase Dashboard: <pre>ALTER TABLE staff ADD COLUMN IF NOT EXISTS profile_picture TEXT;</pre>";
+                                } else {
+                                    $error = "Upload failed: " . $e->getMessage();
+                                }
+                            }
                         } catch (Exception $e) {
                             $error = "Upload failed: " . $e->getMessage();
                         }

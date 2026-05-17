@@ -48,6 +48,33 @@ if (isTeacher()) {
     $teacher_subjects = $stmt->fetchAll();
 }
 
+// Fetch children/wards from parent_students
+$children = [];
+$stmt = $pdo->prepare("SELECT * FROM parent_students WHERE parent_user_id = ?");
+$stmt->execute([$user_id]);
+$parent_records = $stmt->fetchAll();
+if (!empty($parent_records)) {
+    $student_ids = array_map(fn($r) => (int)$r['student_id'], $parent_records);
+    $placeholders = implode(',', array_fill(0, count($student_ids), '?'));
+    $stmt = $pdo->prepare("SELECT * FROM students WHERE id IN ($placeholders)");
+    $stmt->execute($student_ids);
+    $students_list = $stmt->fetchAll();
+    $students_by_id = [];
+    foreach ($students_list as $s) {
+        $students_by_id[(int)$s['id']] = $s;
+    }
+    foreach ($parent_records as $pr) {
+        $sid = (int)$pr['student_id'];
+        if (isset($students_by_id[$sid])) {
+            $children[] = [
+                'relationship' => $pr['relationship'],
+                'is_primary'   => $pr['is_primary'],
+                'student'      => $students_by_id[$sid]
+            ];
+        }
+    }
+}
+
 // Fetch unread messages
 $stmt = $pdo->prepare("SELECT id FROM messages WHERE receiver_id = ?");
 $stmt->execute([$user_id]);
@@ -156,7 +183,7 @@ $unread_count = count($unread_message_ids);
     </style>
 </head>
 <body>
-    <?php echo renderStaffSidebar('dashboard', $school_name, $unread_count, $staff['profile_picture'] ?? '', $staff['full_name'] ?? ''); ?>
+    <?php echo renderStaffSidebar('dashboard', $school_name, $unread_count, getStaffProfilePictureUrl($staff['profile_picture'] ?? '', $user_id), $staff['full_name'] ?? ''); ?>
 
     <div class="staff-main">
         <div class="top-bar">
@@ -213,6 +240,42 @@ $unread_count = count($unread_message_ids);
                 <div class="item"><span class="label">Status</span><span class="value"><span class="badge badge-success"><?php echo htmlspecialchars(ucfirst($staff['status'] ?? 'Active')); ?></span></span></div>
             </div>
         </div>
+
+        <?php if (!empty($children)): ?>
+        <div class="profile-section">
+            <h3><i class="fas fa-child"></i> My Children / Wards</h3>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;">
+                <?php foreach ($children as $child): 
+                    $stu = $child['student'];
+                ?>
+                <div style="background:#f8f9fa;border-radius:10px;padding:18px;border:1px solid #e9ecef;">
+                    <div style="display:flex;align-items:flex-start;gap:12px;">
+                        <div style="width:48px;height:48px;border-radius:50%;background:#1a5276;color:white;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;flex-shrink:0;">
+                            <?php echo strtoupper(substr($stu['full_name'] ?? '?', 0, 1)); ?>
+                        </div>
+                        <div style="flex:1;min-width:0;">
+                            <div style="font-weight:600;font-size:15px;color:#1a5276;"><?php echo htmlspecialchars($stu['full_name'] ?? ''); ?></div>
+                            <div style="font-size:13px;color:#666;margin-top:4px;">
+                                <?php if (!empty($stu['admission_no'])): ?>
+                                <span style="display:inline-block;margin-right:12px;"><i class="fas fa-id-card" style="width:14px;color:#888;"></i> <?php echo htmlspecialchars($stu['admission_no']); ?></span>
+                                <?php endif; ?>
+                                <?php if (!empty($stu['class'])): ?>
+                                <span><i class="fas fa-graduation-cap" style="width:14px;color:#888;"></i> <?php echo htmlspecialchars($stu['class']); ?><?php echo !empty($stu['stream']) ? ' ' . htmlspecialchars($stu['stream']) : ''; ?></span>
+                                <?php endif; ?>
+                            </div>
+                            <div style="font-size:12px;color:#888;margin-top:6px;">
+                                <span class="badge badge-info" style="font-size:11px;"><?php echo htmlspecialchars(ucfirst($child['relationship'] ?? 'Parent')); ?></span>
+                                <?php if (!empty($child['is_primary'])): ?>
+                                <span class="badge badge-success" style="font-size:11px;margin-left:4px;">Primary</span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <?php endif; ?>
 
         <?php if (isTeacher() && !empty($teacher_subjects)): ?>
         <div class="profile-section">

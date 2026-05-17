@@ -248,48 +248,113 @@ class SupabaseClient {
     }
 
     /**
-     * Execute raw SQL via Supabase's SQL endpoint.
-     * Only works with the service_role key. Designed for DDL (ALTER TABLE, etc.)
-     * that cannot be run through PostgREST.
+     * Execute raw SQL via Supabase.
+     *
+     * Tries two approaches in order:
+     *   1. Management API (https://api.supabase.com/v1/projects/{ref}/sql) — requires SUPABASE_PAT
+     *   2. Direct SQL endpoint (https://{ref}.supabase.co/sql) — deprecated on newer projects
+     *
+     * Designed for DDL (ALTER TABLE, etc.) that cannot be run through PostgREST.
+     * Throws a clear error with manual SQL instructions if both approaches fail.
      *
      * @param string $sql Raw SQL statement to execute
      * @return array      Decoded JSON response
-     * @throws Exception  On failure
+     * @throws Exception  On failure (with instructions to run SQL manually)
      */
     public function executeSql(string $sql): array {
-        $url = "$this->url/sql";
-        $body = json_encode(['query' => $sql]);
+        $pat = getenv('SUPABASE_PAT');
 
-        $ch = curl_init();
-        $headers = [
-            "apikey: {$this->key}",
-            "Authorization: Bearer {$this->key}",
-            "Content-Type: application/json"
-        ];
+        // Approach 1: Management API (requires PAT)
+        if (!empty($pat)) {
+            try {
+                // Extract project ref from the Supabase URL
+                $parsedUrl = parse_url($this->url);
+                $host = $parsedUrl['host'] ?? '';
+                $ref = str_replace('.supabase.co', '', $host);
 
-        curl_setopt_array($ch, [
-            CURLOPT_URL => $url,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_CUSTOMREQUEST => 'POST',
-            CURLOPT_HTTPHEADER => $headers,
-            CURLOPT_POSTFIELDS => $body,
-            CURLOPT_SSL_VERIFYPEER => true
-        ]);
+                $mgmtUrl = "https://api.supabase.com/v1/projects/$ref/sql";
+                $mgmtBody = json_encode(['query' => $sql]);
 
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $curlError = curl_error($ch);
-        curl_close($ch);
+                $ch = curl_init();
+                $mgmtHeaders = [
+                    "Authorization: Bearer $pat",
+                    "Content-Type: application/json"
+                ];
 
-        if ($response === false) {
-            throw new Exception("Supabase SQL curl error: " . ($curlError ?: 'unknown'));
+                curl_setopt_array($ch, [
+                    CURLOPT_URL => $mgmtUrl,
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_CUSTOMREQUEST => 'POST',
+                    CURLOPT_HTTPHEADER => $mgmtHeaders,
+                    CURLOPT_POSTFIELDS => $mgmtBody,
+                    CURLOPT_SSL_VERIFYPEER => true
+                ]);
+
+                $response = curl_exec($ch);
+                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                $curlError = curl_error($ch);
+                curl_close($ch);
+
+                if ($response !== false && $httpCode < 400) {
+                    return json_decode($response, true) ?: [];
+                }
+
+                error_log("Supabase Management API Error (HTTP $httpCode): $response");
+            } catch (Exception $e) {
+                error_log("Supabase Management API exception: " . $e->getMessage());
+            }
         }
 
-        if ($httpCode >= 400) {
-            throw new Exception("Supabase SQL Error (HTTP $httpCode): $response");
+        // Approach 2: Direct SQL endpoint (deprecated on newer Supabase projects)
+        try {
+            $url = "$this->url/sql";
+            $body = json_encode(['query' => $sql]);
+
+            $ch = curl_init();
+            $headers = [
+                "apikey: {$this->key}",
+                "Authorization: Bearer {$this->key}",
+                "Content-Type: application/json"
+            ];
+
+            curl_setopt_array($ch, [
+                CURLOPT_URL => $url,
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_CUSTOMREQUEST => 'POST',
+                CURLOPT_HTTPHEADER => $headers,
+                CURLOPT_POSTFIELDS => $body,
+                CURLOPT_SSL_VERIFYPEER => true
+            ]);
+
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlError = curl_error($ch);
+            curl_close($ch);
+
+            if ($response !== false && $httpCode < 400) {
+                return json_decode($response, true) ?: [];
+            }
+
+            error_log("Supabase SQL endpoint Error (HTTP $httpCode): " . ($response ?: $curlError));
+        } catch (Exception $e) {
+            error_log("Supabase SQL endpoint exception: " . $e->getMessage());
         }
 
-        return json_decode($response, true) ?: [];
+        // Both approaches failed — provide clear manual instructions
+        $parsedUrl = parse_url($this->url);
+        $host = $parsedUrl['host'] ?? 'your-project.supabase.co';
+        $projectRef = str_replace('.supabase.co', '', $host);
+
+        $message = "Cannot execute SQL automatically. ";
+        if (empty($pat)) {
+            $message .= "To enable automatic SQL execution, add a Supabase Personal Access Token (SUPABASE_PAT) to your .env file. ";
+            $message .= "Generate one at: https://supabase.com/dashboard/account/tokens\n";
+        }
+        $message .= "Otherwise, run this SQL manually in your Supabase Dashboard SQL Editor:\n";
+        $message .= "  URL: https://supabase.com/dashboard/project/$projectRef/sql/new\n";
+        $message .= "  SQL: $sql";
+
+        throw new Exception($message);
     }
 
     private function request($method, $url, $data = null) {

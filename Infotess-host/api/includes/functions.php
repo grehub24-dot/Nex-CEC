@@ -681,6 +681,30 @@ function resolve_storage_url(?string $path, string $fallback = 'images/aamusted.
     return '../' . ltrim($url, '/');
 }
 
+/**
+ * Get the best available profile picture URL for a staff member.
+ *
+ * Fallback chain: DB column → Session cache → Empty (no picture uploaded yet).
+ *
+ * @param string|null $staffDbValue Value from staff.profile_picture column (null if column missing)
+ * @param int         $userId       The user's ID (for constructing predictable storage path)
+ * @return string                   Profile picture URL or empty string
+ */
+function getStaffProfilePictureUrl(?string $staffDbValue, int $userId): string {
+    // 1. Database column (profile_picture column exists and has a value)
+    if (!empty($staffDbValue)) {
+        return $staffDbValue;
+    }
+
+    // 2. Session cache (set after upload even if DB column is missing)
+    if (!empty($_SESSION['profile_picture'])) {
+        return $_SESSION['profile_picture'];
+    }
+
+    // 3. No picture available
+    return '';
+}
+
 // ==========================================
 // CSRF Protection
 // ==========================================

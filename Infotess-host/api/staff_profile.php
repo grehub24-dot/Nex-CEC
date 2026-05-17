@@ -14,14 +14,14 @@ $message = '';
 $error = '';
 
 // Ensure profile_picture column exists in staff table
-// ALTER TABLE cannot run through the PDO bridge (DDL skipped), so use Supabase SQL API directly
+// ALTER TABLE cannot run through the PDO bridge (DDL skipped), so try Supabase SQL API
 global $supabase;
 if ($supabase && $supabase instanceof SupabaseClient) {
     try {
         $supabase->executeSql("ALTER TABLE staff ADD COLUMN IF NOT EXISTS profile_picture TEXT");
     } catch (Exception $e) {
         error_log("profile_picture migration: " . $e->getMessage());
-        // Non-fatal — the UPDATE below will fail with a clear error if column is missing
+        // Non-fatal — the UPDATE below will handle the case where column is still missing
     }
 }
 
@@ -88,10 +88,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 $_SESSION['profile_picture'] = $newUrl;
                                 $message = "Profile picture updated successfully!";
                             } catch (Exception $e) {
+                                // Always save to session cache so the picture shows in sidebar immediately
+                                $_SESSION['profile_picture'] = $newUrl;
+                                
                                 if (strpos($e->getMessage(), 'profile_picture') !== false && 
                                     (strpos($e->getMessage(), 'Could not find') !== false || 
                                      strpos($e->getMessage(), 'PGRST204') !== false)) {
-                                    $error = "Database column missing. Please run this SQL in Supabase Dashboard: <pre>ALTER TABLE staff ADD COLUMN IF NOT EXISTS profile_picture TEXT;</pre>";
+                                    $error = "Database column missing. 
+                                    <p>Please run this SQL in <strong>Supabase Dashboard → SQL Editor</strong>:</p>
+                                    <pre style='background:#f4f4f4;padding:12px;border-radius:5px;'>ALTER TABLE staff ADD COLUMN IF NOT EXISTS profile_picture TEXT;</pre>
+                                    <p style='font-size:13px;color:#666;'>
+                                        <a href='https://supabase.com/dashboard/project/tbkinaglugagloinecle/sql/new' target='_blank'>
+                                        Open Supabase SQL Editor &rarr;</a>
+                                    </p>";
                                 } else {
                                     $error = "Upload failed: " . $e->getMessage();
                                 }
@@ -121,7 +130,7 @@ if (!$staff) {
 $staff_id = (int)$staff['id'];
 
 // Profile picture from DB (fall back to session cache, then empty)
-$profile_pic = $staff['profile_picture'] ?? ($_SESSION['profile_picture'] ?? '');
+$profile_pic = getStaffProfilePictureUrl($staff['profile_picture'] ?? '', $user_id);
 
 // Fetch user record
 $stmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");

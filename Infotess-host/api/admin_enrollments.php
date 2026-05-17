@@ -316,7 +316,8 @@ if (isset($_GET['action']) && isset($_GET['id'])) {
     // Redirect back to enrollments page
     $redirectFilter = $_GET['filter'] ?? 'all';
     $redirectSearch = urlencode($_GET['search'] ?? '');
-    header("Location: enrollments.php?filter={$redirectFilter}&search={$redirectSearch}");
+    $redirectPage   = isset($_GET['page']) ? '&page=' . (int)$_GET['page'] : '';
+    header("Location: enrollments.php?filter={$redirectFilter}&search={$redirectSearch}{$redirectPage}");
     exit;
 }
 
@@ -361,6 +362,15 @@ $enrollments = array_filter($allStudents, function($s) use ($filter, $search) {
 
 // Sort by admission_date DESC
 usort($enrollments, fn($a, $b) => strcmp($b['admission_date'] ?? '', $a['admission_date'] ?? ''));
+
+// Pagination
+$limit = 15;
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+if ($page < 1) $page = 1;
+$total_enrollments = count($enrollments);
+$total_pages = $total_enrollments > 0 ? (int)ceil($total_enrollments / $limit) : 1;
+$offset = ($page - 1) * $limit;
+$enrollments = array_slice($enrollments, $offset, $limit);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -441,13 +451,14 @@ usort($enrollments, fn($a, $b) => strcmp($b['admission_date'] ?? '', $a['admissi
             <div class="section">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap: wrap; gap: 10px;">
                     <div class="filter-tabs">
-                        <a href="?filter=pending" class="<?php echo $filter === 'pending' ? 'active' : ''; ?>">Pending</a>
-                        <a href="?filter=enrolled" class="<?php echo $filter === 'enrolled' ? 'active' : ''; ?>">Approved</a>
-                        <a href="?filter=rejected" class="<?php echo $filter === 'rejected' ? 'active' : ''; ?>">Rejected</a>
-                        <a href="?filter=all" class="<?php echo $filter === 'all' ? 'active' : ''; ?>">All</a>
+                        <a href="?filter=pending&page=1" class="<?php echo $filter === 'pending' ? 'active' : ''; ?>">Pending</a>
+                        <a href="?filter=enrolled&page=1" class="<?php echo $filter === 'enrolled' ? 'active' : ''; ?>">Approved</a>
+                        <a href="?filter=rejected&page=1" class="<?php echo $filter === 'rejected' ? 'active' : ''; ?>">Rejected</a>
+                        <a href="?filter=all&page=1" class="<?php echo $filter === 'all' ? 'active' : ''; ?>">All</a>
                     </div>
                     <form action="enrollments.php" method="GET" style="display:flex; gap:10px;">
                         <input type="hidden" name="filter" value="<?php echo htmlspecialchars($filter); ?>">
+                        <input type="hidden" name="page" value="1">
                         <input type="text" name="search" placeholder="Search name or admission #..." class="form-control" value="<?php echo htmlspecialchars($search); ?>">
                         <button type="submit" class="btn-login"><i class="fas fa-search"></i></button>
                     </form>
@@ -494,6 +505,23 @@ usort($enrollments, fn($a, $b) => strcmp($b['admission_date'] ?? '', $a['admissi
                         </tbody>
                     </table>
                 </div>
+
+                <?php if ($total_pages > 1): ?>
+                <div style="display:flex; justify-content:center; gap:5px; margin-top:20px; flex-wrap:wrap;">
+                    <?php if ($page > 1): ?>
+                        <a href="?page=<?php echo $page - 1; ?>&filter=<?php echo urlencode($filter); ?><?php echo $search ? '&search='.urlencode($search) : ''; ?>" style="display:inline-flex; align-items:center; gap:5px; padding:8px 16px; background:#f8f9fa; color:#333; border:1px solid #ddd; border-radius:6px; text-decoration:none; font-size:14px;">&laquo; Prev</a>
+                    <?php endif; ?>
+                    <?php for ($i = 1; $i <= $total_pages; $i++): ?>
+                        <a href="?page=<?php echo $i; ?>&filter=<?php echo urlencode($filter); ?><?php echo $search ? '&search='.urlencode($search) : ''; ?>" style="display:inline-flex; align-items:center; justify-content:center; min-width:38px; padding:8px 12px; background:<?php echo $i == $page ? '#1a5276' : '#f8f9fa'; ?>; color:<?php echo $i == $page ? '#fff' : '#333'; ?>; border:1px solid <?php echo $i == $page ? '#1a5276' : '#ddd'; ?>; border-radius:6px; text-decoration:none; font-size:14px; font-weight:<?php echo $i == $page ? '700' : '400'; ?>;"><?php echo $i; ?></a>
+                    <?php endfor; ?>
+                    <?php if ($page < $total_pages): ?>
+                        <a href="?page=<?php echo $page + 1; ?>&filter=<?php echo urlencode($filter); ?><?php echo $search ? '&search='.urlencode($search) : ''; ?>" style="display:inline-flex; align-items:center; gap:5px; padding:8px 16px; background:#f8f9fa; color:#333; border:1px solid #ddd; border-radius:6px; text-decoration:none; font-size:14px;">Next &raquo;</a>
+                    <?php endif; ?>
+                </div>
+                <div style="text-align:center; margin-top:10px; font-size:13px; color:#888;">
+                    Showing page <?php echo $page; ?> of <?php echo $total_pages; ?> (<?php echo $total_enrollments; ?> total enrollments)
+                </div>
+                <?php endif; ?>
             </div>
         </main>
     </div>
@@ -520,6 +548,7 @@ usort($enrollments, fn($a, $b) => strcmp($b['admission_date'] ?? '', $a['admissi
                 <input type="hidden" name="id" id="payStudentId" value="">
                 <input type="hidden" name="filter" value="<?php echo htmlspecialchars($filter); ?>">
                 <input type="hidden" name="search" value="<?php echo htmlspecialchars($search); ?>">
+                <input type="hidden" name="page" value="<?php echo (int)$page; ?>">
                 <div class="form-group">
                     <label>Payment Amount (GHS)</label>
                     <input type="number" step="0.01" name="amount" id="payAmount" class="form-control" required placeholder="e.g. 220.00">

@@ -132,6 +132,8 @@ if (isset($_GET['delete']) && is_numeric($_GET['delete'])) {
         $pdo->prepare("DELETE FROM staff_attendance WHERE staff_id = ?")->execute([$staff_id]);
         $pdo->prepare("DELETE FROM staff WHERE id = ?")->execute([$staff_id]);
         if ($staff && $staff['user_id']) {
+            // Delete messages referencing this user to avoid FK violations
+            $pdo->prepare("DELETE FROM messages WHERE sender_id = ? OR receiver_id = ?")->execute([$staff['user_id'], $staff['user_id']]);
             $pdo->prepare("DELETE FROM users WHERE id = ?")->execute([$staff['user_id']]);
         }
         $pdo->commit();
@@ -142,6 +144,45 @@ if (isset($_GET['delete']) && is_numeric($_GET['delete'])) {
     }
     header("Location: staff.php?msg=" . urlencode($message));
     exit;
+}
+
+// Handle Bulk Delete Staff
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'bulk_delete_staff') {
+    validate_request_csrf();
+    $ids = $_POST['staff_ids'] ?? [];
+    if (!empty($ids) && is_array($ids)) {
+        $deleted_count = 0;
+        $error_count = 0;
+        foreach ($ids as $rawId) {
+            $staffId = (int)$rawId;
+            if ($staffId <= 0) continue;
+            try {
+                $pdo->beginTransaction();
+                $stmt = $pdo->prepare("SELECT user_id FROM staff WHERE id = ?");
+                $stmt->execute([$staffId]);
+                $staff = $stmt->fetch();
+                $pdo->prepare("DELETE FROM salary_structures WHERE staff_id = ?")->execute([$staffId]);
+                $pdo->prepare("DELETE FROM deductions WHERE staff_id = ?")->execute([$staffId]);
+                $pdo->prepare("DELETE FROM payroll WHERE staff_id = ?")->execute([$staffId]);
+                $pdo->prepare("DELETE FROM staff_attendance WHERE staff_id = ?")->execute([$staffId]);
+                $pdo->prepare("DELETE FROM staff WHERE id = ?")->execute([$staffId]);
+                if ($staff && $staff['user_id']) {
+                    // Delete messages referencing this user to avoid FK violations
+                    $pdo->prepare("DELETE FROM messages WHERE sender_id = ? OR receiver_id = ?")->execute([$staff['user_id'], $staff['user_id']]);
+                    $pdo->prepare("DELETE FROM users WHERE id = ?")->execute([$staff['user_id']]);
+                }
+                $pdo->commit();
+                $deleted_count++;
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                $error_count++;
+            }
+        }
+        $message = "$deleted_count staff member(s) deleted successfully.";
+        if ($error_count > 0) {
+            $message .= " $error_count failed.";
+        }
+    }
 }
 
 // Handle Resend Invite
@@ -414,104 +455,118 @@ $total_pages = $total_rows > 0 ? (int)ceil($total_rows / $limit) : 1;
 
             <!-- Staff List -->
             <div class="section">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
                     <h3>All Staff Members</h3>
                     <form action="staff.php" method="GET" style="display:flex; gap:10px;">
                         <input type="text" name="search" placeholder="Search name, ID, or position..." class="form-control" value="<?php echo htmlspecialchars($search); ?>">
                         <button type="submit" class="btn-login"><i class="fas fa-search"></i></button>
                     </form>
                 </div>
-                
-                <div class="table-responsive">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Staff ID</th>
-                                <th>Name</th>
-                                <th>Position</th>
-                                <th>Department</th>
-                                <th>Phone</th>
-                                <th>Account Status</th>
-                                <th>Invite Status</th>
-                                <th>Docs</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php if (empty($staff_list)): ?>
-                                <tr><td colspan="8" style="text-align:center;">No staff members found. Add your first staff member above.</td></tr>
-                            <?php else: ?>
-                                <?php foreach ($staff_list as $staff):
-                                    $inviteStatus = getStaffInviteStatus((int)$staff['id']);
-                                    $csrfAttr = 'csrf_token=' . urlencode(generate_csrf_token());
-                                ?>
+
+                <!-- Bulk Delete Toolbar -->
+                <form method="POST" action="staff.php" id="staffBulkForm">
+                    <input type="hidden" name="action" value="bulk_delete_staff">
+                    <?php csrf_field(); ?>
+                    <div style="margin-bottom:15px; display:flex; align-items:center; gap:10px;">
+                        <button type="button" onclick="confirmStaffBulkDelete()" class="btn-login" style="background:#e74c3c; color:#fff; border:none; padding:8px 16px; border-radius:4px; cursor:pointer; font-size:0.9rem;">
+                            <i class="fas fa-trash"></i> Delete Selected
+                        </button>
+                        <span id="staffSelectedCount" style="color:#666; font-size:0.85rem;">0 selected</span>
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
                                 <tr>
-                                    <td><strong><?php echo htmlspecialchars($staff['staff_id']); ?></strong></td>
-                                    <td><?php echo htmlspecialchars($staff['full_name']); ?></td>
-                                    <td><?php echo htmlspecialchars($staff['position']); ?></td>
-                                    <td><?php echo htmlspecialchars($staff['department'] ?? '-'); ?></td>
-                                    <td><?php echo htmlspecialchars($staff['phone'] ?? '-'); ?></td>
-                                    <td>
-                                        <span style="color: <?php echo ($staff['status'] ?? 'active') === 'active' ? 'green' : '#e74c3c'; ?>; font-weight: bold;">
-                                            <?php echo ucfirst($staff['status'] ?? 'active'); ?>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <?php if ($inviteStatus === 'accepted'): ?>
-                                            <span style="color: #27ae60; font-weight: bold; font-size: 0.85rem;">
-                                                <i class="fas fa-check-circle"></i> Registered
-                                            </span>
-                                        <?php elseif ($inviteStatus === 'pending'): ?>
-                                            <span style="color: #f39c12; font-weight: bold; font-size: 0.85rem;">
-                                                <i class="fas fa-clock"></i> Pending
-                                            </span>
-                                        <?php elseif ($inviteStatus === 'expired'): ?>
-                                            <span style="color: #e74c3c; font-weight: bold; font-size: 0.85rem;">
-                                                <i class="fas fa-hourglass-end"></i> Expired
-                                            </span>
-                                        <?php else: ?>
-                                            <span style="color: #999; font-size: 0.85rem;">
-                                                <i class="fas fa-minus-circle"></i> Not Invited
-                                            </span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td style="text-align:center;">
-                                        <?php
-                                        $hasCv = !empty($staff['cv_path']);
-                                        $hasDocs = !empty($staff['documents']) && json_decode($staff['documents'], true);
-                                        if ($hasCv || $hasDocs):
-                                        ?>
-                                            <a href="edit_staff.php?id=<?php echo $staff['id']; ?>" title="View documents" style="color:#1a5276;text-decoration:none;">
-                                                <?php if ($hasCv): ?>
-                                                    <i class="fas fa-file-pdf" style="color:#e74c3c;font-size:16px;" title="CV Uploaded"></i>
-                                                <?php endif; ?>
-                                                <?php if ($hasDocs): ?>
-                                                    <i class="fas fa-folder-open" style="color:#f39c12;font-size:16px;margin-left:4px;" title="Additional Documents"></i>
-                                                <?php endif; ?>
-                                            </a>
-                                        <?php else: ?>
-                                            <span style="color:#ccc;font-size:12px;">—</span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td style="white-space: nowrap;">
-                                        <a href="edit_staff.php?id=<?php echo $staff['id']; ?>" class="btn-login" style="background:#f0ad4e; padding: 5px 10px; font-size: 0.8rem; text-decoration:none; display:inline-block; margin-bottom:2px;" title="Edit staff details">Edit</a>
-                                        <?php if (($staff['status'] ?? 'active') !== 'active' && $inviteStatus === 'accepted'): ?>
-                                            <a href="staff.php?activate=<?php echo $staff['id']; ?>&<?php echo $csrfAttr; ?>" class="btn-login" style="background:#27ae60; padding: 5px 10px; font-size: 0.8rem; text-decoration:none; display:inline-block; margin-bottom:2px;" onclick="return confirm('Activate this staff account? They will be able to log in immediately.');">Activate</a>
-                                        <?php endif; ?>
-                                        <?php if ($inviteStatus === 'pending' || $inviteStatus === 'expired'): ?>
-                                            <a href="staff.php?resend_invite=<?php echo $staff['id']; ?>&<?php echo $csrfAttr; ?>" class="btn-login" style="background:#3498db; padding: 5px 10px; font-size: 0.8rem; text-decoration:none; display:inline-block; margin-bottom:2px;" title="Resend invite email/SMS">Resend</a>
-                                        <?php endif; ?>
-                                        <?php if ($inviteStatus === 'not_invited'): ?>
-                                            <a href="staff.php?resend_invite=<?php echo $staff['id']; ?>&<?php echo $csrfAttr; ?>" class="btn-login" style="background:#3498db; padding: 5px 10px; font-size: 0.8rem; text-decoration:none; display:inline-block; margin-bottom:2px;">Send Invite</a>
-                                        <?php endif; ?>
-                                        <a href="staff.php?delete=<?php echo $staff['id']; ?>" class="btn-login" style="background:#e74c3c; padding: 5px 10px; font-size: 0.8rem; text-decoration:none; display:inline-block; margin-bottom:2px;" onclick="return confirm('Are you sure you want to delete this staff member?');">Delete</a>
-                                    </td>
+                                    <th style="width:40px;"><input type="checkbox" id="staffSelectAll" onchange="toggleStaffAll(this)"></th>
+                                    <th>Staff ID</th>
+                                    <th>Name</th>
+                                    <th>Position</th>
+                                    <th>Department</th>
+                                    <th>Phone</th>
+                                    <th>Account Status</th>
+                                    <th>Invite Status</th>
+                                    <th>Docs</th>
+                                    <th>Actions</th>
                                 </tr>
-                                <?php endforeach; ?>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
-                </div>
+                            </thead>
+                            <tbody>
+                                <?php if (empty($staff_list)): ?>
+                                    <tr><td colspan="9" style="text-align:center;">No staff members found. Add your first staff member above.</td></tr>
+                                <?php else: ?>
+                                    <?php foreach ($staff_list as $staff):
+                                        $inviteStatus = getStaffInviteStatus((int)$staff['id']);
+                                        $csrfAttr = 'csrf_token=' . urlencode(generate_csrf_token());
+                                    ?>
+                                    <tr>
+                                        <td style="text-align:center;"><input type="checkbox" name="staff_ids[]" value="<?php echo $staff['id']; ?>" class="staff-checkbox" onchange="updateStaffSelectedCount()"></td>
+                                        <td><strong><?php echo htmlspecialchars($staff['staff_id']); ?></strong></td>
+                                        <td><?php echo htmlspecialchars($staff['full_name']); ?></td>
+                                        <td><?php echo htmlspecialchars($staff['position']); ?></td>
+                                        <td><?php echo htmlspecialchars($staff['department'] ?? '-'); ?></td>
+                                        <td><?php echo htmlspecialchars($staff['phone'] ?? '-'); ?></td>
+                                        <td>
+                                            <span style="color: <?php echo ($staff['status'] ?? 'active') === 'active' ? 'green' : '#e74c3c'; ?>; font-weight: bold;">
+                                                <?php echo ucfirst($staff['status'] ?? 'active'); ?>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <?php if ($inviteStatus === 'accepted'): ?>
+                                                <span style="color: #27ae60; font-weight: bold; font-size: 0.85rem;">
+                                                    <i class="fas fa-check-circle"></i> Registered
+                                                </span>
+                                            <?php elseif ($inviteStatus === 'pending'): ?>
+                                                <span style="color: #f39c12; font-weight: bold; font-size: 0.85rem;">
+                                                    <i class="fas fa-clock"></i> Pending
+                                                </span>
+                                            <?php elseif ($inviteStatus === 'expired'): ?>
+                                                <span style="color: #e74c3c; font-weight: bold; font-size: 0.85rem;">
+                                                    <i class="fas fa-hourglass-end"></i> Expired
+                                                </span>
+                                            <?php else: ?>
+                                                <span style="color: #999; font-size: 0.85rem;">
+                                                    <i class="fas fa-minus-circle"></i> Not Invited
+                                                </span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td style="text-align:center;">
+                                            <?php
+                                            $hasCv = !empty($staff['cv_path']);
+                                            $hasDocs = !empty($staff['documents']) && json_decode($staff['documents'], true);
+                                            if ($hasCv || $hasDocs):
+                                            ?>
+                                                <a href="edit_staff.php?id=<?php echo $staff['id']; ?>" title="View documents" style="color:#1a5276;text-decoration:none;">
+                                                    <?php if ($hasCv): ?>
+                                                        <i class="fas fa-file-pdf" style="color:#e74c3c;font-size:16px;" title="CV Uploaded"></i>
+                                                    <?php endif; ?>
+                                                    <?php if ($hasDocs): ?>
+                                                        <i class="fas fa-folder-open" style="color:#f39c12;font-size:16px;margin-left:4px;" title="Additional Documents"></i>
+                                                    <?php endif; ?>
+                                                </a>
+                                            <?php else: ?>
+                                                <span style="color:#ccc;font-size:12px;">—</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td style="white-space: nowrap;">
+                                            <a href="edit_staff.php?id=<?php echo $staff['id']; ?>" class="btn-login" style="background:#f0ad4e; padding: 5px 10px; font-size: 0.8rem; text-decoration:none; display:inline-block; margin-bottom:2px;" title="Edit staff details">Edit</a>
+                                            <?php if (($staff['status'] ?? 'active') !== 'active' && $inviteStatus === 'accepted'): ?>
+                                                <a href="staff.php?activate=<?php echo $staff['id']; ?>&<?php echo $csrfAttr; ?>" class="btn-login" style="background:#27ae60; padding: 5px 10px; font-size: 0.8rem; text-decoration:none; display:inline-block; margin-bottom:2px;" onclick="return confirm('Activate this staff account? They will be able to log in immediately.');">Activate</a>
+                                            <?php endif; ?>
+                                            <?php if ($inviteStatus === 'pending' || $inviteStatus === 'expired'): ?>
+                                                <a href="staff.php?resend_invite=<?php echo $staff['id']; ?>&<?php echo $csrfAttr; ?>" class="btn-login" style="background:#3498db; padding: 5px 10px; font-size: 0.8rem; text-decoration:none; display:inline-block; margin-bottom:2px;" title="Resend invite email/SMS">Resend</a>
+                                            <?php endif; ?>
+                                            <?php if ($inviteStatus === 'not_invited'): ?>
+                                                <a href="staff.php?resend_invite=<?php echo $staff['id']; ?>&<?php echo $csrfAttr; ?>" class="btn-login" style="background:#3498db; padding: 5px 10px; font-size: 0.8rem; text-decoration:none; display:inline-block; margin-bottom:2px;">Send Invite</a>
+                                            <?php endif; ?>
+                                            <a href="staff.php?delete=<?php echo $staff['id']; ?>" class="btn-login" style="background:#e74c3c; padding: 5px 10px; font-size: 0.8rem; text-decoration:none; display:inline-block; margin-bottom:2px;" onclick="return confirm('Are you sure you want to delete this staff member?');">Delete</a>
+                                        </td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </form>
 
                 <!-- Pagination -->
                 <?php if ($total_pages > 1): ?>

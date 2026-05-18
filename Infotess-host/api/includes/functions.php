@@ -384,10 +384,10 @@ function renderStaffSidebar($currentPage = '', $schoolName = 'Nex CEC', $unreadC
     $html .= '<aside class="staff-sidebar" id="sidebar">';
     $html .= '<div class="sidebar-header">';
     if (!empty($profilePic)) {
-        $html .= '<img src="' . htmlspecialchars(resolve_storage_url($profilePic, '')) . '" alt="Profile" onerror="this.src=\'../images/aamusted.jpg\'">';
+        $html .= '<img src="' . htmlspecialchars(resolve_storage_url($profilePic, '')) . '" alt="Profile" class="sidebar-profile-img" onerror="this.src=\'../images/aamusted.jpg\'">';
     } else {
         $logoUrl = getCachedSchoolLogoUrl();
-        $html .= '<img src="' . htmlspecialchars($logoUrl) . '" alt="Logo" onerror="this.src=\'../images/aamusted.jpg\'">';
+        $html .= '<img src="' . htmlspecialchars($logoUrl) . '" alt="Logo" class="sidebar-logo-img" onerror="this.src=\'../images/aamusted.jpg\'">';
     }
     $html .= '<h3>' . htmlspecialchars($schoolName) . '</h3>';
     $html .= '<p>' . ($staffName ? htmlspecialchars($staffName) : 'Staff Portal') . '</p>';
@@ -483,10 +483,10 @@ function renderParentSidebar($currentPage = '', $schoolName = 'Nex CEC', $unread
     $html .= '<aside class="parent-sidebar" id="sidebar">';
     $html .= '<div class="sidebar-header">';
     if (!empty($profilePic)) {
-        $html .= '<img src="' . htmlspecialchars($profilePic) . '" alt="Profile" onerror="this.src=\'../images/aamusted.jpg\'" style="width:64px;height:64px;border-radius:50%;background:white;padding:3px;margin-bottom:10px;object-fit:cover;">';
+        $html .= '<img src="' . htmlspecialchars($profilePic) . '" alt="Profile" class="sidebar-profile-img" onerror="this.src=\'../images/aamusted.jpg\'" style="width:64px;height:64px;border-radius:50%;background:white;padding:3px;margin-bottom:10px;object-fit:cover;">';
     } else {
         $logoUrl = getCachedSchoolLogoUrl();
-        $html .= '<img src="' . htmlspecialchars($logoUrl) . '" alt="Logo" onerror="this.src=\'../images/aamusted.jpg\'">';
+        $html .= '<img src="' . htmlspecialchars($logoUrl) . '" alt="Logo" class="sidebar-logo-img" onerror="this.src=\'../images/aamusted.jpg\'">';
     }
     $html .= '<h3>' . htmlspecialchars($schoolName) . '</h3>';
     $html .= '<p>Parent Portal</p>';

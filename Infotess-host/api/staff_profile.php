@@ -13,6 +13,16 @@ $user_id = $_SESSION['user_id'];
 $message = '';
 $error = '';
 
+// Handle post-redirect upload result message
+if (!empty($_SESSION['upload_result'])) {
+    if ($_SESSION['upload_result'] === 'success') {
+        $message = 'Profile picture updated successfully!';
+    } elseif ($_SESSION['upload_result'] === 'session_only') {
+        $message = 'Profile picture uploaded! It may not persist across sessions until the database column is added.';
+    }
+    unset($_SESSION['upload_result']);
+}
+
 // Ensure profile_picture column exists in staff table
 // ALTER TABLE cannot run through the PDO bridge (DDL skipped), so try Supabase SQL API
 global $supabase;
@@ -81,30 +91,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             }
                             $newUrl = $supabase->getPublicUrl('profiles', $file_name);
 
-                            // Save to database (use SupabaseClient directly — PDO bridge can't handle DDL
-                            // and the PGRST204 column-stripping retry would silently produce empty data)
+                            // Save URL to database — try Supabase client first, fall back to PDO bridge
+                            $dbSaved = false;
                             try {
                                 $supabase->table('staff')->where('user_id', $user_id)->update(['profile_picture' => $newUrl]);
-                                $_SESSION['profile_picture'] = $newUrl;
-                                $message = "Profile picture updated successfully!";
+                                $dbSaved = true;
                             } catch (Exception $e) {
-                                // Always save to session cache so the picture shows in sidebar immediately
-                                $_SESSION['profile_picture'] = $newUrl;
-                                
-                                if (strpos($e->getMessage(), 'profile_picture') !== false && 
-                                    (strpos($e->getMessage(), 'Could not find') !== false || 
-                                     strpos($e->getMessage(), 'PGRST204') !== false)) {
-                                    $error = "Database column missing. 
-                                    <p>Please run this SQL in <strong>Supabase Dashboard → SQL Editor</strong>:</p>
-                                    <pre style='background:#f4f4f4;padding:12px;border-radius:5px;'>ALTER TABLE staff ADD COLUMN IF NOT EXISTS profile_picture TEXT;</pre>
-                                    <p style='font-size:13px;color:#666;'>
-                                        <a href='https://supabase.com/dashboard/project/tbkinaglugagloinecle/sql/new' target='_blank'>
-                                        Open Supabase SQL Editor &rarr;</a>
-                                    </p>";
-                                } else {
-                                    $error = "Upload failed: " . $e->getMessage();
+                                // Supabase direct update failed — try PDO bridge as fallback
+                                error_log("profile_picture Supabase update failed, trying PDO bridge: " . $e->getMessage());
+                                try {
+                                    $pdo->prepare("UPDATE staff SET profile_picture = ? WHERE user_id = ?")->execute([$newUrl, $user_id]);
+                                    $dbSaved = true;
+                                } catch (Exception $pdoEx) {
+                                    error_log("profile_picture PDO bridge also failed: " . $pdoEx->getMessage());
                                 }
                             }
+
+                            // Always save to session cache regardless
+                            $_SESSION['profile_picture'] = $newUrl;
+
+                            // Redirect to clean GET request (prevents re-submit on refresh, ensures fresh DB read)
+                            $_SESSION['upload_result'] = $dbSaved ? 'success' : 'session_only';
+                            redirect('profile.php');
                         } catch (Exception $e) {
                             $error = "Upload failed: " . $e->getMessage();
                         }
@@ -176,7 +184,8 @@ $csrf_token = generate_csrf_token();
             top: 0; left: 0; height: 100vh; overflow-y: auto; z-index: 100;
         }
         .staff-sidebar .sidebar-header { padding: 25px 15px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .staff-sidebar .sidebar-header img { width: 64px; height: 64px; border-radius: 50%; background: white; padding: 3px; margin-bottom: 10px; object-fit: cover; }
+        .staff-sidebar .sidebar-header img.sidebar-profile-img { width: 64px; height: 64px; border-radius: 50%; background: white; padding: 3px; margin-bottom: 10px; object-fit: cover; }
+        .staff-sidebar .sidebar-header img.sidebar-logo-img { max-width: 120px; max-height: 56px; width: auto; height: auto; object-fit: contain; background: white; padding: 4px 8px; border-radius: 6px; margin-bottom: 10px; display: inline-block; }
         .staff-sidebar .sidebar-header h3 { font-size: 15px; margin: 0; }
         .staff-sidebar .sidebar-header p { font-size: 12px; opacity: 0.8; margin: 5px 0 0; }
         .staff-sidebar ul { list-style: none; padding: 0; margin: 0; }
@@ -238,7 +247,7 @@ $csrf_token = generate_csrf_token();
             <div class="profile-pic-section">
                 <form method="POST" enctype="multipart/form-data" id="pictureForm">
                     <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
-                    <img id="profilePreview" src="<?php echo htmlspecialchars(resolve_storage_url($profile_pic, 'images/aamusted.jpg')); ?>" alt="Profile Picture">
+                    <img id="profilePreview" src="<?php echo htmlspecialchars(resolve_storage_url($profile_pic, 'images/aamusted.jpg')); ?>" alt="Profile Picture" style="width:150px;height:150px;border-radius:50%;object-fit:cover;border:3px solid #1a5276;margin-bottom:10px;" onerror="this.src='../images/aamusted.jpg'">
                     <div style="margin-top:8px;">
                         <label for="profile_picture" class="upload-label"><i class="fas fa-camera"></i> Change Picture</label>
                         <input type="file" name="profile_picture" id="profile_picture" style="display:none;" accept="image/*">

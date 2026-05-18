@@ -197,6 +197,18 @@ foreach ($active_for_preview as $s) {
 }
 $configured_count = count(array_filter($staff_structures, fn($s) => $s['configured']));
 $unconfigured_count = count(array_filter($staff_structures, fn($s) => !$s['configured']));
+
+// Salary Structures Pagination
+$salary_per_page = 10;
+$salary_page = isset($_GET['salary_page']) ? (int)$_GET['salary_page'] : 1;
+if ($salary_page < 1) $salary_page = 1;
+$salary_offset = ($salary_page - 1) * $salary_per_page;
+$salary_total = count($staff_structures);
+$salary_total_pages = max(1, (int)ceil($salary_total / $salary_per_page));
+$salary_display = array_slice($staff_structures, $salary_offset, $salary_per_page);
+// Track displayed row numbers for the "showing X-Y of Z" label
+$salary_start_row = $salary_offset + 1;
+$salary_end_row = min($salary_offset + $salary_per_page, $salary_total);
 ?>
 
 <!DOCTYPE html>
@@ -280,14 +292,19 @@ $unconfigured_count = count(array_filter($staff_structures, fn($s) => !$s['confi
             <!-- Current Salary Structures Preview -->
             <div class="card" style="margin-bottom: 30px;">
                 <div class="card-content">
-                    <h3><i class="fas fa-cogs" style="color: var(--primary-color);"></i> Current Salary Structures
-                        <span style="font-size: 0.85rem; font-weight: normal; color: #666; margin-left: 10px;">
-                            <?php echo $configured_count; ?> configured
-                            <?php if ($unconfigured_count > 0): ?>
-                                · <span style="color: #e74c3c;"><?php echo $unconfigured_count; ?> missing</span>
-                            <?php endif; ?>
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                        <h3 style="margin:0;"><i class="fas fa-cogs" style="color: var(--primary-color);"></i> Current Salary Structures
+                            <span style="font-size: 0.85rem; font-weight: normal; color: #666; margin-left: 10px;">
+                                <?php echo $configured_count; ?> configured
+                                <?php if ($unconfigured_count > 0): ?>
+                                    · <span style="color: #e74c3c;"><?php echo $unconfigured_count; ?> missing</span>
+                                <?php endif; ?>
+                            </span>
+                        </h3>
+                        <span style="font-size:0.85rem; color:#666;">
+                            Showing <?php echo $salary_start_row; ?>–<?php echo $salary_end_row; ?> of <?php echo $salary_total; ?>
                         </span>
-                    </h3>
+                    </div>
                     <div class="table-responsive" style="margin-top: 15px;">
                         <table class="table">
                             <thead>
@@ -306,7 +323,7 @@ $unconfigured_count = count(array_filter($staff_structures, fn($s) => !$s['confi
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($staff_structures as $s): 
+                                <?php foreach ($salary_display as $s): 
                                     $gross_preview = $s['basic'] + $s['housing'] + $s['transport'] + $s['other_allow'];
                                 ?>
                                 <tr>
@@ -344,9 +361,36 @@ $unconfigured_count = count(array_filter($staff_structures, fn($s) => !$s['confi
                         </table>
                     </div>
                 </div>
-            </div>
 
-            <!-- Payroll Table -->
+                <!-- Salary Structures Pagination -->
+                <?php
+                // Build base query string preserving existing params (month, year, etc.)
+                $salary_qs_parts = [];
+                foreach (['month', 'year', 'status'] as $key) {
+                    if (isset($_GET[$key])) {
+                        $salary_qs_parts[] = urlencode($key) . '=' . urlencode($_GET[$key]);
+                    }
+                }
+                $salary_qs = $salary_qs_parts ? implode('&', $salary_qs_parts) . '&' : '';
+                ?>
+                <?php if ($salary_total_pages > 1): ?>
+                <div style="display:flex; justify-content:center; gap:5px; margin-top:15px; flex-wrap:wrap;">
+                    <?php if ($salary_page > 1): ?>
+                        <a href="?<?php echo $salary_qs; ?>salary_page=<?php echo $salary_page - 1; ?>" style="display:inline-flex; align-items:center; gap:5px; padding:6px 14px; background:#f8f9fa; color:#000; border:1px solid #ddd; border-radius:6px; text-decoration:none; font-size:13px;">&laquo; Prev</a>
+                    <?php endif; ?>
+                    <?php for ($i = 1; $i <= $salary_total_pages; $i++): ?>
+                        <a href="?<?php echo $salary_qs; ?>salary_page=<?php echo $i; ?>" style="display:inline-flex; align-items:center; justify-content:center; min-width:34px; padding:6px 10px; background:<?php echo $i == $salary_page ? '#1a5276' : '#f8f9fa'; ?>; color:<?php echo $i == $salary_page ? '#fff' : '#000'; ?>; border:1px solid <?php echo $i == $salary_page ? '#1a5276' : '#ddd'; ?>; border-radius:6px; text-decoration:none; font-size:13px; font-weight:<?php echo $i == $salary_page ? '700' : '400'; ?>;"><?php echo $i; ?></a>
+                    <?php endfor; ?>
+                    <?php if ($salary_page < $salary_total_pages): ?>
+                        <a href="?<?php echo $salary_qs; ?>salary_page=<?php echo $salary_page + 1; ?>" style="display:inline-flex; align-items:center; gap:5px; padding:6px 14px; background:#f8f9fa; color:#000; border:1px solid #ddd; border-radius:6px; text-decoration:none; font-size:13px;">Next &raquo;</a>
+                    <?php endif; ?>
+                </div>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payroll Table -->
             <div class="section">
                 <h3>Payroll — <?php echo date('F Y', mktime(0, 0, 0, $selected_month, 1, $selected_year)); ?></h3>
                 

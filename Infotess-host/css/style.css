@@ -376,144 +376,230 @@ img {
    6. BUTTONS
    ========================================== */
 
-/* Public CTA button */
+/* --- Global Button Base --- */
+/* Applies to all .btn-* classes for consistent base styling */
+.btn-primary,
+.btn-secondary,
+.btn-success,
+.btn-danger,
+.btn-cta,
+.btn-login,
+.btn-submit,
+.btn-admin-action,
+.btn-admin-secondary,
+.btn-admin-success,
+.btn-admin-danger {
+    position: relative;
+    overflow: hidden;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 11px 22px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    line-height: 1.3;
+    cursor: pointer;
+    text-decoration: none;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.btn-primary:hover,
+.btn-secondary:hover,
+.btn-success:hover,
+.btn-danger:hover,
+.btn-cta:hover,
+.btn-login:hover,
+.btn-submit:hover,
+.btn-admin-action:hover,
+.btn-admin-secondary:hover,
+.btn-admin-success:hover,
+.btn-admin-danger:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.06);
+}
+
+.btn-primary:active,
+.btn-secondary:active,
+.btn-success:active,
+.btn-danger:active,
+.btn-cta:active,
+.btn-login:active,
+.btn-submit:active,
+.btn-admin-action:active,
+.btn-admin-secondary:active,
+.btn-admin-success:active,
+.btn-admin-danger:active {
+    transform: translateY(0);
+    filter: brightness(0.96);
+}
+
+/* --- Ripple Effect (all btn-* classes) --- */
+.btn-primary::after,
+.btn-secondary::after,
+.btn-success::after,
+.btn-danger::after,
+.btn-cta::after,
+.btn-login::after,
+.btn-submit::after,
+.btn-admin-action::after,
+.btn-admin-secondary::after,
+.btn-admin-success::after,
+.btn-admin-danger::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 5px;
+    height: 5px;
+    background: rgba(255, 255, 255, 0.35);
+    border-radius: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+    pointer-events: none;
+}
+
+.btn-primary:active::after,
+.btn-secondary:active::after,
+.btn-success:active::after,
+.btn-danger:active::after,
+.btn-cta:active::after,
+.btn-login:active::after,
+.btn-submit:active::after,
+.btn-admin-action:active::after,
+.btn-admin-secondary:active::after,
+.btn-admin-success:active::after,
+.btn-admin-danger:active::after {
+    animation: ripple 0.6s linear;
+}
+
+/* --- Color Variants (global — work everywhere) --- */
+
+/* Primary (blue) */
+.btn-primary,
+.btn-admin-action {
+    background: linear-gradient(135deg, #0a3d77, #0c5fb5);
+    color: #fff !important;
+    border-color: rgba(0, 33, 71, 0.25);
+    box-shadow: 0 6px 16px rgba(12, 95, 181, 0.28);
+}
+.btn-primary:hover,
+.btn-admin-action:hover {
+    box-shadow: 0 10px 22px rgba(12, 95, 181, 0.38);
+}
+.btn-primary:active,
+.btn-admin-action:active {
+    box-shadow: 0 4px 12px rgba(12, 95, 181, 0.2);
+}
+
+/* Secondary (gray) */
+.btn-secondary,
+.btn-admin-secondary {
+    background: linear-gradient(135deg, #4b5563, #374151);
+    color: #fff !important;
+    border-color: rgba(31, 41, 55, 0.35);
+    box-shadow: 0 6px 16px rgba(55, 65, 81, 0.22);
+}
+.btn-secondary:hover,
+.btn-admin-secondary:hover {
+    box-shadow: 0 10px 22px rgba(55, 65, 81, 0.32);
+}
+
+/* Success (green) */
+.btn-success,
+.btn-admin-success {
+    background: linear-gradient(135deg, #0f9d58, #15803d);
+    color: #fff !important;
+    border-color: rgba(20, 83, 45, 0.35);
+    box-shadow: 0 6px 16px rgba(21, 128, 61, 0.25);
+}
+.btn-success:hover,
+.btn-admin-success:hover {
+    box-shadow: 0 10px 22px rgba(21, 128, 61, 0.35);
+}
+
+/* Danger (red) */
+.btn-danger,
+.btn-admin-danger {
+    background: linear-gradient(135deg, #dc3545, #b42333);
+    color: #fff !important;
+    border-color: rgba(127, 29, 29, 0.35);
+    box-shadow: 0 6px 16px rgba(180, 35, 51, 0.25);
+}
+.btn-danger:hover,
+.btn-admin-danger:hover {
+    box-shadow: 0 10px 22px rgba(180, 35, 51, 0.35);
+}
+
+/* CTA (gold/yellow — public pages) */
 .btn-cta {
-    display: inline-block;
     background: var(--secondary-color);
     color: var(--primary-color);
     padding: 12px 30px;
-    border-radius: 5px;
     font-weight: bold;
-    transition: transform var(--transition-base);
 }
-
 .btn-cta:hover {
     transform: scale(1.05);
+    box-shadow: 0 8px 20px rgba(255, 183, 0, 0.35);
 }
 
-/* Login/Register button (nav) */
+/* Login/Register nav button */
 .btn-login {
     background: var(--primary-color);
     color: var(--white) !important;
     padding: 8px 20px;
-    border-radius: 5px;
+    border-radius: 6px;
+    border: none;
+    box-shadow: none;
 }
-
 .btn-login:hover {
     background: var(--secondary-color);
     color: var(--primary-color) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 51, 102, 0.2);
 }
 
-/* Primary form submit */
+/* Full-width form submit */
 .btn-submit {
     width: 100%;
     background: var(--primary-color);
     color: var(--white);
     padding: 12px;
     border: none;
-    border-radius: 5px;
-    cursor: pointer;
+    border-radius: 8px;
     font-size: 1rem;
+    box-shadow: 0 4px 14px rgba(0, 51, 102, 0.25);
 }
-
 .btn-submit:hover {
     background: #002244;
+    box-shadow: 0 6px 18px rgba(0, 51, 102, 0.35);
 }
 
-/* Admin dashboard buttons */
-.btn-admin-action,
-.dashboard-container .btn-primary,
-.dashboard-container .btn-submit,
-.dashboard-container .btn-login,
-.dashboard-container .btn.btn-primary,
-.dashboard-container .btn-secondary {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    min-height: 40px;
-    padding: 10px 18px;
-    border-radius: 12px;
-    border: 1px solid rgba(0, 33, 71, 0.25);
-    background: linear-gradient(135deg, #0a3d77, #0c5fb5);
-    color: #fff !important;
-    font-weight: 600;
-    font-size: 0.9rem;
-    line-height: 1;
-    cursor: pointer;
-    text-decoration: none;
-    box-shadow: 0 8px 18px rgba(12, 95, 181, 0.24);
-    transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
-}
-
-.btn-admin-action:hover,
-.dashboard-container .btn-primary:hover,
-.dashboard-container .btn-submit:hover,
-.dashboard-container .btn-login:hover,
-.dashboard-container .btn.btn-primary:hover,
-.dashboard-container .btn-secondary:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 10px 20px rgba(10, 61, 119, 0.3);
-    filter: brightness(1.03);
-}
-
-.btn-admin-action:active,
-.dashboard-container .btn-primary:active,
-.dashboard-container .btn-submit:active,
-.dashboard-container .btn-login:active,
-.dashboard-container .btn.btn-primary:active,
-.dashboard-container .btn-secondary:active {
-    transform: translateY(0);
-    box-shadow: 0 6px 14px rgba(10, 61, 119, 0.25);
-}
-
-.btn-admin-action:focus-visible,
-.dashboard-container .btn-primary:focus-visible,
-.dashboard-container .btn-submit:focus-visible,
-.dashboard-container .btn-login:focus-visible,
-.dashboard-container .btn.btn-primary:focus-visible,
-.dashboard-container .btn-secondary:focus-visible {
-    outline: 3px solid rgba(12, 95, 181, 0.28);
-    outline-offset: 2px;
-}
-
-.dashboard-container .btn-submit {
-    width: 100%;
-}
-
-/* Admin button variants */
-.btn-admin-secondary,
-.dashboard-container .btn-secondary {
-    background: linear-gradient(135deg, #4b5563, #374151);
-    border-color: rgba(31, 41, 55, 0.35);
-    box-shadow: 0 8px 18px rgba(55, 65, 81, 0.25);
-}
-
-.btn-admin-success {
-    background: linear-gradient(135deg, #0f9d58, #15803d);
-    border-color: rgba(20, 83, 45, 0.35);
-    box-shadow: 0 8px 18px rgba(21, 128, 61, 0.25);
-}
-
-.btn-admin-danger {
-    background: linear-gradient(135deg, #dc3545, #b42333);
-    border-color: rgba(127, 29, 29, 0.35);
-    box-shadow: 0 8px 18px rgba(180, 35, 51, 0.25);
-}
-
+/* Size variant: small */
+.btn-sm,
 .btn-admin-sm {
     min-height: 32px;
-    padding: 7px 12px;
-    border-radius: 9px;
+    padding: 7px 14px;
+    border-radius: 8px;
     font-size: 0.8rem;
     gap: 6px;
 }
 
-/* Utility button sizes */
-.btn-sm {
-    padding: 5px 10px;
-    font-size: 0.8rem !important;
-    min-height: auto !important;
+/* Focus ring (keyboard nav) */
+.btn-primary:focus-visible,
+.btn-secondary:focus-visible,
+.btn-success:focus-visible,
+.btn-danger:focus-visible,
+.btn-admin-action:focus-visible,
+.btn-admin-secondary:focus-visible,
+.btn-admin-success:focus-visible,
+.btn-admin-danger:focus-visible {
+    outline: 3px solid rgba(12, 95, 181, 0.35);
+    outline-offset: 2px;
 }
 
 /* ==========================================
@@ -1249,44 +1335,6 @@ img {
 @keyframes ripple {
     0% { transform: scale(0); opacity: 0.6; }
     100% { transform: scale(4); opacity: 0; }
-}
-
-/* ==========================================
-   22. RIPPLE EFFECT ON BUTTONS
-   ========================================== */
-.btn-admin-action,
-.dashboard-container .btn-primary,
-.dashboard-container .btn-submit,
-.dashboard-container .btn-login,
-.btn-submit {
-    position: relative;
-    overflow: hidden;
-}
-
-.btn-admin-action::after,
-.dashboard-container .btn-primary::after,
-.dashboard-container .btn-submit::after,
-.dashboard-container .btn-login::after,
-.btn-submit::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 5px;
-    height: 5px;
-    background: rgba(255, 255, 255, 0.4);
-    border-radius: 50%;
-    transform: translate(-50%, -50%) scale(0);
-    opacity: 0;
-    pointer-events: none;
-}
-
-.btn-admin-action:active::after,
-.dashboard-container .btn-primary:active::after,
-.dashboard-container .btn-submit:active::after,
-.dashboard-container .btn-login:active::after,
-.btn-submit:active::after {
-    animation: ripple 0.6s linear;
 }
 
 /* ==========================================

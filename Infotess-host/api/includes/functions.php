@@ -1032,26 +1032,35 @@ function sendStaffInvite(int $staffId, int $userId, int $invitedBy, string $emai
         if (!empty($phone)) {
             try {
                 $smsText = "Staff Registration: $inviteLink (expires in 48h) - " . ($GLOBALS['school_name'] ?? 'SchoolName');
-                if (function_exists('sendSMS')) {
-                    $sentSms = sendSMS($phone, $smsText);
-                } elseif (class_exists('\\App\\Helpers\\SMSHelper')) {
-                    $sms = new \App\Helpers\SMSHelper();
-                    $sentSms = $sms->send($phone, $smsText);
-                }
+                require_once __DIR__ . '/SMSHelper.php';
+                $smsHelper = new SMSHelper();
+                $sentSms = $smsHelper->send($phone, $smsText);
             } catch (Exception $e) {
                 error_log("sendStaffInvite SMS error: " . $e->getMessage());
             }
         }
 
+        // Log delivery results
+        error_log("sendStaffInvite result — staff_id=$staffId email_sent=" . ($sentEmail ? '1' : '0') . " sms_sent=" . ($sentSms ? '1' : '0') . " token=$token");
+
         // Update sent flags
         $upd = $pdo->prepare("UPDATE staff_invites SET email_sent = ?, sms_sent = ? WHERE token = ?");
         $upd->execute([$sentEmail ? 1 : 0, $sentSms ? 1 : 0, $token]);
 
-        return [
-            'success' => true,
-            'token' => $token,
-            'message' => 'Invite sent successfully.'
-        ];
+        // Report accurate success — at least one delivery method worked
+        if ($sentEmail || $sentSms) {
+            return [
+                'success' => true,
+                'token' => $token,
+                'message' => 'Invite sent successfully' . ($sentEmail ? ' via email' : '') . ($sentSms ? ($sentEmail ? ' and ' : ' via ') . 'SMS' : '') . '.'
+            ];
+        } else {
+            return [
+                'success' => true,
+                'token' => $token,
+                'message' => 'Invite link created but delivery failed. Check SMTP/SMS configuration in environment variables. Link: ' . $inviteLink
+            ];
+        }
     } catch (Exception $e) {
         error_log("sendStaffInvite error: " . $e->getMessage());
         return [

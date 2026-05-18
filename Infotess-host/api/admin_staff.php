@@ -8,6 +8,7 @@ $settings = [];
 $stmt = $pdo->query("SELECT setting_key, setting_value FROM system_settings");
 while ($row = $stmt->fetch()) { $settings[$row['setting_key']] = $row['setting_value']; }
 $school_name = $settings['school_name'] ?? 'Nex CEC';
+$GLOBALS['school_name'] = $school_name; // For email templates in sendStaffInvite()
 
 $message = '';
 $error = '';
@@ -49,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $network = null;
     }
 
-    if (!isset($error)) {
+    if (empty($error)) {
         // Auto-generate staff ID (bridge doesn't support COUNT(*) — count in PHP)
         $allStaffForCount = $pdo->query("SELECT id FROM staff");
         $allStaffForCount = $allStaffForCount ? $allStaffForCount->fetchAll() : [];

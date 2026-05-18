@@ -729,3 +729,31 @@ UNION ALL SELECT 'messages', COUNT(*) FROM messages
 UNION ALL SELECT 'notifications', COUNT(*) FROM notifications
 UNION ALL SELECT 'parent_students', COUNT(*) FROM parent_students
 UNION ALL SELECT 'sessions', COUNT(*) FROM sessions;
+
+-- ==========================================
+-- PHASE 6: Staff Self-Registration (Invite System)
+-- ==========================================
+
+-- Add columns to staff table for profile/document uploads
+ALTER TABLE staff ADD COLUMN IF NOT EXISTS profile_picture TEXT;
+ALTER TABLE staff ADD COLUMN IF NOT EXISTS cv_path TEXT;
+ALTER TABLE staff ADD COLUMN IF NOT EXISTS documents TEXT; -- JSON array of uploaded doc URLs
+
+-- Create staff_invites table for invitation tokens
+CREATE TABLE IF NOT EXISTS staff_invites (
+    id SERIAL PRIMARY KEY,
+    staff_id INTEGER NOT NULL REFERENCES staff(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token VARCHAR(64) UNIQUE NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    invited_by INTEGER REFERENCES users(id),
+    invited_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    accepted_at TIMESTAMP WITH TIME ZONE,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    email_sent BOOLEAN DEFAULT FALSE,
+    sms_sent BOOLEAN DEFAULT FALSE
+);
+
+-- Index for fast token lookups
+CREATE INDEX IF NOT EXISTS idx_staff_invites_token ON staff_invites(token);
+CREATE INDEX IF NOT EXISTS idx_staff_invites_staff_id ON staff_invites(staff_id);

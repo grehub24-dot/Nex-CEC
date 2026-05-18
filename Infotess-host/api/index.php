@@ -82,6 +82,9 @@ foreach ($staffPages as $page) {
 }
 $routes["staff/student_attendance.php"] = "admin_attendance.php";
 
+// Staff self-registration (via invite token, no auth required)
+$routes["staff/register.php"] = "staff_register.php";
+
 // Parent routes
 $parentPages = ['dashboard', 'student', 'fees', 'report_card', 'messages', 'profile', 'password-reset'];
 foreach ($parentPages as $page) {

@@ -951,3 +951,189 @@ function csrf_field(): void {
 function csrf_query(): string {
     return 'csrf_token=' . urlencode(generate_csrf_token());
 }
+
+// ==========================================
+// Staff Invite Helpers
+// ==========================================
+
+/**
+ * Generate a cryptographically secure 64-character hex token for staff invites.
+ */
+function generateStaffInviteToken(): string {
+    return bin2hex(random_bytes(32));
+}
+
+/**
+ * Store a new staff invite record and send email/SMS notification.
+ *
+ * @param int    $staffId   staff.id
+ * @param int    $userId    users.id
+ * @param int    $invitedBy admin users.id
+ * @param string $email     Staff email address
+ * @param string $phone     Staff phone number
+ * @param string $staffName Staff full name for message
+ * @return array ['success' => bool, 'token' => string, 'message' => string]
+ */
+function sendStaffInvite(int $staffId, int $userId, int $invitedBy, string $email, string $phone, string $staffName): array {
+    global $pdo;
+
+    try {
+        $token = generateStaffInviteToken();
+        $expiresAt = date('Y-m-d H:i:s', time() + 86400); // 48 hours from now
+
+        // Check for existing pending invite
+        $existing = $pdo->prepare("SELECT id, token FROM staff_invites WHERE staff_id = ? AND status = 'pending'");
+        $existing->execute([$staffId]);
+        $existingRow = $existing->fetch();
+
+        if ($existingRow) {
+            // Reuse existing token, just re-send
+            $token = $existingRow['token'];
+        } else {
+            $stmt = $pdo->prepare("INSERT INTO staff_invites (staff_id, user_id, token, status, invited_by, expires_at) VALUES (?, ?, ?, 'pending', ?, ?)");
+            $stmt->execute([$staffId, $userId, $token, $invitedBy, $expiresAt]);
+        }
+
+        $inviteLink = rtrim(getenv('APP_URL') ?: 'https://nexcec.vercel.app', '/') . '/staff/register.php?token=' . $token;
+
+        $sentEmail = false;
+        $sentSms = false;
+
+        // Send email
+        if (!empty($email)) {
+            try {
+                require_once __DIR__ . '/Mailer.php';
+                $mailer = new Mailer();
+                if ($mailer) {
+                    $subject = "Staff Registration Invitation - " . ($GLOBALS['school_name'] ?? 'SchoolName');
+                    $body = "
+                    <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'>
+                        <h2 style='color: #1a5276;'>Staff Registration Invitation</h2>
+                        <p>Dear <strong>" . htmlspecialchars($staffName) . "</strong>,</p>
+                        <p>You have been invited to register for the staff portal of <strong>" . ($GLOBALS['school_name'] ?? 'SchoolName') . "</strong>.</p>
+                        <p>Please click the button below to complete your registration. This link will expire in <strong>48 hours</strong>.</p>
+                        <p style='text-align: center; margin: 30px 0;'>
+                            <a href='$inviteLink' style='background: #1a5276; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-size: 16px; display: inline-block;'>Complete Registration</a>
+                        </p>
+                        <p>Or copy this link into your browser:</p>
+                        <p style='background: #f5f5f5; padding: 10px; word-break: break-all; font-size: 13px;'>$inviteLink</p>
+                        <p>If you did not expect this invitation, please ignore this email.</p>
+                        <hr style='border: none; border-top: 1px solid #eee;'>
+                        <p style='color: #999; font-size: 12px;'>This is an automated message from " . ($GLOBALS['school_name'] ?? 'SchoolName') . ".</p>
+                    </div>";
+                    $sentEmail = $mailer->sendHTML($email, $subject, $body);
+                }
+            } catch (Exception $e) {
+                error_log("sendStaffInvite email error: " . $e->getMessage());
+            }
+        }
+
+        // Send SMS
+        if (!empty($phone)) {
+            try {
+                $smsText = "Staff Registration: $inviteLink (expires in 48h) - " . ($GLOBALS['school_name'] ?? 'SchoolName');
+                if (function_exists('sendSMS')) {
+                    $sentSms = sendSMS($phone, $smsText);
+                } elseif (class_exists('\\App\\Helpers\\SMSHelper')) {
+                    $sms = new \App\Helpers\SMSHelper();
+                    $sentSms = $sms->send($phone, $smsText);
+                }
+            } catch (Exception $e) {
+                error_log("sendStaffInvite SMS error: " . $e->getMessage());
+            }
+        }
+
+        // Update sent flags
+        $upd = $pdo->prepare("UPDATE staff_invites SET email_sent = ?, sms_sent = ? WHERE token = ?");
+        $upd->execute([$sentEmail ? 1 : 0, $sentSms ? 1 : 0, $token]);
+
+        return [
+            'success' => true,
+            'token' => $token,
+            'message' => 'Invite sent successfully.'
+        ];
+    } catch (Exception $e) {
+        error_log("sendStaffInvite error: " . $e->getMessage());
+        return [
+            'success' => false,
+            'token' => '',
+            'message' => 'Failed to send invite: ' . $e->getMessage()
+        ];
+    }
+}
+
+/**
+ * Get the invite status string for a staff member.
+ *
+ * @param int   $staffId
+ * @return string 'accepted' | 'pending' | 'expired' | 'not_invited'
+ */
+function getStaffInviteStatus(int $staffId): string {
+    global $pdo;
+    try {
+        $stmt = $pdo->prepare("SELECT status, expires_at FROM staff_invites WHERE staff_id = ? ORDER BY id DESC LIMIT 1");
+        $stmt->execute([$staffId]);
+        $row = $stmt->fetch();
+        if (!$row) {
+            return 'not_invited';
+        }
+        if ($row['status'] === 'accepted') {
+            return 'accepted';
+        }
+        if ($row['status'] === 'pending') {
+            $expiresAt = strtotime($row['expires_at']);
+            if ($expiresAt < time()) {
+                return 'expired';
+            }
+            return 'pending';
+        }
+        return $row['status'] ?? 'not_invited';
+    } catch (Exception $e) {
+        error_log("getStaffInviteStatus error: " . $e->getMessage());
+        return 'not_invited';
+    }
+}
+
+/**
+ * Upload an uploaded file from $_FILES to Supabase Storage.
+ * Thin wrapper specifically for staff documents.
+ */
+function uploadStaffFile(array $file, string $bucket = 'staff_documents'): string {
+    global $supabase;
+    if (!$supabase || !($supabase instanceof SupabaseClient) || empty($file) || $file['error'] !== UPLOAD_ERR_OK) {
+        return '';
+    }
+    try {
+        $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
+        $filename = uniqid('staff_') . '_' . time() . '.' . $ext;
+        $filePath = $filename;
+        $fileContent = file_get_contents($file['tmp_name']);
+        if ($fileContent === false) return '';
+
+        // Ensure bucket exists
+        try { $supabase->createBucket($bucket, ['public' => true]); } catch (Exception $e) {}
+
+        $result = $supabase->uploadFile($bucket, $filePath, $fileContent, $ext === 'pdf' ? 'application/pdf' : mime_content_type($file['tmp_name']));
+
+        if ($result) {
+            return $supabase->getPublicUrl($bucket, $filePath);
+        }
+    } catch (Exception $e) {
+        error_log("uploadStaffFile error: " . $e->getMessage());
+    }
+    return '';
+}
+
+/**
+ * Decode staff documents JSON into a comma-separated HTML list.
+ */
+function formatStaffDocuments(string $documentsJson): string {
+    $docs = json_decode($documentsJson, true);
+    if (!is_array($docs) || empty($docs)) return '-';
+    $items = [];
+    foreach ($docs as $url) {
+        $name = basename($url);
+        $items[] = '<a href="' . htmlspecialchars($url) . '" target="_blank" rel="noopener">' . htmlspecialchars($name) . '</a>';
+    }
+    return implode(', ', $items);
+}

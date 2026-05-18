@@ -27,6 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $hire_date = sanitize($_POST['hire_date']);
     $bank_name = sanitize($_POST['bank_name'] ?? '');
     $account_number = sanitize($_POST['account_number'] ?? '');
+    $send_invite = isset($_POST['send_invite']) && $_POST['send_invite'] === '1';
 
     // Validate Ghana phone number (MoMo/Ghana Pay compatible)
     // Accepts: 024, 025, 026, 027, 054, 055, 056, 057, 050, 059 (MTN), 020, 050 (Vodafone/Telecel), 026, 056 (AirtelTigo)
@@ -62,9 +63,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         } else {
             $pdo->beginTransaction();
             try {
-                $auto_password = substr(str_shuffle("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"), 0, 8);
-                $password_hash = password_hash($auto_password, PASSWORD_DEFAULT);
-                
                 // Determine role: teaching positions get 'teacher', others get 'staff'
                 $teaching_keywords = ['teacher', 'instructor', 'tutor', 'lecturer', 'facilitator', 'coach'];
                 $position_lower = strtolower($position);
@@ -76,15 +74,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     }
                 }
                 $role = $is_teaching ? 'teacher' : 'staff';
-                $stmt = $pdo->prepare("INSERT INTO users (email, password, role) VALUES (?, ?, ?)");
-                $stmt->execute([$email, $password_hash, $role]);
-                $user_id = $pdo->lastInsertId();
 
-                $stmt = $pdo->prepare("INSERT INTO staff (user_id, staff_id, full_name, position, department, qualification, phone, email, gender, date_of_birth, address, hire_date, bank_name, account_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                $stmt->execute([$user_id, $staff_id, $full_name, $position, $department, $qualification, $phone, $email, $gender, $date_of_birth, $address, $hire_date, $bank_name, $account_number]);
-                
-                $pdo->commit();
-                $message = "Staff member added successfully! ID: $staff_id | Temp password: $auto_password";
+                if ($send_invite) {
+                    // Staff self-registration mode: no auto-password, status=inactive
+                    $placeholder_hash = password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT);
+                    $stmt = $pdo->prepare("INSERT INTO users (email, password, role, status) VALUES (?, ?, ?, 'inactive')");
+                    $stmt->execute([$email, $placeholder_hash, $role]);
+                    $user_id = $pdo->lastInsertId();
+
+                    $stmt = $pdo->prepare("INSERT INTO staff (user_id, staff_id, full_name, position, department, qualification, phone, email, gender, date_of_birth, address, hire_date, bank_name, account_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                    $stmt->execute([$user_id, $staff_id, $full_name, $position, $department, $qualification, $phone, $email, $gender, $date_of_birth, $address, $hire_date, $bank_name, $account_number]);
+                    $staff_id_inserted = (int)$pdo->lastInsertId();
+                    
+                    $pdo->commit();
+
+                    // Send invite
+                    $inviteResult = sendStaffInvite($staff_id_inserted, $user_id, (int)$_SESSION['user_id'], $email, $phone, $full_name);
+                    if ($inviteResult['success']) {
+                        $message = "Staff member added and invite sent to <strong>" . htmlspecialchars($email) . "</strong> and <strong>" . htmlspecialchars($phone) . "</strong>.";
+                    } else {
+                        $message = "Staff member added! However, invite sending failed: " . $inviteResult['message'];
+                    }
+                } else {
+                    // Legacy mode: auto-password, status=active (default)
+                    $auto_password = substr(str_shuffle("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"), 0, 8);
+                    $password_hash = password_hash($auto_password, PASSWORD_DEFAULT);
+                    $stmt = $pdo->prepare("INSERT INTO users (email, password, role) VALUES (?, ?, ?)");
+                    $stmt->execute([$email, $password_hash, $role]);
+                    $user_id = $pdo->lastInsertId();
+
+                    $stmt = $pdo->prepare("INSERT INTO staff (user_id, staff_id, full_name, position, department, qualification, phone, email, gender, date_of_birth, address, hire_date, bank_name, account_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                    $stmt->execute([$user_id, $staff_id, $full_name, $position, $department, $qualification, $phone, $email, $gender, $date_of_birth, $address, $hire_date, $bank_name, $account_number]);
+                    
+                    $pdo->commit();
+                    $message = "Staff member added successfully! ID: $staff_id | Temp password: <strong>$auto_password</strong>";
+                }
             } catch (Exception $e) {
                 $pdo->rollBack();
                 $error = "Error: " . $e->getMessage();
@@ -116,6 +140,59 @@ if (isset($_GET['delete']) && is_numeric($_GET['delete'])) {
         $error = "Error deleting staff: " . $e->getMessage();
     }
     header("Location: staff.php?msg=" . urlencode($message));
+    exit;
+}
+
+// Handle Resend Invite
+if (isset($_GET['resend_invite']) && is_numeric($_GET['resend_invite'])) {
+    validate_request_csrf();
+    $staffId = (int)$_GET['resend_invite'];
+    try {
+        $stmt = $pdo->prepare("SELECT s.*, u.id as uid FROM staff s JOIN users u ON u.id = s.user_id WHERE s.id = ?");
+        $stmt->execute([$staffId]);
+        $staffRow = $stmt->fetch();
+        if ($staffRow) {
+            $result = sendStaffInvite($staffId, (int)$staffRow['user_id'], (int)$_SESSION['user_id'], $staffRow['email'] ?? '', $staffRow['phone'] ?? '', $staffRow['full_name'] ?? '');
+            if ($result['success']) {
+                $message = "Invite resent successfully to " . htmlspecialchars($staffRow['email'] ?? $staffRow['phone'] ?? '') . ".";
+            } else {
+                $error = "Failed to resend invite: " . $result['message'];
+            }
+        } else {
+            $error = "Staff member not found.";
+        }
+    } catch (Exception $e) {
+        $error = "Error resending invite: " . $e->getMessage();
+    }
+    $redirectParam = $message ? "msg=" . urlencode($message) : "err=" . urlencode($error);
+    header("Location: staff.php?" . $redirectParam);
+    exit;
+}
+
+// Handle Activate Staff
+if (isset($_GET['activate']) && is_numeric($_GET['activate'])) {
+    validate_request_csrf();
+    $staffId = (int)$_GET['activate'];
+    try {
+        $pdo->beginTransaction();
+        $stmt = $pdo->prepare("SELECT user_id FROM staff WHERE id = ?");
+        $stmt->execute([$staffId]);
+        $staffRow = $stmt->fetch();
+        if ($staffRow && $staffRow['user_id']) {
+            $pdo->prepare("UPDATE users SET status = 'active' WHERE id = ?")->execute([(int)$staffRow['user_id']]);
+            $pdo->prepare("UPDATE staff SET status = 'active' WHERE id = ?")->execute([$staffId]);
+            $pdo->commit();
+            $message = "Staff account activated successfully.";
+        } else {
+            $pdo->rollBack();
+            $error = "Staff member not found.";
+        }
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        $error = "Error activating staff: " . $e->getMessage();
+    }
+    $redirectParam = $message ? "msg=" . urlencode($message) : "err=" . urlencode($error);
+    header("Location: staff.php?" . $redirectParam);
     exit;
 }
 
@@ -175,11 +252,16 @@ $total_pages = $total_rows > 0 ? (int)ceil($total_rows / $limit) : 1;
                 <button id="openModalBtn" class="btn-primary"><i class="fas fa-plus"></i> Add Staff Member</button>
             </div>
 
-            <?php if ($message || isset($_GET['msg'])): ?>
-                <div class="alert alert-success"><?php echo htmlspecialchars($message ?: $_GET['msg']); ?></div>
+            <?php 
+            // Support both direct $message/$error and redirected msg/err query params
+            $displayMsg = $message ?: (isset($_GET['msg']) ? $_GET['msg'] : '');
+            $displayErr = $error ?: (isset($_GET['err']) ? $_GET['err'] : '');
+            ?>
+            <?php if ($displayMsg): ?>
+                <div class="alert alert-success"><?php echo htmlspecialchars($displayMsg); ?></div>
             <?php endif; ?>
-            <?php if ($error): ?>
-                <div class="alert alert-danger"><?php echo $error; ?></div>
+            <?php if ($displayErr): ?>
+                <div class="alert alert-danger"><?php echo htmlspecialchars($displayErr); ?></div>
             <?php endif; ?>
 
             <!-- Staff Stats -->
@@ -309,21 +391,21 @@ $total_pages = $total_rows > 0 ? (int)ceil($total_rows / $limit) : 1;
                             <input type="text" name="address" class="form-control" placeholder="Residential address">
                         </div>
 
-                        <div class="section-divider">
-                            <h4><i class="fas fa-piggy-bank"></i> Bank Details (for Payroll)</h4>
-                        </div>
-
-                        <div>
-                            <label>Bank Name</label>
-                            <input type="text" name="bank_name" class="form-control" placeholder="e.g. GCB Bank">
-                        </div>
-                        <div>
-                            <label>Account Number</label>
-                            <input type="text" name="account_number" class="form-control" placeholder="e.g. 1234567890">
+                        <div style="grid-column: span 2; border-top: 1px solid #eee; padding-top: 15px;">
+                            <h4 style="font-size:15px; color:#1a5276; margin:0 0 5px 0;"><i class="fas fa-envelope"></i> Staff Invitation</h4>
+                            <p style="font-size:12px; color:#666; margin-bottom:10px;">
+                                Check the box below to send a self-registration invite. The staff member will receive an email/SMS with a secure link to complete their profile and set their own password. Their account will remain <strong>inactive</strong> until you activate it.
+                            </p>
+                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:14px;">
+                                <input type="checkbox" name="send_invite" value="1" checked>
+                                <span><strong>Send invite to staff</strong> (email + SMS)</span>
+                            </label>
                         </div>
 
                         <div style="grid-column: span 2; margin-top: 10px;">
-                            <button type="submit" class="btn-submit" style="width:100%;">Add Staff Member</button>
+                            <button type="submit" class="btn-submit" style="width:100%;">
+                                <i class="fas fa-user-plus"></i> Add Staff Member
+                            </button>
                         </div>
                     </form>
                 </div>
@@ -348,15 +430,19 @@ $total_pages = $total_rows > 0 ? (int)ceil($total_rows / $limit) : 1;
                                 <th>Position</th>
                                 <th>Department</th>
                                 <th>Phone</th>
-                                <th>Status</th>
+                                <th>Account Status</th>
+                                <th>Invite Status</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php if (empty($staff_list)): ?>
-                                <tr><td colspan="7" style="text-align:center;">No staff members found. Add your first staff member above.</td></tr>
+                                <tr><td colspan="8" style="text-align:center;">No staff members found. Add your first staff member above.</td></tr>
                             <?php else: ?>
-                                <?php foreach ($staff_list as $staff): ?>
+                                <?php foreach ($staff_list as $staff):
+                                    $inviteStatus = getStaffInviteStatus((int)$staff['id']);
+                                    $csrfAttr = 'csrf_token=' . urlencode(generate_csrf_token());
+                                ?>
                                 <tr>
                                     <td><strong><?php echo htmlspecialchars($staff['staff_id']); ?></strong></td>
                                     <td><?php echo htmlspecialchars($staff['full_name']); ?></td>
@@ -364,13 +450,41 @@ $total_pages = $total_rows > 0 ? (int)ceil($total_rows / $limit) : 1;
                                     <td><?php echo htmlspecialchars($staff['department'] ?? '-'); ?></td>
                                     <td><?php echo htmlspecialchars($staff['phone'] ?? '-'); ?></td>
                                     <td>
-                                        <span style="color: <?php echo $staff['status'] === 'active' ? 'green' : 'red'; ?>; font-weight: bold;">
+                                        <span style="color: <?php echo ($staff['status'] ?? 'active') === 'active' ? 'green' : '#e74c3c'; ?>; font-weight: bold;">
                                             <?php echo ucfirst($staff['status'] ?? 'active'); ?>
                                         </span>
                                     </td>
                                     <td>
-                                        <a href="edit_staff.php?id=<?php echo $staff['id']; ?>" class="btn-login" style="background:#f0ad4e; padding: 5px 10px; font-size: 0.8rem;">Edit</a>
-                                        <a href="staff.php?delete=<?php echo $staff['id']; ?>" class="btn-login" style="background:#e74c3c; padding: 5px 10px; font-size: 0.8rem;" onclick="return confirm('Are you sure you want to delete this staff member?');">Delete</a>
+                                        <?php if ($inviteStatus === 'accepted'): ?>
+                                            <span style="color: #27ae60; font-weight: bold; font-size: 0.85rem;">
+                                                <i class="fas fa-check-circle"></i> Registered
+                                            </span>
+                                        <?php elseif ($inviteStatus === 'pending'): ?>
+                                            <span style="color: #f39c12; font-weight: bold; font-size: 0.85rem;">
+                                                <i class="fas fa-clock"></i> Pending
+                                            </span>
+                                        <?php elseif ($inviteStatus === 'expired'): ?>
+                                            <span style="color: #e74c3c; font-weight: bold; font-size: 0.85rem;">
+                                                <i class="fas fa-hourglass-end"></i> Expired
+                                            </span>
+                                        <?php else: ?>
+                                            <span style="color: #999; font-size: 0.85rem;">
+                                                <i class="fas fa-minus-circle"></i> Not Invited
+                                            </span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td style="white-space: nowrap;">
+                                        <a href="edit_staff.php?id=<?php echo $staff['id']; ?>" class="btn-login" style="background:#f0ad4e; padding: 5px 10px; font-size: 0.8rem; text-decoration:none; display:inline-block; margin-bottom:2px;" title="Edit staff details">Edit</a>
+                                        <?php if (($staff['status'] ?? 'active') !== 'active' && $inviteStatus === 'accepted'): ?>
+                                            <a href="staff.php?activate=<?php echo $staff['id']; ?>&<?php echo $csrfAttr; ?>" class="btn-login" style="background:#27ae60; padding: 5px 10px; font-size: 0.8rem; text-decoration:none; display:inline-block; margin-bottom:2px;" onclick="return confirm('Activate this staff account? They will be able to log in immediately.');">Activate</a>
+                                        <?php endif; ?>
+                                        <?php if ($inviteStatus === 'pending' || $inviteStatus === 'expired'): ?>
+                                            <a href="staff.php?resend_invite=<?php echo $staff['id']; ?>&<?php echo $csrfAttr; ?>" class="btn-login" style="background:#3498db; padding: 5px 10px; font-size: 0.8rem; text-decoration:none; display:inline-block; margin-bottom:2px;" title="Resend invite email/SMS">Resend</a>
+                                        <?php endif; ?>
+                                        <?php if ($inviteStatus === 'not_invited'): ?>
+                                            <a href="staff.php?resend_invite=<?php echo $staff['id']; ?>&<?php echo $csrfAttr; ?>" class="btn-login" style="background:#3498db; padding: 5px 10px; font-size: 0.8rem; text-decoration:none; display:inline-block; margin-bottom:2px;">Send Invite</a>
+                                        <?php endif; ?>
+                                        <a href="staff.php?delete=<?php echo $staff['id']; ?>" class="btn-login" style="background:#e74c3c; padding: 5px 10px; font-size: 0.8rem; text-decoration:none; display:inline-block; margin-bottom:2px;" onclick="return confirm('Are you sure you want to delete this staff member?');">Delete</a>
                                     </td>
                                 </tr>
                                 <?php endforeach; ?>

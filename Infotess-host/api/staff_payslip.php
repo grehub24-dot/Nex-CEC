@@ -223,6 +223,7 @@ $deductions = $stmt->fetchAll();
             </div>
         <?php endif; ?>
         <?php endif; ?>
+        <?php endif; ?>
     </div>
 </body>
 </html>

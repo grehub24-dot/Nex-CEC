@@ -190,7 +190,7 @@ require_once 'includes/header.php';
 
 <div class="section">
     <div class="form-container" style="text-align: center;">
-        <img src="<?php echo htmlspecialchars($settings['school_logo_url'] ?? 'images/aamusted.jpg'); ?>" alt="School Logo" style="width: 100px; margin-bottom: 20px;" onerror="this.src='images/aamusted.jpg'">
+        <img src="<?php echo htmlspecialchars($settings['school_logo_url'] ?? 'images/aamusted.jpg'); ?>" alt="School Logo" style="max-width: 130px; max-height: 68px; width: auto; height: auto; object-fit: contain; margin-bottom: 20px;" onerror="this.src='images/aamusted.jpg'">
         <h2 class="section-title">Login to Portal</h2>
         <?php if ($error): ?>
             <div class="alert alert-danger"><?php echo $error; ?></div>

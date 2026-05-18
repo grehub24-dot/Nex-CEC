@@ -68,13 +68,17 @@ try {
             margin-bottom: 30px;
         }
         .branding img {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
+            max-width: 120px;
+            max-height: 64px;
+            width: auto;
+            height: auto;
+            object-fit: contain;
             background: #fff;
-            padding: 5px;
+            padding: 6px 12px;
+            border-radius: 8px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             margin-bottom: 12px;
+            display: inline-block;
         }
         .branding h1 {
             font-size: 22px;

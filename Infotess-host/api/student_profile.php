@@ -86,7 +86,7 @@ if ($student) {
     <div class="dashboard-container">
         <aside class="sidebar">
             <div class="sidebar-header" style="text-align:center; padding: 20px 10px;">
-                <img src="<?php echo htmlspecialchars($settings['school_logo_url'] ?? '../images/aamusted.jpg'); ?>" alt="Logo" style="width: 60px; height: 60px; margin-bottom: 8px; border-radius: 50%; background: #fff; padding: 5px;" onerror="this.src='../images/aamusted.jpg'">
+                <img src="<?php echo htmlspecialchars($settings['school_logo_url'] ?? '../images/aamusted.jpg'); ?>" alt="Logo" style="max-width: 90px; max-height: 48px; width: auto; height: auto; object-fit: contain; background: #fff; padding: 4px 8px; border-radius: 6px; display: inline-block; margin-bottom: 8px;" onerror="this.src='../images/aamusted.jpg'">
                 <h3 style="font-size:15px;">My Portal</h3>
             </div>
                                     <ul class="sidebar-menu">

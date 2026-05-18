@@ -289,6 +289,50 @@ $csrf_token = generate_csrf_token();
             </div>
         </div>
 
+        <!-- Documents (CV & Additional) -->
+        <div class="profile-section">
+            <h3><i class="fas fa-file-alt"></i> Uploaded Documents</h3>
+            <?php
+            $cvPath = $staff['cv_path'] ?? '';
+            $docsJson = $staff['documents'] ?? '[]';
+            $docs = json_decode($docsJson, true);
+            $hasDocs = !empty($cvPath) || (is_array($docs) && !empty($docs));
+            ?>
+            <?php if ($hasDocs): ?>
+                <div style="display:flex;flex-direction:column;gap:12px;">
+                    <?php if (!empty($cvPath)): ?>
+                    <div style="display:flex;align-items:center;gap:14px;padding:10px 14px;background:#f8f9fa;border-radius:8px;border:1px solid #e9ecef;">
+                        <span style="font-size:28px;color:#e74c3c;"><i class="fas fa-file-pdf"></i></span>
+                        <div style="flex:1;">
+                            <div style="font-size:13px;color:#888;">Curriculum Vitae (CV)</div>
+                            <a href="<?php echo htmlspecialchars($cvPath); ?>" target="_blank" rel="noopener" style="font-weight:600;color:#1a5276;text-decoration:none;font-size:14px;">
+                                <i class="fas fa-external-link-alt"></i> View / Download CV
+                            </a>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+                    <?php if (is_array($docs) && !empty($docs)): ?>
+                    <div style="padding:4px 0;">
+                        <div style="font-size:13px;color:#888;margin-bottom:8px;font-weight:500;">Additional Documents (<?php echo count($docs); ?>)</div>
+                        <div style="display:flex;flex-direction:column;gap:4px;">
+                            <?php foreach ($docs as $docUrl): ?>
+                            <a href="<?php echo htmlspecialchars($docUrl); ?>" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:#f8f9fa;border-radius:6px;border:1px solid #e9ecef;color:#333;text-decoration:none;font-size:13px;transition:all 0.2s;" onmouseover="this.style.borderColor='#1a5276';this.style.background='#eef2f7';" onmouseout="this.style.borderColor='#e9ecef';this.style.background='#f8f9fa';">
+                                <i class="fas fa-file" style="color:#1a5276;font-size:16px;"></i>
+                                <span style="flex:1;"><?php echo htmlspecialchars(basename($docUrl)); ?></span>
+                                <i class="fas fa-external-link-alt" style="color:#888;font-size:11px;"></i>
+                            </a>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+                </div>
+            <?php else: ?>
+                <p style="font-size:14px;color:#999;text-align:center;padding:16px 0;">
+                    <i class="fas fa-info-circle"></i> No documents uploaded yet. Documents uploaded during self-registration will appear here.
+                </p>
+            <?php endif; ?>
+        </div>
+
         <!-- Bank Information -->
         <?php if (!empty($staff['bank_name']) || !empty($staff['account_number'])): ?>
         <div class="profile-section">

@@ -162,7 +162,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                             <input type="text" name="address" class="form-control" value="<?php echo htmlspecialchars($staff['address'] ?? ''); ?>">
                         </div>
 
+                        <!-- Uploaded Documents Section -->
+                        <div style="grid-column: span 2; border-top: 1px solid #eee; padding-top: 15px; margin-top: 10px;">
+                            <h4 style="font-size:15px; color:#1a5276; margin:0 0 10px 0;"><i class="fas fa-file-alt"></i> Uploaded Documents</h4>
+                            <?php
+                            $cvPath = $staff['cv_path'] ?? '';
+                            $docsJson = $staff['documents'] ?? '[]';
+                            $docs = json_decode($docsJson, true);
+                            $hasDocs = !empty($cvPath) || (is_array($docs) && !empty($docs));
+                            ?>
+                            <?php if ($hasDocs): ?>
+                                <div style="display:flex;flex-direction:column;gap:8px;">
+                                    <?php if (!empty($cvPath)): ?>
+                                    <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:#f8f9fa;border-radius:8px;border:1px solid #e9ecef;">
+                                        <span style="font-size:24px;color:#e74c3c;"><i class="fas fa-file-pdf"></i></span>
+                                        <div style="flex:1;">
+                                            <div style="font-size:12px;color:#888;">Curriculum Vitae (CV)</div>
+                                            <a href="<?php echo htmlspecialchars($cvPath); ?>" target="_blank" rel="noopener" style="font-weight:600;color:#1a5276;text-decoration:none;font-size:13px;">
+                                                <i class="fas fa-external-link-alt"></i> View / Download CV
+                                            </a>
+                                        </div>
+                                    </div>
+                                    <?php endif; ?>
+                                    <?php if (is_array($docs) && !empty($docs)): ?>
+                                    <div>
+                                        <div style="font-size:12px;color:#888;margin-bottom:6px;font-weight:500;">Additional Documents (<?php echo count($docs); ?>)</div>
+                                        <div style="display:flex;flex-direction:column;gap:4px;">
+                                            <?php foreach ($docs as $docUrl): ?>
+                                            <a href="<?php echo htmlspecialchars($docUrl); ?>" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:7px 12px;background:#f8f9fa;border-radius:6px;border:1px solid #e9ecef;color:#333;text-decoration:none;font-size:12px;transition:all 0.2s;" onmouseover="this.style.borderColor='#1a5276';this.style.background='#eef2f7';" onmouseout="this.style.borderColor='#e9ecef';this.style.background='#f8f9fa';">
+                                                <i class="fas fa-file" style="color:#1a5276;font-size:14px;"></i>
+                                                <span style="flex:1;"><?php echo htmlspecialchars(basename($docUrl)); ?></span>
+                                                <i class="fas fa-external-link-alt" style="color:#888;font-size:10px;"></i>
+                                            </a>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    </div>
+                                    <?php endif; ?>
+                                </div>
+                            <?php else: ?>
+                                <p style="font-size:13px;color:#999;padding:8px 0;">
+                                    <i class="fas fa-info-circle"></i> No documents uploaded yet. Staff can upload documents during self-registration.
+                                </p>
+                            <?php endif; ?>
+                        </div>
+
                         <div class="section-divider">
+                            <h4><i class="fas fa-piggy-bank"></i> Bank Details</h4>
+                        </div>
                             <h4><i class="fas fa-piggy-bank"></i> Bank Details</h4>
                         </div>
 

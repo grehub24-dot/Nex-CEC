@@ -433,6 +433,7 @@ $total_pages = $total_rows > 0 ? (int)ceil($total_rows / $limit) : 1;
                                 <th>Phone</th>
                                 <th>Account Status</th>
                                 <th>Invite Status</th>
+                                <th>Docs</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -472,6 +473,24 @@ $total_pages = $total_rows > 0 ? (int)ceil($total_rows / $limit) : 1;
                                             <span style="color: #999; font-size: 0.85rem;">
                                                 <i class="fas fa-minus-circle"></i> Not Invited
                                             </span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td style="text-align:center;">
+                                        <?php
+                                        $hasCv = !empty($staff['cv_path']);
+                                        $hasDocs = !empty($staff['documents']) && json_decode($staff['documents'], true);
+                                        if ($hasCv || $hasDocs):
+                                        ?>
+                                            <a href="edit_staff.php?id=<?php echo $staff['id']; ?>" title="View documents" style="color:#1a5276;text-decoration:none;">
+                                                <?php if ($hasCv): ?>
+                                                    <i class="fas fa-file-pdf" style="color:#e74c3c;font-size:16px;" title="CV Uploaded"></i>
+                                                <?php endif; ?>
+                                                <?php if ($hasDocs): ?>
+                                                    <i class="fas fa-folder-open" style="color:#f39c12;font-size:16px;margin-left:4px;" title="Additional Documents"></i>
+                                                <?php endif; ?>
+                                            </a>
+                                        <?php else: ?>
+                                            <span style="color:#ccc;font-size:12px;">—</span>
                                         <?php endif; ?>
                                     </td>
                                     <td style="white-space: nowrap;">

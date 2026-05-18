@@ -384,7 +384,7 @@ function renderStaffSidebar($currentPage = '', $schoolName = 'Nex CEC', $unreadC
     $html .= '<aside class="staff-sidebar" id="sidebar">';
     $html .= '<div class="sidebar-header">';
     $logoUrl = getCachedSchoolLogoUrl();
-    $html .= '<img src="' . htmlspecialchars($logoUrl) . '" alt="Logo" class="sidebar-logo-img" onerror="this.src=\'../images/aamusted.jpg\'">';
+    $html .= '<img src="' . htmlspecialchars($logoUrl) . '" alt="Logo" style="width:64px;height:64px;border-radius:50%;object-fit:cover;background:white;padding:3px;margin-bottom:10px;" onerror="this.src=\'../images/aamusted.jpg\'">';
     $html .= '<h3>' . htmlspecialchars($schoolName) . '</h3>';
     $html .= '<p>' . ($staffName ? htmlspecialchars($staffName) : 'Staff Portal') . '</p>';
     $html .= '</div>';

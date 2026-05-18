@@ -29,6 +29,9 @@ try {
 } catch (Exception $e) {}
 $school_name = $settings['school_name'] ?? 'Nex CEC';
 
+// Determine staff dashboard link based on role
+$staffDashboardLink = (isAdmin()) ? 'admin/dashboard.php' : 'staff/dashboard.php';
+
 // Fetch children for display
 $children = [];
 $parent_user_id = $_SESSION['user_id'];
@@ -246,7 +249,7 @@ try {
     <div class="portal-grid">
 
         <!-- Staff Portal Card -->
-        <a href="admin/dashboard.php" class="portal-card">
+        <a href="<?php echo $staffDashboardLink; ?>" class="portal-card">
             <div class="icon staff-icon"><i class="fas fa-chalkboard-teacher"></i></div>
             <h3>Staff Portal</h3>
             <p>Access the admin dashboard, manage students, grades, attendance, fees, and school operations.</p>

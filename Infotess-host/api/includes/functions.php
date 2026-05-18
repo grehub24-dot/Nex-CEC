@@ -243,7 +243,7 @@ function getSidebarMenu($currentPage = '') {
     }
     
     if ($isFullAdmin) {
-        $allItems[] = ['href' => 'payroll.php', 'icon' => 'fas fa-file-invoice-dollar', 'label' => 'Payroll', 'acl' => 'payroll'];
+        $allItems[] = ['href' => 'admin_payroll.php', 'icon' => 'fas fa-file-invoice-dollar', 'label' => 'Payroll', 'acl' => 'payroll'];
         $allItems[] = ['href' => 'salary.php', 'icon' => 'fas fa-money-check-alt', 'label' => 'Salary Structures', 'acl' => 'salary'];
         $allItems[] = ['href' => 'staff_attendance.php', 'icon' => 'fas fa-user-tie', 'label' => 'Staff Attendance', 'acl' => 'staff_attendance'];
     }
@@ -485,7 +485,7 @@ function renderParentSidebar($currentPage = '', $schoolName = 'Nex CEC', $unread
     // Staff Dashboard link (for dual-role users who have children)
     if ($hasChildren) {
         $active = ($currentPage === 'staff_dashboard') ? ' class="active"' : '';
-        $html .= '<li><a href="../admin/dashboard.php"' . $active . '><i class="fas fa-chalkboard-teacher"></i> Staff Dashboard</a></li>';
+        $html .= '<li><a href="../staff/dashboard.php"' . $active . '><i class="fas fa-chalkboard-teacher"></i> Staff Dashboard</a></li>';
     }
     
     // My Children

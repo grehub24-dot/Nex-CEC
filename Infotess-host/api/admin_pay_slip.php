@@ -13,13 +13,11 @@ $school_phone = $settings['school_phone'] ?? '+233 123 456 789';
 
 // Guard: ensure payroll and staff_id exist before any bridge query
 $payroll_id = (int)($_GET['id'] ?? 0);
-if ($payroll_id <= 0) { redirect('payroll.php'); }
+if ($payroll_id <= 0) { redirect('admin_payroll.php'); }
 
-$stmt = $pdo->prepare("SELECT * FROM payroll WHERE id = ?");
-$stmt->execute([$payroll_id]);
-$payroll = $stmt->fetch();
+// ... validation ...
 
-if (!$payroll) { redirect('payroll.php'); }
+if (!$payroll) { redirect('admin_payroll.php'); }
 
 // Enrich payroll with staff info from staff table
 $staff_id = (int)($payroll['staff_id'] ?? 0);
@@ -77,7 +75,7 @@ $month_name = date('F', mktime(0, 0, 0, (int)($payroll['month'] ?? 1), 1));
 </head>
 <body>
     <div class="no-print" style="text-align: center; padding: 20px;">
-        <a href="payroll.php" class="btn-login"><i class="fas fa-arrow-left"></i> Back to Payroll</a>
+        <a href="admin_payroll.php" class="btn-login"><i class="fas fa-arrow-left"></i> Back to Payroll</a>
         <button onclick="window.print()" class="btn-primary"><i class="fas fa-print"></i> Print Pay Slip</button>
     </div>
 

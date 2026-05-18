@@ -50,37 +50,12 @@ foreach ($children as $c) {
 }
 
 // Fetch unread message count for sidebar badge
-// Two-step for bridge compatibility
 $unread_count = 0;
 try {
-    // Step 1: Get all direct messages to this user
-    $stmt = $pdo->prepare("SELECT id FROM messages WHERE receiver_id = ?");
-    $stmt->execute([$parent_user_id]);
-    $direct_ids = array_map(fn($r) => (int)$r['id'], $stmt->fetchAll());
-
-    // Step 2: Get all broadcast messages
-    $stmt = $pdo->prepare("SELECT id FROM messages WHERE is_broadcast = ?");
-    $stmt->execute([1]);
-    $broadcast_ids = array_map(fn($r) => (int)$r['id'], $stmt->fetchAll());
-
-    // Step 3: Get all message IDs this user has read
-    $all_msg_ids = array_unique(array_merge($direct_ids, $broadcast_ids));
-    $stmt = $pdo->prepare("SELECT message_id FROM message_reads WHERE user_id = ?");
-    $stmt->execute([$parent_user_id]);
-    $read_ids = array_map(fn($r) => (int)$r['message_id'], $stmt->fetchAll());
-
-    // Unread = in direct/broadcast but NOT in message_reads
-    // Also check messages.read_at for backward compatibility with direct messages
-    foreach (array_chunk($all_msg_ids, 50) as $chunk) {
-        if (empty($chunk)) continue;
-        $placeholders = implode(',', array_fill(0, count($chunk), '?'));
-        $stmt = $pdo->prepare("SELECT id FROM messages WHERE id IN ($placeholders) AND read_at IS NULL");
-        $stmt->execute($chunk);
-        $unread_direct = array_map(fn($r) => (int)$r['id'], $stmt->fetchAll());
-        foreach ($unread_direct as $uid) {
-            if (!in_array($uid, $read_ids)) $unread_count++;
-        }
-    }
+    $stmt = $pdo->prepare("SELECT COUNT(*) as cnt FROM messages m WHERE (m.receiver_id = ? OR m.is_broadcast = 1) AND NOT EXISTS (SELECT 1 FROM message_reads mr WHERE mr.message_id = m.id AND mr.user_id = ?)");
+    $stmt->execute([$parent_user_id, $parent_user_id]);
+    $row = $stmt->fetch();
+    $unread_count = (int)($row['cnt'] ?? 0);
 } catch (Exception $e) {
     error_log("Unread count error: " . $e->getMessage());
 }

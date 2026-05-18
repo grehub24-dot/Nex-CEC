@@ -1,5 +1,6 @@
 <?php
 require_once 'includes/db.php';
+require_once 'includes/functions.php';
 
 if (!isLoggedIn() || !isParentOrDual()) {
     redirect('../login.php');
@@ -85,6 +86,17 @@ foreach ($messages as &$m) {
     if (!$is_read) $unread_count++;
 }
 unset($m);
+
+// Fetch parent profile picture for sidebar
+$parent_profile_pic = null;
+try {
+    $stmt = $pdo->prepare("SELECT profile_picture FROM users WHERE id = ?");
+    $stmt->execute([$parent_user_id]);
+    $row = $stmt->fetch();
+    if ($row && !empty($row['profile_picture'])) {
+        $parent_profile_pic = $row['profile_picture'];
+    }
+} catch (Exception $e) {}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -97,13 +109,40 @@ unset($m);
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f6f9; color: #333; }
-        .top-bar {
-            background: #1a5276; color: white; padding: 15px 30px;
-            display: flex; align-items: center; justify-content: space-between;
+        .parent-container { display: flex; min-height: 100vh; }
+        .parent-main { flex: 1; padding: 30px; background: #f4f6f9; margin-left: 250px; }
+        .parent-sidebar {
+            width: 250px; background: #1a5276; color: white; position: fixed;
+            top: 0; left: 0; height: 100vh; overflow-y: auto; z-index: 100;
         }
-        .top-bar a { color: white; text-decoration: none; font-size: 14px; }
-        .top-bar a:hover { text-decoration: underline; }
-        .container { max-width: 800px; margin: 0 auto; padding: 30px 20px; }
+        .parent-sidebar .sidebar-header { padding: 25px 15px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .parent-sidebar .sidebar-header img { width: 64px; height: 64px; border-radius: 50%; background: white; padding: 3px; margin-bottom: 10px; }
+        .parent-sidebar .sidebar-header h3 { font-size: 15px; margin: 0; }
+        .parent-sidebar .sidebar-header p { font-size: 12px; opacity: 0.8; margin: 5px 0 0; }
+        .parent-sidebar ul { list-style: none; padding: 0; margin: 0; }
+        .parent-sidebar ul li { border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .parent-sidebar ul li a {
+            display: block; padding: 14px 20px; color: rgba(255,255,255,0.85); text-decoration: none;
+            font-size: 14px; transition: all 0.2s; position: relative;
+        }
+        .parent-sidebar ul li a:hover, .parent-sidebar ul li a.active { background: rgba(255,255,255,0.1); color: white; padding-left: 25px; }
+        .parent-sidebar ul li a i { width: 22px; text-align: center; margin-right: 8px; }
+        .parent-sidebar .msg-count {
+            position: absolute; right: 15px; top: 50%; transform: translateY(-50%);
+            background: #e74c3c; color: white; padding: 1px 8px;
+            border-radius: 10px; font-size: 11px; font-weight: 700; line-height: 1.5;
+            min-width: 20px; text-align: center;
+        }
+        .hamburger-menu { display: none; position: fixed; top: 15px; left: 15px; z-index: 200;
+            background: #1a5276; color: white; border: none; width: 40px; height: 40px;
+            border-radius: 8px; font-size: 18px; cursor: pointer;
+        }
+        @media (max-width: 768px) {
+            .parent-sidebar { left: -250px; transition: left 0.3s; }
+            .parent-sidebar.open { left: 0; }
+            .parent-main { margin-left: 0; padding: 20px; }
+            .hamburger-menu { display: block; }
+        }
         .page-header {
             background: white; border-radius: 12px; padding: 22px 28px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 25px;
@@ -156,20 +195,12 @@ unset($m);
     </style>
 </head>
 <body>
-    <div class="top-bar">
-        <div>
-            <a href="../parent/dashboard.php"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
-        </div>
-        <span>Parent Portal — <?php echo htmlspecialchars($school_name); ?></span>
-        <div style="display: flex; align-items: center; gap: 12px;">
-            <a href="../parent/profile.php" style="color: white; font-size: 13px;" title="My Profile"><i class="fas fa-user-cog"></i></a>
-            <?php if (isset($_SESSION['has_children']) && $_SESSION['has_children']): ?>
-            <a href="../admin/dashboard.php" style="color: white; font-size: 13px;"><i class="fas fa-chalkboard-teacher"></i> Staff Portal</a>
-            <?php endif; ?>
-        </div>
-    </div>
-
-    <div class="container">
+<div class="parent-container">
+    <?php
+    $profile_pic_path = $parent_profile_pic ? '../' . htmlspecialchars($parent_profile_pic) : '';
+    echo renderParentSidebar('messages', $school_name, $unread_count, $profile_pic_path, !empty($_SESSION['has_children']));
+    ?>
+    <div class="parent-main">
         <div class="page-header">
             <h2><i class="fas fa-envelope"></i> Messages</h2>
             <?php if ($unread_count > 0): ?>
@@ -215,6 +246,7 @@ unset($m);
             <a href="../parent/dashboard.php" class="btn"><i class="fas fa-home"></i> Back to Dashboard</a>
         </div>
     </div>
+</div>
 
     <script>
         function toggleMsg(header, msgId) {

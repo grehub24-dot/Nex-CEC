@@ -1,5 +1,6 @@
 <?php
 require_once 'includes/db.php';
+require_once 'includes/functions.php';
 
 if (!isLoggedIn() || !isParentOrDual()) {
     redirect('../login.php');
@@ -142,6 +143,35 @@ try {
         $guardian_phone = $row['guardian_phone_primary'];
     }
 } catch (Exception $e) {}
+
+// Fetch unread message count for sidebar badge
+$unread_count = 0;
+try {
+    $stmt = $pdo->prepare("SELECT id FROM messages WHERE receiver_id = ?");
+    $stmt->execute([$parent_user_id]);
+    $direct_ids = array_map(fn($r) => (int)$r['id'], $stmt->fetchAll());
+    $stmt = $pdo->prepare("SELECT id FROM messages WHERE is_broadcast = ?");
+    $stmt->execute([1]);
+    $broadcast_ids = array_map(fn($r) => (int)$r['id'], $stmt->fetchAll());
+    $all_msg_ids = array_unique(array_merge($direct_ids, $broadcast_ids));
+    $stmt = $pdo->prepare("SELECT message_id FROM message_reads WHERE user_id = ?");
+    $stmt->execute([$parent_user_id]);
+    $read_ids = array_map(fn($r) => (int)$r['message_id'], $stmt->fetchAll());
+    foreach (array_chunk($all_msg_ids, 50) as $chunk) {
+        if (empty($chunk)) continue;
+        $placeholders = implode(',', array_fill(0, count($chunk), '?'));
+        $stmt = $pdo->prepare("SELECT id FROM messages WHERE id IN ($placeholders) AND read_at IS NULL");
+        $stmt->execute($chunk);
+        $unread_direct = array_map(fn($r) => (int)$r['id'], $stmt->fetchAll());
+        foreach ($unread_direct as $uid) {
+            if (!in_array($uid, $read_ids)) $unread_count++;
+        }
+    }
+} catch (Exception $e) {
+    error_log("Unread count error: " . $e->getMessage());
+}
+
+// $profile_pic is already set above from user data
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -154,12 +184,41 @@ try {
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f6f9; color: #333; }
-        .top-bar {
-            background: #1a5276; color: white; padding: 15px 30px;
-            display: flex; align-items: center; justify-content: space-between;
+        .parent-container { display: flex; min-height: 100vh; }
+        .parent-main { flex: 1; padding: 30px; background: #f4f6f9; margin-left: 250px; }
+        .parent-sidebar {
+            width: 250px; background: #1a5276; color: white; position: fixed;
+            top: 0; left: 0; height: 100vh; overflow-y: auto; z-index: 100;
         }
-        .top-bar a { color: white; text-decoration: none; font-size: 14px; }
-        .container { max-width: 700px; margin: 0 auto; padding: 30px 20px; }
+        .parent-sidebar .sidebar-header { padding: 25px 15px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .parent-sidebar .sidebar-header img { width: 64px; height: 64px; border-radius: 50%; background: white; padding: 3px; margin-bottom: 10px; }
+        .parent-sidebar .sidebar-header h3 { font-size: 15px; margin: 0; }
+        .parent-sidebar .sidebar-header p { font-size: 12px; opacity: 0.8; margin: 5px 0 0; }
+        .parent-sidebar ul { list-style: none; padding: 0; margin: 0; }
+        .parent-sidebar ul li { border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .parent-sidebar ul li a {
+            display: block; padding: 14px 20px; color: rgba(255,255,255,0.85); text-decoration: none;
+            font-size: 14px; transition: all 0.2s; position: relative;
+        }
+        .parent-sidebar ul li a:hover, .parent-sidebar ul li a.active { background: rgba(255,255,255,0.1); color: white; padding-left: 25px; }
+        .parent-sidebar ul li a i { width: 22px; text-align: center; margin-right: 8px; }
+        .parent-sidebar .msg-count {
+            position: absolute; right: 15px; top: 50%; transform: translateY(-50%);
+            background: #e74c3c; color: white; padding: 1px 8px;
+            border-radius: 10px; font-size: 11px; font-weight: 700; line-height: 1.5;
+            min-width: 20px; text-align: center;
+        }
+        .hamburger-menu { display: none; position: fixed; top: 15px; left: 15px; z-index: 200;
+            background: #1a5276; color: white; border: none; width: 40px; height: 40px;
+            border-radius: 8px; font-size: 18px; cursor: pointer;
+        }
+        @media (max-width: 768px) {
+            .parent-sidebar { left: -250px; transition: left 0.3s; }
+            .parent-sidebar.open { left: 0; }
+            .parent-main { margin-left: 0; padding: 20px; }
+            .hamburger-menu { display: block; }
+        }
+        .profile-content-wrap { max-width: 700px; margin: 0 auto; }
         .card {
             background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);
             padding: 28px; margin-bottom: 20px;
@@ -213,19 +272,13 @@ try {
     </style>
 </head>
 <body>
-    <div class="top-bar">
-        <div>
-            <a href="../parent/dashboard.php" class="btn-back"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
-        </div>
-        <span>My Profile — <?php echo htmlspecialchars($school_name); ?></span>
-        <div>
-            <?php if (isset($_SESSION['has_children']) && $_SESSION['has_children']): ?>
-            <a href="../admin/dashboard.php" style="color: white; margin-left: 15px; font-size: 13px;"><i class="fas fa-chalkboard-teacher"></i> Staff Portal</a>
-            <?php endif; ?>
-        </div>
-    </div>
-
-    <div class="container">
+<div class="parent-container">
+    <?php
+    $profile_pic_path = $profile_pic ? '../' . htmlspecialchars($profile_pic) : '';
+    echo renderParentSidebar('profile', $school_name, $unread_count, $profile_pic_path, !empty($_SESSION['has_children']));
+    ?>
+    <div class="parent-main">
+    <div class="profile-content-wrap">
         <?php if ($message): ?>
             <div class="alert alert-success"><?php echo htmlspecialchars($message); ?></div>
         <?php endif; ?>
@@ -293,6 +346,8 @@ try {
             <a href="../parent/dashboard.php" style="color: #1a5276; font-size: 14px;"><i class="fas fa-home"></i> Back to Dashboard</a>
         </div>
     </div>
+</div>
+</div>
 
     <script>
         const fileInput = document.getElementById('profile_picture');

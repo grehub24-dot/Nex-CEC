@@ -451,6 +451,98 @@ function renderStaffSidebar($currentPage = '', $schoolName = 'Nex CEC', $unreadC
     return $html;
 }
 
+/**
+ * Render parent portal sidebar with hamburger and navigation.
+ * 
+ * @param string $currentPage  Key of the active page (dashboard, messages, profile, password, fees, student, report)
+ * @param string $schoolName   School name to display in header
+ * @param int    $unreadCount  Number of unread messages for badge
+ * @param string $profilePic   URL/path to profile picture
+ * @param bool   $hasChildren  Whether user has linked children (shows Staff Dashboard link)
+ * @return string HTML output
+ */
+function renderParentSidebar($currentPage = '', $schoolName = 'Nex CEC', $unreadCount = 0, $profilePic = '', $hasChildren = false) {
+    $html = '';
+    
+    // Hamburger button (visible on mobile)
+    $html .= '<button class="hamburger-menu" id="hamburgerBtn" onclick="document.getElementById(\'sidebar\').classList.toggle(\'open\')">';
+    $html .= '<i class="fas fa-bars"></i>';
+    $html .= '</button>';
+    
+    // Sidebar
+    $html .= '<aside class="parent-sidebar" id="sidebar">';
+    $html .= '<div class="sidebar-header">';
+    if (!empty($profilePic)) {
+        $html .= '<img src="' . htmlspecialchars($profilePic) . '" alt="Profile" onerror="this.src=\'../images/aamusted.jpg\'" style="width:64px;height:64px;border-radius:50%;background:white;padding:3px;margin-bottom:10px;object-fit:cover;">';
+    } else {
+        $html .= '<img src="../images/school-logo.png" alt="Logo" onerror="this.src=\'../images/aamusted.jpg\'">';
+    }
+    $html .= '<h3>' . htmlspecialchars($schoolName) . '</h3>';
+    $html .= '<p>Parent Portal</p>';
+    $html .= '</div>';
+    $html .= '<ul>';
+    
+    // Staff Dashboard link (for dual-role users who have children)
+    if ($hasChildren) {
+        $active = ($currentPage === 'staff_dashboard') ? ' class="active"' : '';
+        $html .= '<li><a href="../admin/dashboard.php"' . $active . '><i class="fas fa-chalkboard-teacher"></i> Staff Dashboard</a></li>';
+    }
+    
+    // My Children
+    $active = ($currentPage === 'dashboard') ? ' class="active"' : '';
+    $html .= '<li><a href="../parent/dashboard.php"' . $active . '><i class="fas fa-home"></i> My Children</a></li>';
+    
+    // Messages (with unread badge)
+    $active = ($currentPage === 'messages') ? ' class="active"' : '';
+    $html .= '<li><a href="../parent/messages.php"' . $active . '><i class="fas fa-envelope"></i> Messages';
+    if ($unreadCount > 0) {
+        $html .= ' <span class="msg-count">' . (int)$unreadCount . '</span>';
+    }
+    $html .= '</a></li>';
+    
+    // My Profile
+    $active = ($currentPage === 'profile') ? ' class="active"' : '';
+    $html .= '<li><a href="../parent/profile.php"' . $active . '><i class="fas fa-user-cog"></i> My Profile</a></li>';
+    
+    // Change Password
+    $active = ($currentPage === 'password') ? ' class="active"' : '';
+    $html .= '<li><a href="../parent/password-reset.php"' . $active . '><i class="fas fa-key"></i> Change Password</a></li>';
+    
+    // Logout
+    $html .= '<li><a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>';
+    
+    $html .= '</ul></aside>';
+    
+    // Mobile sidebar toggle script
+    $html .= '<script>
+    (function() {
+        var hamburger = document.getElementById("hamburgerBtn");
+        var sidebar = document.getElementById("sidebar");
+        if (!hamburger || !sidebar) return;
+        hamburger.addEventListener("click", function(e) {
+            e.stopPropagation();
+            sidebar.classList.toggle("open");
+        });
+        document.addEventListener("click", function(e) {
+            if (window.innerWidth <= 768 && !sidebar.contains(e.target) && !hamburger.contains(e.target)) {
+                sidebar.classList.remove("open");
+            }
+        });
+        var links = sidebar.querySelectorAll("a");
+        for (var i = 0; i < links.length; i++) {
+            links[i].addEventListener("click", function() {
+                if (window.innerWidth <= 768) sidebar.classList.remove("open");
+            });
+        }
+        document.addEventListener("keydown", function(e) {
+            if (e.key === "Escape") sidebar.classList.remove("open");
+        });
+    })();
+    </script>';
+    
+    return $html;
+}
+
 function redirect($url) {
     if (strpos($url, 'http') !== 0) {
         $basePath = defined('BASE_PATH') ? BASE_PATH : getBasePath();

@@ -1,5 +1,6 @@
 <?php
 require_once 'includes/db.php';
+require_once 'includes/functions.php';
 
 if (!isLoggedIn() || !isParentOrDual()) {
     redirect('../login.php');
@@ -220,40 +221,10 @@ try {
     </style>
 </head>
 <body>
-    <!-- Hamburger (mobile) -->
-    <button class="hamburger-menu" id="hamburgerBtn" onclick="document.getElementById('sidebar').classList.toggle('open')">
-        <i class="fas fa-bars"></i>
-    </button>
-
-    <!-- Sidebar -->
-    <aside class="parent-sidebar" id="sidebar">
-        <div class="sidebar-header">
-            <?php if ($parent_profile_pic): ?>
-                <img src="../<?php echo htmlspecialchars($parent_profile_pic); ?>" alt="Profile" style="width:64px; height:64px; border-radius:50%; background:white; padding:3px; margin-bottom:10px; object-fit:cover;">
-            <?php else: ?>
-                <img src="../images/school-logo.png" alt="Logo" onerror="this.src='../images/aamusted.jpg'">
-            <?php endif; ?>
-            <h3><?php echo htmlspecialchars($school_name); ?></h3>
-            <p>Parent Portal</p>
-        </div>
-        <ul>
-            <?php if (isset($_SESSION['has_children']) && $_SESSION['has_children']): ?>
-            <li><a href="../admin/dashboard.php"><i class="fas fa-chalkboard-teacher"></i> Staff Dashboard</a></li>
-            <?php endif; ?>
-            <li><a href="../parent/dashboard.php" class="active"><i class="fas fa-home"></i> My Children</a></li>
-            <li>
-                <a href="../parent/messages.php">
-                    <i class="fas fa-envelope"></i> Messages
-                    <?php if ($unread_count > 0): ?>
-                        <span class="msg-count"><?php echo $unread_count; ?></span>
-                    <?php endif; ?>
-                </a>
-            </li>
-            <li><a href="../parent/profile.php"><i class="fas fa-user-cog"></i> My Profile</a></li>
-            <li><a href="../parent/password-reset.php"><i class="fas fa-key"></i> Change Password</a></li>
-            <li><a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
-        </ul>
-    </aside>
+    <?php
+    $profile_pic_path = $parent_profile_pic ? '../' . htmlspecialchars($parent_profile_pic) : '';
+    echo renderParentSidebar('dashboard', $school_name, $unread_count, $profile_pic_path, !empty($_SESSION['has_children']));
+    ?>
 
     <!-- Main Content -->
     <div class="parent-main">

@@ -587,6 +587,31 @@ $total_pages = $total_rows > 0 ? (int)ceil($total_rows / $limit) : 1;
     </div>
 
     <script>
+        // Bulk delete functions
+        function toggleStaffAll(source) {
+            var checkboxes = document.querySelectorAll('.staff-checkbox');
+            for (var i = 0; i < checkboxes.length; i++) {
+                checkboxes[i].checked = source.checked;
+            }
+            updateStaffSelectedCount();
+        }
+
+        function updateStaffSelectedCount() {
+            var checkboxes = document.querySelectorAll('.staff-checkbox:checked');
+            document.getElementById('staffSelectedCount').textContent = checkboxes.length + ' selected';
+        }
+
+        function confirmStaffBulkDelete() {
+            var checkboxes = document.querySelectorAll('.staff-checkbox:checked');
+            if (checkboxes.length === 0) {
+                alert('Please select at least one staff member to delete.');
+                return;
+            }
+            if (confirm('Are you sure you want to delete ' + checkboxes.length + ' selected staff member(s)? This action cannot be undone.')) {
+                document.getElementById('staffBulkForm').submit();
+            }
+        }
+
         // Force close any stuck modal on load
         document.addEventListener('DOMContentLoaded', function() {
             const modal = document.getElementById("staffModal");

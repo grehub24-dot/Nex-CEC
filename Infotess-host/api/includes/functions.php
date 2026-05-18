@@ -1119,8 +1119,8 @@ function uploadStaffFile(array $file, string $bucket = 'staff_documents'): strin
         $fileContent = file_get_contents($file['tmp_name']);
         if ($fileContent === false) return '';
 
-        // Ensure bucket exists
-        try { $supabase->createBucket($bucket, ['public' => true]); } catch (Exception $e) {}
+        // Ensure bucket exists (second param is bool $public, not an options array)
+        try { $supabase->createBucket($bucket, true); } catch (Exception $e) {}
 
         $result = $supabase->uploadFile($bucket, $filePath, $fileContent, $ext === 'pdf' ? 'application/pdf' : mime_content_type($file['tmp_name']));
 

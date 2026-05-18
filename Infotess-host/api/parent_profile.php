@@ -139,6 +139,17 @@ try {
 }
 
 $profile_pic = $user['profile_picture'] ?? null;
+// Fallback: if user is also staff, check staff table for profile picture
+if (empty($profile_pic) && ($_SESSION['role'] ?? '') === 'staff') {
+    try {
+        $stmt = $pdo->prepare("SELECT profile_picture FROM staff WHERE user_id = ?");
+        $stmt->execute([$parent_user_id]);
+        $srow = $stmt->fetch();
+        if ($srow && !empty($srow['profile_picture'])) {
+            $profile_pic = $srow['profile_picture'];
+        }
+    } catch (Exception $e) {}
+}
 $user_email = $user['email'] ?? '';
 
 // Fetch first child's guardian phone as default

@@ -122,6 +122,15 @@ try {
     if ($row && !empty($row['profile_picture'])) {
         $parent_profile_pic = $row['profile_picture'];
     }
+    // Fallback: if user is also staff, check staff table
+    if (empty($parent_profile_pic) && ($_SESSION['role'] ?? '') === 'staff') {
+        $stmt = $pdo->prepare("SELECT profile_picture FROM staff WHERE user_id = ?");
+        $stmt->execute([$parent_user_id]);
+        $srow = $stmt->fetch();
+        if ($srow && !empty($srow['profile_picture'])) {
+            $parent_profile_pic = $srow['profile_picture'];
+        }
+    }
 } catch (Exception $e) {}
 ?>
 <!DOCTYPE html>

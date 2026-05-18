@@ -33,7 +33,7 @@ $prospectus_fee = $settings['prospectus_fee'] ?? '50.00';
 $form_fee = $settings['enrollment_form_fee'] ?? '20.00';
 
 $logoData = '';
-$logoPath = __DIR__ . '/images/school-logo.png';
+$logoPath = getSchoolLogoFilePath();
 if (file_exists($logoPath)) {
     $type = pathinfo($logoPath, PATHINFO_EXTENSION);
     $data = file_get_contents($logoPath);

@@ -21,6 +21,15 @@ if (isLoggedIn()) {
 
 $error = '';
 
+// Load settings for dynamic logo
+$settings = [];
+try {
+    $stmt = $pdo->query("SELECT setting_key, setting_value FROM system_settings");
+    while ($row = $stmt->fetch()) {
+        $settings[$row['setting_key']] = $row['setting_value'];
+    }
+} catch (Exception $e) {}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $identifier = trim($_POST['identifier'] ?? ''); // Email or Index Number
     $password = $_POST['password'] ?? '';
@@ -181,7 +190,7 @@ require_once 'includes/header.php';
 
 <div class="section">
     <div class="form-container" style="text-align: center;">
-        <img src="images/school-logo.png" alt="School Logo" style="width: 100px; margin-bottom: 20px;" onerror="this.src='images/aamusted.jpg'">
+        <img src="<?php echo htmlspecialchars($settings['school_logo_url'] ?? 'images/aamusted.jpg'); ?>" alt="School Logo" style="width: 100px; margin-bottom: 20px;" onerror="this.src='images/aamusted.jpg'">
         <h2 class="section-title">Login to Portal</h2>
         <?php if ($error): ?>
             <div class="alert alert-danger"><?php echo $error; ?></div>

@@ -12,7 +12,7 @@
     <meta name="theme-color" content="#003366">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="<?php echo $base_url; ?>images/school-logo.png">
+    <link rel="apple-touch-icon" href="<?php echo $base_url; ?>images/aamusted.jpg">
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
@@ -54,7 +54,7 @@
     <nav class="navbar" role="navigation" aria-label="Main navigation">
         <div class="container">
             <a href="<?php echo $base_url; ?>index.php" class="logo" aria-label="<?php echo htmlspecialchars($school_name); ?> Home">
-                <img src="<?php echo $base_url; ?>images/school-logo.png" alt="<?php echo htmlspecialchars($school_name); ?> Logo" height="40" onerror="this.style.display='none'"> <?php echo htmlspecialchars($school_name); ?>
+                <img src="<?php echo htmlspecialchars($settings['school_logo_url'] ?? $base_url . 'images/aamusted.jpg'); ?>" alt="<?php echo htmlspecialchars($school_name); ?> Logo" height="40" onerror="this.src='<?php echo $base_url; ?>images/aamusted.jpg'"> <?php echo htmlspecialchars($school_name); ?>
             </a>
             <ul class="nav-links" role="menubar">
                 <li role="none"><a href="<?php echo $base_url; ?>index.php" role="menuitem">Home</a></li>

@@ -144,7 +144,7 @@ require_once 'includes/header.php';
 
 <div class="section">
     <div class="form-container" style="text-align: center;">
-        <img src="images/school-logo.png" alt="School Logo" style="width: 100px; margin-bottom: 20px;" onerror="this.src='images/aamusted.jpg'">
+        <img src="<?php echo htmlspecialchars(($settings['school_logo_url'] ?? 'images/aamusted.jpg')); ?>" alt="School Logo" style="width: 100px; margin-bottom: 20px;" onerror="this.src='images/aamusted.jpg'">
         <h2 class="section-title">Forgot Password</h2>
         <p style="margin-bottom: 20px; color: #666;">Enter your Email or Index Number to receive a temporary password.</p>
         

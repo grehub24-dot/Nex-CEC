@@ -301,7 +301,8 @@ function renderSidebar($currentPage = '', $schoolName = 'Nex CEC') {
     $html .= '<aside class="sidebar" id="sidebar">';
     $html .= '<div class="sidebar-header position-relative" style="padding: 20px 10px;">';
     $html .= '<button class="sidebar-close-btn" id="sidebarCloseBtn" aria-label="Close menu"><i class="fas fa-times"></i></button>';
-    $html .= '<img src="../images/school-logo.png" alt="Logo" class="rounded-full mb-10" style="width: 80px; height: 80px; background: #fff; padding: 5px;" onerror="this.src=\'../images/aamusted.jpg\'">';
+    $logoUrl = getCachedSchoolLogoUrl();
+    $html .= '<img src="' . htmlspecialchars($logoUrl) . '" alt="Logo" class="rounded-full mb-10" style="width: 80px; height: 80px; background: #fff; padding: 5px;" onerror="this.src=\'../images/aamusted.jpg\'">';
     $html .= '<h3>' . htmlspecialchars($schoolName) . ' ' . $roleLabel . '</h3>';
     $html .= '</div>';
     $html .= '<ul class="sidebar-menu">';
@@ -385,7 +386,8 @@ function renderStaffSidebar($currentPage = '', $schoolName = 'Nex CEC', $unreadC
     if (!empty($profilePic)) {
         $html .= '<img src="' . htmlspecialchars(resolve_storage_url($profilePic, '')) . '" alt="Profile" onerror="this.src=\'../images/aamusted.jpg\'">';
     } else {
-        $html .= '<img src="../images/school-logo.png" alt="Logo" onerror="this.src=\'../images/aamusted.jpg\'">';
+        $logoUrl = getCachedSchoolLogoUrl();
+        $html .= '<img src="' . htmlspecialchars($logoUrl) . '" alt="Logo" onerror="this.src=\'../images/aamusted.jpg\'">';
     }
     $html .= '<h3>' . htmlspecialchars($schoolName) . '</h3>';
     $html .= '<p>' . ($staffName ? htmlspecialchars($staffName) : 'Staff Portal') . '</p>';
@@ -483,7 +485,8 @@ function renderParentSidebar($currentPage = '', $schoolName = 'Nex CEC', $unread
     if (!empty($profilePic)) {
         $html .= '<img src="' . htmlspecialchars($profilePic) . '" alt="Profile" onerror="this.src=\'../images/aamusted.jpg\'" style="width:64px;height:64px;border-radius:50%;background:white;padding:3px;margin-bottom:10px;object-fit:cover;">';
     } else {
-        $html .= '<img src="../images/school-logo.png" alt="Logo" onerror="this.src=\'../images/aamusted.jpg\'">';
+        $logoUrl = getCachedSchoolLogoUrl();
+        $html .= '<img src="' . htmlspecialchars($logoUrl) . '" alt="Logo" onerror="this.src=\'../images/aamusted.jpg\'">';
     }
     $html .= '<h3>' . htmlspecialchars($schoolName) . '</h3>';
     $html .= '<p>Parent Portal</p>';
@@ -704,6 +707,83 @@ function fetchSettings($pdo): array {
         error_log("fetchSettings: " . $e->getMessage());
     }
     return $settings;
+}
+
+// ==========================================
+// School Logo Helpers
+// ==========================================
+
+/**
+ * Get the school logo URL for use in <img src="..."> tags.
+ * Uses the uploaded logo from system_settings if available,
+ * otherwise falls back to the default image.
+ *
+ * @param array $settings The settings array (from fetchSettings or inline query)
+ * @param string $relativePath Relative prefix to the images folder (e.g. '../' or '')
+ * @return string The logo URL
+ */
+function getSchoolLogoUrl(array $settings = [], string $relativePath = '../'): string {
+    if (!empty($settings['school_logo_url'])) {
+        return $settings['school_logo_url'];
+    }
+    return $relativePath . 'images/aamusted.jpg';
+}
+
+/**
+ * Get the local filesystem path to the school logo for PDF/image generation.
+ * Falls back to aamusted.jpg if no local school-logo.png exists.
+ *
+ * @return string Absolute filesystem path
+ */
+function getSchoolLogoFilePath(): string {
+    $primaryPath = __DIR__ . '/../images/school-logo.png';
+    if (file_exists($primaryPath)) {
+        return $primaryPath;
+    }
+    $fallbackAamusted = __DIR__ . '/../images/aamusted.jpg';
+    if (file_exists($fallbackAamusted)) {
+        return $fallbackAamusted;
+    }
+    $fallbackInfotess = __DIR__ . '/../images/infotess.png';
+    if (file_exists($fallbackInfotess)) {
+        return $fallbackInfotess;
+    }
+    return $primaryPath; // last resort, will fail gracefully
+}
+
+/**
+ * Get the school logo URL with database caching.
+ * Queries system_settings once per request and caches in a static variable.
+ * Used by sidebar render functions to show the uploaded logo.
+ */
+function getCachedSchoolLogoUrl(): string {
+    static $url = null;
+    if ($url !== null) {
+        return $url;
+    }
+    // Check if stored in session first (faster)
+    if (!empty($_SESSION['school_logo_url'])) {
+        $url = $_SESSION['school_logo_url'];
+        return $url;
+    }
+    // Fall back to DB query
+    try {
+        global $pdo;
+        if (isset($pdo)) {
+            $stmt = $pdo->prepare("SELECT setting_value FROM system_settings WHERE setting_key = ?");
+            $stmt->execute(['school_logo_url']);
+            $row = $stmt->fetch();
+            if ($row && !empty($row['setting_value'])) {
+                $url = $row['setting_value'];
+                $_SESSION['school_logo_url'] = $url; // cache in session
+                return $url;
+            }
+        }
+    } catch (Exception $e) {
+        error_log("getCachedSchoolLogoUrl: " . $e->getMessage());
+    }
+    $url = '../images/aamusted.jpg';
+    return $url;
 }
 
 // ==========================================

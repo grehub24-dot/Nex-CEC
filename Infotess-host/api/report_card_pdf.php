@@ -145,7 +145,7 @@ $receiptNumber = 'RC-' . $student['admission_number'] . '-T' . $selected_term['n
 
 // Convert logo to base64 for PDF HTML
 $logoData = '';
-$logoPath = __DIR__ . '/../images/school-logo.png';
+$logoPath = getSchoolLogoFilePath();
 if (file_exists($logoPath)) {
     $type = pathinfo($logoPath, PATHINFO_EXTENSION);
     $data = file_get_contents($logoPath);

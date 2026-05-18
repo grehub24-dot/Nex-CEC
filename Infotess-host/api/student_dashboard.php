@@ -78,7 +78,7 @@ $status_text = $outstanding <= 0 ? 'Fully Paid' : 'Outstanding';
         <!-- Sidebar -->
         <aside class="sidebar">
             <div class="sidebar-header text-center" style="padding: 20px 10px;">
-                <img src="../images/school-logo.png" alt="Logo" class="rounded-full mb-10" style="width: 60px; height: 60px; background: #fff; padding: 5px;" onerror="this.src='../images/aamusted.jpg'">
+                <img src="<?php echo htmlspecialchars($settings['school_logo_url'] ?? '../images/aamusted.jpg'); ?>" alt="Logo" class="rounded-full mb-10" style="width: 60px; height: 60px; background: #fff; padding: 5px;" onerror="this.src='../images/aamusted.jpg'">
                 <h3 style="font-size:15px;">My Portal</h3>
             </div>
                         <ul class="sidebar-menu">

@@ -50,7 +50,7 @@ $className = htmlspecialchars($student['class_name'] ?? 'N/A');
 
 // Convert local image to base64 for display
 $logoData = '';
-$logoPath = __DIR__ . '/images/school-logo.png';
+$logoPath = getSchoolLogoFilePath();
 if (file_exists($logoPath)) {
     $type = pathinfo($logoPath, PATHINFO_EXTENSION);
     $data = file_get_contents($logoPath);

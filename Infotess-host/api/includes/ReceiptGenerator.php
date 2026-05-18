@@ -16,7 +16,7 @@ class ReceiptGenerator {
         $filepath = $directory . $filename;
 
         // Convert local image to base64 for email compatibility
-        $logoPath = __DIR__ . '/../images/school-logo.png';
+        $logoPath = getSchoolLogoFilePath();
         $logoData = '';
         if (file_exists($logoPath)) {
             $type = pathinfo($logoPath, PATHINFO_EXTENSION);

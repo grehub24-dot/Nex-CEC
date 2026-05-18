@@ -45,6 +45,77 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
+// Handle Logo Upload
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'upload_logo') {
+    validate_request_csrf();
+    if (isset($_FILES['school_logo']) && $_FILES['school_logo']['error'] === UPLOAD_ERR_OK) {
+        $file = $_FILES['school_logo'];
+        // Validate file size (max 2MB)
+        if ($file['size'] > 2 * 1024 * 1024) {
+            $error = "File too large. Maximum size is 2MB.";
+        } else {
+            $allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+            $finfo = @finfo_open(FILEINFO_MIME_TYPE);
+            $mime = $finfo ? finfo_file($finfo, $file['tmp_name']) : '';
+            @finfo_close($finfo);
+            if (!in_array($mime, $allowed_types)) {
+                $error = "Invalid file type. Only JPG, PNG, GIF, WebP, and SVG images are allowed.";
+            } else {
+                try {
+                    $ext = pathinfo($file['name'], PATHINFO_EXTENSION) ?: 'png';
+                    $file_name = 'school_logo_' . time() . '_' . uniqid() . '.' . $ext;
+                    $fileData = file_get_contents($file['tmp_name']);
+                    
+                    global $supabase;
+                    if (!$supabase || !($supabase instanceof SupabaseClient)) {
+                        $error = "Upload service not available.";
+                    } else {
+                        try {
+                            $supabase->uploadFile('logos', $file_name, $fileData, $mime);
+                        } catch (Exception $e) {
+                            if (strpos($e->getMessage(), 'Bucket not found') !== false) {
+                                $supabase->createBucket('logos');
+                                $supabase->uploadFile('logos', $file_name, $fileData, $mime);
+                            } else {
+                                throw $e;
+                            }
+                        }
+                        $logoUrl = $supabase->getPublicUrl('logos', $file_name);
+                        
+                        // Save to system_settings
+                        $existing = $pdo->prepare("SELECT setting_key FROM system_settings WHERE setting_key = ?");
+                        $existing->execute(['school_logo_url']);
+                        if ($existing->fetch()) {
+                            $stmt = $pdo->prepare("UPDATE system_settings SET setting_value = ? WHERE setting_key = ?");
+                            $stmt->execute([$logoUrl, 'school_logo_url']);
+                        } else {
+                            $stmt = $pdo->prepare("INSERT INTO system_settings (setting_key, setting_value) VALUES (?, ?)");
+                            $stmt->execute(['school_logo_url', $logoUrl]);
+                        }
+                        
+                        $message = "School logo updated successfully!";
+                    }
+                } catch (Exception $e) {
+                    $error = "Upload failed: " . $e->getMessage();
+                }
+            }
+        }
+    } else {
+        $error = "No file selected or upload error.";
+    }
+}
+
+// Handle Logo Removal
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'remove_logo') {
+    validate_request_csrf();
+    try {
+        $pdo->prepare("DELETE FROM system_settings WHERE setting_key = ?")->execute(['school_logo_url']);
+        $message = "School logo removed. Default logo will be used.";
+    } catch (Exception $e) {
+        $error = "Error removing logo: " . $e->getMessage();
+    }
+}
+
 // Fetch Current Settings
 $settings = [];
 $stmt = $pdo->query("SELECT setting_key, setting_value FROM system_settings");
@@ -200,6 +271,43 @@ $settings = array_merge($defaults, $settings);
                             <div class="setting-item" style="border-left-color: #e74c3c;">
                                 <span class="setting-label">Enrollment Form Fee</span>
                                 <span class="setting-value">GHS <?php echo htmlspecialchars($settings['enrollment_form_fee'] ?? '20.00'); ?></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- School Logo Section -->
+                <div class="card" style="margin-top: 20px;">
+                    <div class="card-header">
+                        <h3>School Logo</h3>
+                    </div>
+                    <div class="card-content">
+                        <div style="display: flex; align-items: center; gap: 30px; flex-wrap: wrap;">
+                            <div style="text-align: center;">
+                                <p style="margin-bottom: 10px; color: #555; font-weight: 500;">Current Logo</p>
+                                <img src="<?php echo htmlspecialchars($settings['school_logo_url'] ?? '../images/aamusted.jpg'); ?>" 
+                                     alt="School Logo" 
+                                     style="max-width: 180px; max-height: 120px; border: 2px solid #ddd; border-radius: 8px; padding: 8px; background: #fff;"
+                                     onerror="this.src='../images/aamusted.jpg'">
+                            </div>
+                            <div>
+                                <p style="color: #666; margin-bottom: 10px; font-size: 0.9em;">
+                                    <i class="fas fa-info-circle"></i> Upload a new logo (JPG, PNG, GIF, WebP, SVG — max 2MB).
+                                    The logo will be used across the system (login page, header, PDF receipts).
+                                </p>
+                                <form action="settings.php" method="POST" enctype="multipart/form-data" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                                    <input type="hidden" name="action" value="upload_logo">
+                                    <?php csrf_field(); ?>
+                                    <input type="file" name="school_logo" accept="image/*" required style="padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9em;">
+                                    <button type="submit" class="btn-primary" style="padding: 8px 20px;"><i class="fas fa-upload"></i> Upload Logo</button>
+                                </form>
+                                <?php if (!empty($settings['school_logo_url'])): ?>
+                                    <form action="settings.php" method="POST" style="display: inline-block; margin-top: 8px;" onsubmit="return confirm('Remove the custom school logo and revert to default?')">
+                                        <input type="hidden" name="action" value="remove_logo">
+                                        <?php csrf_field(); ?>
+                                        <button type="submit" class="btn-danger" style="padding: 5px 15px; font-size: 0.85em;"><i class="fas fa-trash"></i> Remove Logo</button>
+                                    </form>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>

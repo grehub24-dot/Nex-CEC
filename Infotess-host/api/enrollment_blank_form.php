@@ -21,7 +21,7 @@ $form_fee = $settings['enrollment_form_fee'] ?? '20.00';
 
 // Convert logo to base64 for print
 $logoData = '';
-$logoPath = __DIR__ . '/images/school-logo.png';
+$logoPath = getSchoolLogoFilePath();
 if (file_exists($logoPath)) {
     $type = pathinfo($logoPath, PATHINFO_EXTENSION);
     $data = file_get_contents($logoPath);

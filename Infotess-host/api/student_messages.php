@@ -123,7 +123,7 @@ usort($direct_messages, function($a, $b) {
         <!-- Sidebar -->
         <aside class="sidebar">
             <div class="sidebar-header" style="text-align:center; padding: 20px 10px;">
-                <img src="../images/school-logo.png" alt="Logo" style="width: 60px; height: 60px; margin-bottom: 8px; border-radius: 50%; background: #fff; padding: 5px;" onerror="this.src='../images/aamusted.jpg'">
+                <img src="<?php echo htmlspecialchars(getCachedSchoolLogoUrl()); ?>" alt="Logo" style="width: 60px; height: 60px; margin-bottom: 8px; border-radius: 50%; background: #fff; padding: 5px;" onerror="this.src='../images/aamusted.jpg'">
                 <h3 style="font-size:15px;">My Portal</h3>
             </div>
                                     <ul class="sidebar-menu">

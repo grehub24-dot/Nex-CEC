@@ -248,7 +248,7 @@ class LegacyStatement {
                 }
                 $this->affectedRows = is_array($this->result) ? count($this->result) : 1;
             } elseif ($this->isDelete) {
-                // DELETE FROM table WHERE id = ?
+                // DELETE FROM table WHERE id = ?  OR  DELETE FROM table WHERE id IN (?, ?, ?)
                 preg_match_all('/WHERE\s+([\s\S]+?)(\s+ORDER|\s+LIMIT|$)/i', $this->sql, $whereMatches);
                 
                 $query = $this->client->table($this->table);
@@ -256,16 +256,37 @@ class LegacyStatement {
                 if (!empty($whereMatches[1])) {
                     $conditions = explode(' AND ', $whereMatches[1][0]);
                     foreach ($conditions as $cond) {
-                        $parts = preg_split('/\s*=\s*/', trim($cond));
-                        if (count($parts) === 2) {
-                            $col = preg_replace('/^\w+\./', '', $parts[0]); // strip table alias
-                            $val = trim($parts[1]);
-                            if ($val === '?') {
-                                $paramVal = $this->params[$paramIndex] ?? null;
-                                if ($paramVal !== null && $paramVal !== '') {
-                                    $query = $query->where($col, $paramVal);
+                        $cond = trim($cond);
+                        // Handle: col IN (?, ?, ?)
+                        if (preg_match('/^(\w+)\s+IN\s*\(([^)]+)\)$/i', $cond, $inMatch)) {
+                            $col = $inMatch[1];
+                            $inParts = array_map('trim', explode(',', $inMatch[2]));
+                            $inValues = [];
+                            foreach ($inParts as $part) {
+                                if ($part === '?') {
+                                    $pv = $this->params[$paramIndex] ?? null;
+                                    if ($pv !== null && $pv !== '') {
+                                        $inValues[] = $pv;
+                                    }
+                                    $paramIndex++;
                                 }
-                                $paramIndex++;
+                            }
+                            if (!empty($inValues)) {
+                                $query = $query->in($col, $inValues);
+                            }
+                        } else {
+                            // Handle: col = ?
+                            $parts = preg_split('/\s*=\s*/', $cond);
+                            if (count($parts) === 2) {
+                                $col = preg_replace('/^\w+\./', '', $parts[0]); // strip table alias
+                                $val = trim($parts[1]);
+                                if ($val === '?') {
+                                    $paramVal = $this->params[$paramIndex] ?? null;
+                                    if ($paramVal !== null && $paramVal !== '') {
+                                        $query = $query->where($col, $paramVal);
+                                    }
+                                    $paramIndex++;
+                                }
                             }
                         }
                     }

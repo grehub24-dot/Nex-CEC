@@ -46,7 +46,7 @@ $billGen->generate($student, $fees, $total, $school_name);
 
 // Render bill HTML directly (no redirect to static file — Vercel compatible)
 $logoData = '';
-$logoPath = __DIR__ . '/images/school-logo.png';
+$logoPath = getSchoolLogoFilePath();
 if (file_exists($logoPath)) {
     $type = pathinfo($logoPath, PATHINFO_EXTENSION);
     $data = file_get_contents($logoPath);

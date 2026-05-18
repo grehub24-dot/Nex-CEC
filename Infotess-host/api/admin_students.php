@@ -234,6 +234,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $userId = $stu_row ? ($stu_row['user_id'] ?? null) : null;
 
         $pdo->beginTransaction();
+
+        // Delete messages referencing this user to avoid FK violations
+        if ($userId) {
+            $pdo->prepare("DELETE FROM messages WHERE sender_id = ? OR receiver_id = ?")->execute([$userId, $userId]);
+        }
+
         // Delete the student record
         $pdo->prepare("DELETE FROM students WHERE id = ?")->execute([$studentId]);
 
@@ -247,6 +253,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     } catch (Exception $e) {
         $pdo->rollBack();
         $error = "Error deleting student: " . $e->getMessage();
+    }
+}
+
+// Handle Bulk Delete Students
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'bulk_delete_students') {
+    validate_request_csrf();
+    $ids = $_POST['student_ids'] ?? [];
+    if (!empty($ids) && is_array($ids)) {
+        $deleted_count = 0;
+        $error_count = 0;
+        foreach ($ids as $rawId) {
+            $studentId = (int)$rawId;
+            if ($studentId <= 0) continue;
+            try {
+                $stmt = $pdo->prepare("SELECT * FROM students WHERE id = ?");
+                $stmt->execute([$studentId]);
+                $stu_row = $stmt->fetch();
+                $userId = $stu_row ? ($stu_row['user_id'] ?? null) : null;
+                $pdo->beginTransaction();
+
+                // Delete messages referencing this user to avoid FK violations
+                if ($userId) {
+                    $pdo->prepare("DELETE FROM messages WHERE sender_id = ? OR receiver_id = ?")->execute([$userId, $userId]);
+                }
+
+                $pdo->prepare("DELETE FROM students WHERE id = ?")->execute([$studentId]);
+                if ($userId) {
+                    $pdo->prepare("DELETE FROM users WHERE id = ?")->execute([$userId]);
+                }
+                $pdo->commit();
+                $deleted_count++;
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                $error_count++;
+            }
+        }
+        $message = "$deleted_count student(s) deleted successfully.";
+        if ($error_count > 0) {
+            $message .= " $error_count failed.";
+        }
     }
 }
 
@@ -593,61 +639,77 @@ $total_pages = $total_rows > 0 ? (int)ceil($total_rows / $limit) : 1;
 
             <!-- Student List -->
             <div class="section">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
                     <h3>Registered Students</h3>
-                    <form action="students.php" method="GET" style="display:flex; gap:10px;">
-                        <input type="text" name="search" placeholder="Search name or admission number..." class="form-control" value="<?php echo htmlspecialchars($search); ?>">
-                        <button type="submit" class="btn-login"><i class="fas fa-search"></i></button>
-                    </form>
+                    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                        <form action="students.php" method="GET" style="display:flex; gap:10px;">
+                            <input type="text" name="search" placeholder="Search name or admission number..." class="form-control" value="<?php echo htmlspecialchars($search); ?>">
+                            <button type="submit" class="btn-login"><i class="fas fa-search"></i></button>
+                        </form>
+                    </div>
                 </div>
-                
-                <div class="table-responsive">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Photo</th>
-                                <th>Adm. No.</th>
-                                <th>Name</th>
-                                <th>Class</th>
-                                <th>Gender</th>
-                                <th>Guardian</th>
-                                <th>Primary Phone</th>
-                                <th>Academic Year</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($students as $student): ?>
-                            <tr>
-                                <td>
-                                    <img src="<?php echo resolve_storage_url($student['profile_picture'] ?? ''); ?>" alt="Profile" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 1px solid #ddd;">
-                                </td>
-                                <td><strong><?php echo htmlspecialchars($student['admission_number']); ?></strong></td>
-                                <td><?php echo htmlspecialchars($student['full_name']); ?></td>
-                                <td><?php echo htmlspecialchars($student['class_name'] ?? '-'); ?></td>
-                                <td><?php echo htmlspecialchars($student['gender'] ?? '-'); ?></td>
-                                <td>
-                                    <?php echo htmlspecialchars($student['guardian_name'] ?? '-'); ?>
-                                    <?php if (!empty($student['guardian_relationship'])): ?>
-                                        <br><small style="color:#666;">(<?php echo htmlspecialchars($student['guardian_relationship']); ?>)</small>
-                                    <?php endif; ?>
-                                </td>
-                                <td>
-                                    <?php echo htmlspecialchars($student['guardian_phone_primary'] ?? '-'); ?>
-                                    <?php if (!empty($student['guardian_phone_emergency'])): ?>
-                                        <br><small style="color:#e74c3c;">Emer: <?php echo htmlspecialchars($student['guardian_phone_emergency']); ?></small>
-                                    <?php endif; ?>
-                                </td>
-                                <td><small><?php echo htmlspecialchars($student['academic_year'] ?? '-'); ?></small></td>
-                                <td>
-                                    <a href="edit_student.php?id=<?php echo $student['id']; ?>" class="btn-login" style="background:#f0ad4e;">Edit</a>
-                                    <button type="button" class="btn-login" style="background:#e74c3c; color:#fff; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:12px;" onclick="showDeleteConfirm(<?php echo $student['id']; ?>, '<?php echo htmlspecialchars(addslashes($student['full_name']), ENT_QUOTES, 'UTF-8'); ?>')"><i class="fas fa-trash"></i> Delete</button>
-                                </td>
-                            </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
+
+                <!-- Bulk Delete Toolbar -->
+                <form method="POST" action="students.php" id="studentBulkForm">
+                    <input type="hidden" name="action" value="bulk_delete_students">
+                    <?php csrf_field(); ?>
+                    <div style="margin-bottom:15px; display:flex; align-items:center; gap:10px;">
+                        <button type="button" onclick="confirmStudentBulkDelete()" class="btn-login" style="background:#e74c3c; color:#fff; border:none; padding:8px 16px; border-radius:4px; cursor:pointer; font-size:0.9rem;">
+                            <i class="fas fa-trash"></i> Delete Selected
+                        </button>
+                        <span id="studentSelectedCount" style="color:#666; font-size:0.85rem;">0 selected</span>
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table class="table" id="studentTable">
+                            <thead>
+                                <tr>
+                                    <th style="width:40px;"><input type="checkbox" id="studentSelectAll" onchange="toggleStudentAll(this)"></th>
+                                    <th>Photo</th>
+                                    <th>Adm. No.</th>
+                                    <th>Name</th>
+                                    <th>Class</th>
+                                    <th>Gender</th>
+                                    <th>Guardian</th>
+                                    <th>Primary Phone</th>
+                                    <th>Academic Year</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($students as $student): ?>
+                                <tr>
+                                    <td style="text-align:center;"><input type="checkbox" name="student_ids[]" value="<?php echo $student['id']; ?>" class="student-checkbox" onchange="updateStudentSelectedCount()"></td>
+                                    <td>
+                                        <img src="<?php echo resolve_storage_url($student['profile_picture'] ?? ''); ?>" alt="Profile" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 1px solid #ddd;">
+                                    </td>
+                                    <td><strong><?php echo htmlspecialchars($student['admission_number']); ?></strong></td>
+                                    <td><?php echo htmlspecialchars($student['full_name']); ?></td>
+                                    <td><?php echo htmlspecialchars($student['class_name'] ?? '-'); ?></td>
+                                    <td><?php echo htmlspecialchars($student['gender'] ?? '-'); ?></td>
+                                    <td>
+                                        <?php echo htmlspecialchars($student['guardian_name'] ?? '-'); ?>
+                                        <?php if (!empty($student['guardian_relationship'])): ?>
+                                            <br><small style="color:#666;">(<?php echo htmlspecialchars($student['guardian_relationship']); ?>)</small>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <?php echo htmlspecialchars($student['guardian_phone_primary'] ?? '-'); ?>
+                                        <?php if (!empty($student['guardian_phone_emergency'])): ?>
+                                            <br><small style="color:#e74c3c;">Emer: <?php echo htmlspecialchars($student['guardian_phone_emergency']); ?></small>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td><small><?php echo htmlspecialchars($student['academic_year'] ?? '-'); ?></small></td>
+                                    <td>
+                                        <a href="edit_student.php?id=<?php echo $student['id']; ?>" class="btn-login" style="background:#f0ad4e;">Edit</a>
+                                        <button type="button" class="btn-login" style="background:#e74c3c; color:#fff; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:12px;" onclick="showDeleteConfirm(<?php echo $student['id']; ?>, '<?php echo htmlspecialchars(addslashes($student['full_name']), ENT_QUOTES, 'UTF-8'); ?>')"><i class="fas fa-trash"></i> Delete</button>
+                                    </td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </form>
 
                 <!-- Pagination -->
                 <?php if ($total_pages > 1): ?>
@@ -692,6 +754,27 @@ $total_pages = $total_rows > 0 ? (int)ceil($total_rows / $limit) : 1;
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') closeDeleteModal();
         });
+
+        // ========================================
+        // BULK DELETE FUNCTIONS
+        // ========================================
+        function toggleStudentAll(master) {
+            var cbs = document.querySelectorAll('.student-checkbox');
+            cbs.forEach(function(cb) { cb.checked = master.checked; });
+            updateStudentSelectedCount();
+        }
+        function updateStudentSelectedCount() {
+            var cbs = document.querySelectorAll('.student-checkbox:checked');
+            var el = document.getElementById('studentSelectedCount');
+            if (el) el.textContent = cbs.length + ' selected';
+        }
+        function confirmStudentBulkDelete() {
+            var cbs = document.querySelectorAll('.student-checkbox:checked');
+            if (cbs.length === 0) { alert('No students selected.'); return; }
+            if (confirm('Delete ' + cbs.length + ' selected student(s)? This will also remove their guardian accounts and cannot be undone.')) {
+                document.getElementById('studentBulkForm').submit();
+            }
+        }
 
         // ========================================
         // ADD STUDENT MODAL

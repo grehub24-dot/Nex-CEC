@@ -68,7 +68,7 @@ class Mailer {
             $mail->AltBody = strip_tags($html);
 
             $mail->send();
-            return $filename; // Return filename on success like original
+            return $filename !== null ? $filename : true; // Return filename if saved, true otherwise
 
         } catch (Exception $e) {
             error_log("Gmail SMTP Email Error: {$mail->ErrorInfo}");

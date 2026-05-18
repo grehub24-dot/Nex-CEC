@@ -92,7 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     // Send invite
                     $inviteResult = sendStaffInvite($staff_id_inserted, $user_id, (int)$_SESSION['user_id'], $email, $phone, $full_name);
                     if ($inviteResult['success']) {
-                        $message = "Staff member added and invite sent to <strong>" . htmlspecialchars($email) . "</strong> and <strong>" . htmlspecialchars($phone) . "</strong>.";
+                        $message = "Staff member added. " . $inviteResult['message'] . " <a href='staff.php' style='color:#27ae60;'>Back to staff list</a>";
                     } else {
                         $message = "Staff member added! However, invite sending failed: " . $inviteResult['message'];
                     }
@@ -155,7 +155,7 @@ if (isset($_GET['resend_invite']) && is_numeric($_GET['resend_invite'])) {
         if ($staffRow) {
             $result = sendStaffInvite($staffId, (int)$staffRow['user_id'], (int)$_SESSION['user_id'], $staffRow['email'] ?? '', $staffRow['phone'] ?? '', $staffRow['full_name'] ?? '');
             if ($result['success']) {
-                $message = "Invite resent successfully to " . htmlspecialchars($staffRow['email'] ?? $staffRow['phone'] ?? '') . ".";
+                $message = $result['message']; // Show actual delivery result (success details or delivery failure)
             } else {
                 $error = "Failed to resend invite: " . $result['message'];
             }

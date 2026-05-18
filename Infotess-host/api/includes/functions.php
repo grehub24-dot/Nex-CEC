@@ -482,7 +482,7 @@ function renderParentSidebar($currentPage = '', $schoolName = 'Nex CEC', $unread
         $html .= '<img src="' . htmlspecialchars($profilePic) . '" alt="Profile" class="sidebar-profile-img" onerror="this.src=\'../images/aamusted.jpg\'" style="width:64px;height:64px;border-radius:50%;background:white;padding:3px;margin-bottom:10px;object-fit:cover;">';
     } else {
         $logoUrl = getCachedSchoolLogoUrl();
-        $html .= '<img src="' . htmlspecialchars($logoUrl) . '" alt="Logo" class="sidebar-logo-img" onerror="this.src=\'../images/aamusted.jpg\'">';
+        $html .= '<img src="' . htmlspecialchars($logoUrl) . '" alt="Logo" style="width:64px;height:64px;border-radius:50%;object-fit:cover;background:white;padding:3px;margin-bottom:10px;" onerror="this.src=\'../images/aamusted.jpg\'">';
     }
     $html .= '<h3>' . htmlspecialchars($schoolName) . '</h3>';
     $html .= '<p>Parent Portal</p>';

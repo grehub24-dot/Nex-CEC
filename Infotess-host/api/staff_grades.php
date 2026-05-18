@@ -286,7 +286,6 @@ if (!empty($students)) {
         }
         .staff-sidebar .sidebar-header { padding: 25px 15px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
         .staff-sidebar .sidebar-header img.sidebar-profile-img { width: 64px; height: 64px; border-radius: 50%; background: white; padding: 3px; margin-bottom: 10px; object-fit: cover; }
-        .staff-sidebar .sidebar-header img.sidebar-logo-img { max-width: 120px; max-height: 56px; width: auto; height: auto; object-fit: contain; background: white; padding: 4px 8px; border-radius: 6px; margin-bottom: 10px; display: inline-block; }
         .staff-sidebar .sidebar-header h3 { font-size: 15px; margin: 0; }
         .staff-sidebar .sidebar-header p { font-size: 12px; opacity: 0.8; margin: 5px 0 0; }
         .staff-sidebar ul { list-style: none; padding: 0; margin: 0; }

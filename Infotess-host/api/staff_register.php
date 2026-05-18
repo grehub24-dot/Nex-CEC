@@ -62,7 +62,10 @@ if (!empty($token)) {
 }
 
 // Handle form submission
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && $staff && isset($_POST['register'])) {
+// NOTE: We check $_POST['password'] instead of $_POST['register'] because
+// the JS disables the submit button before the request completes, and some
+// browsers omit disabled button name/values from POST data.
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $staff && !empty($_POST['password'])) {
     $gender = $_POST['gender'] ?? '';
     $dateOfBirth = $_POST['date_of_birth'] ?? '';
     $address = $_POST['address'] ?? '';
@@ -358,7 +361,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $staff && isset($_POST['register'])
                 <i class="fas fa-exclamation-circle"></i> <?php echo htmlspecialchars($error); ?>
                 <?php if (strpos($error, 'expired') !== false || strpos($error, 'Invalid') !== false || strpos($error, 'already') !== false): ?>
                     <div class="login-link" style="margin-top:10px;">
-                        <a href="login.php"><i class="fas fa-sign-in-alt"></i> Go to Login</a>
+                        <a href="/login.php"><i class="fas fa-sign-in-alt"></i> Go to Login</a>
                     </div>
                 <?php endif; ?>
             </div>
@@ -368,7 +371,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $staff && isset($_POST['register'])
             <div class="success-box">
                 <i class="fas fa-check-circle"></i> <?php echo htmlspecialchars($success); ?>
                 <div class="login-link" style="margin-top:15px;">
-                    <a href="login.php" style="background:#1a5276; color:white; padding:10px 24px; border-radius:6px; display:inline-block; text-decoration:none;">
+                    <a href="/login.php" style="background:#1a5276; color:white; padding:10px 24px; border-radius:6px; display:inline-block; text-decoration:none;">
                         <i class="fas fa-sign-in-alt"></i> Go to Login
                     </a>
                 </div>
@@ -491,7 +494,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $staff && isset($_POST['register'])
             </form>
 
             <div class="login-link">
-                <p><small>Already registered? <a href="login.php">Log in</a></small></p>
+                <p><small>Already registered? <a href="/login.php">Log in</a></small></p>
             </div>
 
             <script>

@@ -85,6 +85,9 @@ $routes["staff/student_attendance.php"] = "admin_attendance.php";
 // Staff self-registration (via invite token, no auth required)
 $routes["staff/register.php"] = "staff_register.php";
 
+// Staff login (same as root login — route alias avoids 404 when accessed from /staff/ subdirectory)
+$routes["staff/login.php"] = "login.php";
+
 // Parent routes
 $parentPages = ['dashboard', 'student', 'fees', 'report_card', 'messages', 'profile', 'password-reset'];
 foreach ($parentPages as $page) {

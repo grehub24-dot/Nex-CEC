@@ -152,6 +152,10 @@ try {
             display: flex; align-items: center; justify-content: center;
             color: white; font-size: 20px; font-weight: bold; flex-shrink: 0;
         }
+        .child-card .card-header .avatar-img {
+            width: 50px; height: 50px; border-radius: 50%; object-fit: cover;
+            flex-shrink: 0; border: 2px solid #1a5276;
+        }
         .child-card .card-header .info { flex: 1; }
         .child-card .card-header .info h4 { font-size: 16px; margin: 0; color: #1a5276; }
         .child-card .card-header .info p { font-size: 13px; color: #888; margin: 2px 0 0; }
@@ -270,7 +274,12 @@ try {
                 ?>
                     <div class="child-card">
                         <div class="card-header">
-                            <div class="avatar"><?php echo htmlspecialchars($initial); ?></div>
+                            <?php if (!empty($child['profile_picture'])): ?>
+                                <img src="<?php echo htmlspecialchars(resolve_storage_url($child['profile_picture'] ?? null)); ?>" alt="Profile" class="avatar-img" id="child-avatar-<?php echo $child['id']; ?>" onerror="var fb=document.getElementById('child-avatar-fb-<?php echo $child['id']; ?>');if(fb){fb.style.display='flex';}this.style.display='none';">
+                                <div class="avatar" id="child-avatar-fb-<?php echo $child['id']; ?>" style="display:none;"><?php echo htmlspecialchars($initial); ?></div>
+                            <?php else: ?>
+                                <div class="avatar"><?php echo htmlspecialchars($initial); ?></div>
+                            <?php endif; ?>
                             <div class="info">
                                 <h4><?php echo htmlspecialchars($child['full_name'] ?? 'Unknown'); ?></h4>
                                 <p>

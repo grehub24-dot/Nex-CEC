@@ -256,9 +256,16 @@ $unread_count = count($unread_message_ids);
                 ?>
                 <a href="../parent/student.php?id=<?php echo (int)$stu['id']; ?>" style="text-decoration:none;color:inherit;display:block;background:#f8f9fa;border-radius:10px;padding:18px;border:1px solid #e9ecef;transition:all 0.2s;" onmouseover="this.style.borderColor='#1a5276';this.style.boxShadow='0 2px 12px rgba(26,82,118,0.12)';" onmouseout="this.style.borderColor='#e9ecef';this.style.boxShadow='none';">
                     <div style="display:flex;align-items:flex-start;gap:12px;">
-                        <div style="width:48px;height:48px;border-radius:50%;background:#1a5276;color:white;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;flex-shrink:0;">
-                            <?php echo strtoupper(substr($stu['full_name'] ?? '?', 0, 1)); ?>
-                        </div>
+                        <?php if (!empty($stu['profile_picture'])): ?>
+                            <img src="<?php echo htmlspecialchars(resolve_storage_url($stu['profile_picture'])); ?>" alt="Profile" style="width:48px;height:48px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,0.1);" onerror="var fb=document.getElementById('child-sfb-<?php echo (int)$stu['id']; ?>');if(fb){fb.style.display='flex';}this.style.display='none';">
+                            <div style="width:48px;height:48px;border-radius:50%;background:#1a5276;color:white;display:none;align-items:center;justify-content:center;font-size:20px;font-weight:700;flex-shrink:0;" id="child-sfb-<?php echo (int)$stu['id']; ?>">
+                                <?php echo strtoupper(substr($stu['full_name'] ?? '?', 0, 1)); ?>
+                            </div>
+                        <?php else: ?>
+                            <div style="width:48px;height:48px;border-radius:50%;background:#1a5276;color:white;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;flex-shrink:0;">
+                                <?php echo strtoupper(substr($stu['full_name'] ?? '?', 0, 1)); ?>
+                            </div>
+                        <?php endif; ?>
                         <div style="flex:1;min-width:0;">
                             <div style="font-weight:600;font-size:15px;color:#1a5276;"><?php echo htmlspecialchars($stu['full_name'] ?? ''); ?></div>
                             <div style="font-size:13px;color:#666;margin-top:4px;">

@@ -159,11 +159,10 @@ try {
     $stmt->execute([$parent_user_id]);
     $row = $stmt->fetch();
     if ($row && !empty($row['guardian_phone_primary'])) {
-    $row = $stmt->fetch();
-    if ($row && !empty($row['guardian_phone_primary'])) {
         $guardian_phone = $row['guardian_phone_primary'];
     }
 } catch (Exception $e) {}
+
 
 // Fetch unread message count for sidebar badge
 $unread_count = 0;

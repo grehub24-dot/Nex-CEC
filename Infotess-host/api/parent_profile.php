@@ -81,6 +81,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     } catch (Exception $e) {
                         $error = "Error saving profile picture: " . $e->getMessage();
                     }
+                    // Also sync to staff table if dual-role user
+                    if (empty($error) && ($_SESSION['role'] ?? '') === 'staff') {
+                        try {
+                            $stmt = $pdo->prepare("UPDATE staff SET profile_picture = ? WHERE user_id = ?");
+                            $stmt->execute([$newUrl, $parent_user_id]);
+                        } catch (Exception $e2) {}
+                    }
+                    // Cache in session for same-session display
+                    if (empty($error)) {
+                        $_SESSION['profile_picture'] = $newUrl;
+                    }
                 } else {
                     $error = "Failed to upload image.";
                 }
@@ -269,6 +280,9 @@ try {
             background: #e8f0fe; color: #1a5276; font-size: 12px;
             padding: 4px 12px; border-radius: 20px; font-weight: 500;
         }
+        .children-tags .tag-more {
+            font-size: 12px; padding: 4px 12px; border-radius: 20px; font-weight: 600;
+        }
         @media (max-width: 600px) {
             .info-grid { grid-template-columns: 1fr; }
             .top-bar { flex-direction: column; gap: 8px; text-align: center; }
@@ -278,7 +292,7 @@ try {
 <body>
 <div class="parent-container">
     <?php
-    $profile_pic_path = $profile_pic ? '../' . htmlspecialchars($profile_pic) : '';
+    $profile_pic_path = $profile_pic ? resolve_storage_url($profile_pic) : '';
     echo renderParentSidebar('profile', $school_name, $unread_count, $profile_pic_path, !empty($_SESSION['has_children']));
     ?>
     <div class="parent-main">
@@ -296,7 +310,7 @@ try {
             <form method="POST" action="" enctype="multipart/form-data">
                 <!-- Profile Picture -->
                 <div class="profile-pic-section">
-                    <img id="profilePreview" src="../<?php echo htmlspecialchars($profile_pic ?? 'images/aamusted.jpg'); ?>" alt="Profile Picture">
+                    <img id="profilePreview" src="<?php echo resolve_storage_url($profile_pic, 'images/aamusted.jpg'); ?>" alt="Profile Picture">
                     <br>
                     <label for="profile_picture" class="upload-label"><i class="fas fa-camera"></i> Change Picture</label>
                     <input type="file" name="profile_picture" id="profile_picture" accept="image/*">
@@ -315,11 +329,30 @@ try {
                     </div>
                     <div class="info-item">
                         <label>Linked Children</label>
-                        <div class="children-tags">
+                        <div class="children-tags" id="childrenTags">
                             <?php if (!empty($children_names)): ?>
-                                <?php foreach ($children_names as $name): ?>
+                                <?php
+                                $max_visible = 20;
+                                $total_children = count($children_names);
+                                $shown = array_slice($children_names, 0, $max_visible);
+                                $hidden = array_slice($children_names, $max_visible);
+                                ?>
+                                <?php foreach ($shown as $name): ?>
                                     <span class="tag"><?php echo htmlspecialchars($name ?? ''); ?></span>
                                 <?php endforeach; ?>
+                                <?php if (!empty($hidden)): ?>
+                                    <span class="tag tag-more" id="showMoreChildren" style="cursor:pointer;background:#1a5276;color:white;" onclick="toggleChildren()">
+                                        +<?php echo count($hidden); ?> more
+                                    </span>
+                                    <div id="hiddenChildren" style="display:none;">
+                                        <?php foreach ($hidden as $name): ?>
+                                            <span class="tag"><?php echo htmlspecialchars($name ?? ''); ?></span>
+                                        <?php endforeach; ?>
+                                        <span class="tag tag-more" style="cursor:pointer;background:#888;color:white;" onclick="toggleChildren()">
+                                            Show less
+                                        </span>
+                                    </div>
+                                <?php endif; ?>
                             <?php else: ?>
                                 <span style="color: #888; font-size: 13px;">None</span>
                             <?php endif; ?>
@@ -354,6 +387,16 @@ try {
 </div>
 
     <script>
+        function toggleChildren() {
+            const hidden = document.getElementById('hiddenChildren');
+            const moreBtn = document.getElementById('showMoreChildren');
+            if (hidden && moreBtn) {
+                const isHidden = hidden.style.display === 'none' || hidden.style.display === '';
+                hidden.style.display = isHidden ? 'inline' : 'none';
+                moreBtn.style.display = isHidden ? 'none' : 'inline';
+            }
+        }
+
         const fileInput = document.getElementById('profile_picture');
         const preview = document.getElementById('profilePreview');
         const fileName = document.getElementById('fileName');
@@ -362,13 +405,13 @@ try {
             fileInput.addEventListener('change', function() {
                 const file = this.files && this.files[0];
                 if (!file) {
-                    preview.src = '../<?php echo htmlspecialchars($profile_pic ?? 'images/aamusted.jpg'); ?>';
+                    preview.src = '<?php echo resolve_storage_url($profile_pic, 'images/aamusted.jpg'); ?>';
                     fileName.textContent = 'No image selected';
                     return;
                 }
                 fileName.textContent = file.name;
                 if (!file.type.startsWith('image/')) {
-                    preview.src = '../<?php echo htmlspecialchars($profile_pic ?? 'images/aamusted.jpg'); ?>';
+                    preview.src = '<?php echo resolve_storage_url($profile_pic, 'images/aamusted.jpg'); ?>';
                     fileName.textContent = 'Please select an image file';
                     this.value = '';
                     return;

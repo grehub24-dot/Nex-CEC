@@ -107,6 +107,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 }
                             }
 
+                            // Also save to users table so parent portal (dual-role staff) sees the same picture
+                            try {
+                                $pdo->prepare("UPDATE users SET profile_picture = ? WHERE id = ?")->execute([$newUrl, $user_id]);
+                            } catch (Exception $e) {
+                                error_log("users.profile_picture update failed: " . $e->getMessage());
+                            }
+
                             // Always save to session cache regardless
                             $_SESSION['profile_picture'] = $newUrl;
 

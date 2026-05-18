@@ -22,26 +22,14 @@ try {
 $school_name = $settings['school_name'] ?? 'Nex CEC';
 
 // Ensure profile_picture column exists in users table
-try {
-    $stmt = $pdo->query("SHOW COLUMNS FROM users LIKE 'profile_picture'");
-    if ($stmt->rowCount() == 0) {
-        // Try PostgreSQL syntax first
-        try {
-            $pdo->exec("ALTER TABLE users ADD COLUMN profile_picture TEXT");
-        } catch (Exception $e2) {
-            // Fallback to MySQL syntax
-            try {
-                $pdo->exec("ALTER TABLE users ADD COLUMN profile_picture VARCHAR(255) DEFAULT NULL");
-            } catch (Exception $e3) {
-                // Column may already exist or table is read-only
-            }
-        }
-    }
-} catch (Exception $e) {
-    // Schema check failed, try adding column directly
+// ALTER TABLE cannot run through the PDO bridge (DDL skipped), so try Supabase SQL API
+global $supabase;
+if ($supabase && $supabase instanceof SupabaseClient) {
     try {
-        $pdo->exec("ALTER TABLE users ADD COLUMN profile_picture TEXT");
-    } catch (Exception $e2) {}
+        $supabase->executeSql("ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture TEXT");
+    } catch (Exception $e) {
+        error_log("profile_picture migration (users): " . $e->getMessage());
+    }
 }
 
 // Handle profile update

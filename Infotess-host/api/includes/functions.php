@@ -994,7 +994,7 @@ function sendStaffInvite(int $staffId, int $userId, int $invitedBy, string $emai
             $stmt->execute([$staffId, $userId, $token, $invitedBy, $expiresAt]);
         }
 
-        $inviteLink = rtrim(getenv('APP_URL') ?: 'https://nexcec.vercel.app', '/') . '/staff/register.php?token=' . $token;
+        $inviteLink = rtrim(getenv('APP_URL') ?: 'https://nex-cec.vercel.app', '/') . '/staff/register.php?token=' . $token;
 
         $sentEmail = false;
         $sentSms = false;

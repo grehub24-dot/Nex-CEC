@@ -136,7 +136,10 @@ $deductions = $stmt->fetchAll();
 
         <?php if ($selected_payroll):
             $month_name = date('F', mktime(0,0,0,(int)$selected_payroll['month'],1));
+            $slip_status = $selected_payroll['status'] ?? 'pending';
         ?>
+
+        <?php if (in_array($slip_status, ['approved', 'paid'])): ?>
         <div class="no-print" style="text-align:right;margin-bottom:10px;">
             <button onclick="window.print()" class="btn-primary btn-sm"><i class="fas fa-print"></i> Print</button>
         </div>
@@ -212,6 +215,12 @@ $deductions = $stmt->fetchAll();
                 <div><div class="signature-line">Authorized Signature</div></div>
             </div>
         </div>
+        <?php else: /* pending — hide preview */ ?>
+            <div style="max-width:600px;margin:40px auto;text-align:center;padding:60px 30px;background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+                <div style="font-size:60px;color:#f39c12;margin-bottom:20px;"><i class="fas fa-hourglass-half"></i></div>
+                <h3 style="color:#333;margin:0 0 10px 0;">Pay Slip Pending Approval</h3>
+                <p style="color:#888;font-size:14px;margin:0;">Your pay slip for <?php echo $month_name . ' ' . $selected_payroll['year']; ?> is awaiting approval. It will be available for preview and printing once approved.</p>
+            </div>
         <?php endif; ?>
         <?php endif; ?>
     </div>

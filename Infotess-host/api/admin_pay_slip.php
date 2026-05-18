@@ -15,7 +15,10 @@ $school_phone = $settings['school_phone'] ?? '+233 123 456 789';
 $payroll_id = (int)($_GET['id'] ?? 0);
 if ($payroll_id <= 0) { redirect('admin_payroll.php'); }
 
-// ... validation ...
+// Fetch payroll record
+$stmt = $pdo->prepare("SELECT * FROM payroll WHERE id = ?");
+$stmt->execute([$payroll_id]);
+$payroll = $stmt->fetch();
 
 if (!$payroll) { redirect('admin_payroll.php'); }
 
@@ -74,6 +77,9 @@ $month_name = date('F', mktime(0, 0, 0, (int)($payroll['month'] ?? 1), 1));
     </style>
 </head>
 <body>
+    <?php $slip_status = $payroll['status'] ?? 'pending'; ?>
+
+    <?php if (in_array($slip_status, ['approved', 'paid'])): ?>
     <div class="no-print" style="text-align: center; padding: 20px;">
         <a href="payroll.php" class="btn-login"><i class="fas fa-arrow-left"></i> Back to Payroll</a>
         <button onclick="window.print()" class="btn-primary"><i class="fas fa-print"></i> Print Pay Slip</button>
@@ -188,5 +194,15 @@ $month_name = date('F', mktime(0, 0, 0, (int)($payroll['month'] ?? 1), 1));
             </div>
         </div>
     </div>
+    <?php else: /* pending — hide preview */ ?>
+    <div class="no-print" style="text-align: center; padding: 20px;">
+        <a href="payroll.php" class="btn-login"><i class="fas fa-arrow-left"></i> Back to Payroll</a>
+    </div>
+    <div style="max-width:600px;margin:30px auto;text-align:center;padding:60px 30px;background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+        <div style="font-size:60px;color:#f39c12;margin-bottom:20px;"><i class="fas fa-hourglass-half"></i></div>
+        <h3 style="color:#333;margin:0 0 10px 0;">Pay Slip Pending Approval</h3>
+        <p style="color:#888;font-size:14px;margin:0;">This pay slip for <?php echo $month_name . ' ' . $payroll['year']; ?> has not been approved yet. It will be available for preview and printing once approved.</p>
+    </div>
+    <?php endif; ?>
 </body>
 </html>

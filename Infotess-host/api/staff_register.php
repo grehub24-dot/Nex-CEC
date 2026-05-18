@@ -148,8 +148,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $staff && isset($_POST['register'])
             // Update users table — set password, keep status as inactive
             $pdo->prepare("UPDATE users SET password = ? WHERE id = ?")->execute([$hashedPassword, (int)$staff['user_id']]);
 
-            // Mark invite as accepted
-            $pdo->prepare("UPDATE staff_invites SET status = 'accepted', accepted_at = NOW() WHERE id = ?")->execute([(int)$invite['id']]);
+            // Mark invite as accepted — use PHP date() not SQL NOW()
+            // because the Supabase bridge sends literals as JSON strings (NOW() becomes literal 'NOW()')
+            $now = date('c'); // ISO 8601 — Supabase accepts this format for timestamptz
+            $pdo->prepare("UPDATE staff_invites SET status = 'accepted', accepted_at = ? WHERE id = ?")->execute([$now, (int)$invite['id']]);
 
             $pdo->commit();
 
@@ -381,6 +383,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $staff && isset($_POST['register'])
             </div>
 
             <form method="POST" enctype="multipart/form-data" id="registerForm">
+                <input type="hidden" name="token" value="<?php echo htmlspecialchars($token); ?>">
                 <!-- Personal Information -->
                 <div class="section-title"><i class="fas fa-user"></i> Personal Information</div>
 

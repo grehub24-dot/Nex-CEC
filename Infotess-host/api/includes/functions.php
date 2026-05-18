@@ -979,7 +979,7 @@ function sendStaffInvite(int $staffId, int $userId, int $invitedBy, string $emai
 
     try {
         $token = generateStaffInviteToken();
-        $expiresAt = date('Y-m-d H:i:s', time() + 86400); // 48 hours from now
+        $expiresAt = date('Y-m-d H:i:s', time() + 172800); // 48 hours from now
 
         // Check for existing pending invite
         $existing = $pdo->prepare("SELECT id, token FROM staff_invites WHERE staff_id = ? AND status = 'pending'");

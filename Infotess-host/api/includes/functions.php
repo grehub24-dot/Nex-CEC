@@ -243,7 +243,7 @@ function getSidebarMenu($currentPage = '') {
     }
     
     if ($isFullAdmin) {
-        $allItems[] = ['href' => 'admin_payroll.php', 'icon' => 'fas fa-file-invoice-dollar', 'label' => 'Payroll', 'acl' => 'payroll'];
+        $allItems[] = ['href' => 'payroll.php', 'icon' => 'fas fa-file-invoice-dollar', 'label' => 'Payroll', 'acl' => 'payroll'];
         $allItems[] = ['href' => 'salary.php', 'icon' => 'fas fa-money-check-alt', 'label' => 'Salary Structures', 'acl' => 'salary'];
         $allItems[] = ['href' => 'staff_attendance.php', 'icon' => 'fas fa-user-tie', 'label' => 'Staff Attendance', 'acl' => 'staff_attendance'];
     }
@@ -393,6 +393,8 @@ function renderStaffSidebar($currentPage = '', $schoolName = 'Nex CEC', $unreadC
     $html .= '<ul>';
     
     // Build menu items
+    $hasChildren = isset($_SESSION['has_children']) && $_SESSION['has_children'] === true;
+    
     $items = [
         ['href' => '../staff/dashboard.php', 'icon' => 'fas fa-home',        'label' => 'Dashboard',        'key' => 'dashboard'],
         ['href' => '../staff/grades.php',    'icon' => 'fas fa-clipboard-list', 'label' => 'SBA / Grades',    'key' => 'grades',      'teacherOnly' => true],
@@ -401,8 +403,14 @@ function renderStaffSidebar($currentPage = '', $schoolName = 'Nex CEC', $unreadC
         ['href' => '../staff/profile.php',   'icon' => 'fas fa-user-cog',   'label' => 'Profile',           'key' => 'profile'],
         ['href' => '../staff/messaging.php', 'icon' => 'fas fa-envelope',    'label' => 'Messages',          'key' => 'messaging',   'badge' => $unreadCount],
         ['href' => '../staff/student_attendance.php','icon' => 'fas fa-user-check', 'label' => 'Student Attendance','key' => 'student_attendance', 'teacherOnly' => true],
-        ['href' => '../logout.php',          'icon' => 'fas fa-sign-out-alt','label' => 'Logout',            'key' => 'logout'],
     ];
+    
+    // Add Parent Portal link for dual-role staff (staff + parent)
+    if ($hasChildren) {
+        $items[] = ['href' => '../parent/dashboard.php', 'icon' => 'fas fa-child', 'label' => 'My Children / Wards', 'key' => 'children'];
+    }
+    
+    $items[] = ['href' => '../logout.php', 'icon' => 'fas fa-sign-out-alt', 'label' => 'Logout', 'key' => 'logout'];
     
     foreach ($items as $item) {
         // Skip teacher-only items for non-teachers

@@ -226,7 +226,7 @@ $unconfigured_count = count(array_filter($staff_structures, fn($s) => !$s['confi
             <!-- Month Selector & Generate -->
             <div class="card" style="margin-bottom: 30px;">
                 <div class="card-content" style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
-                    <form method="GET" action="admin_payroll.php" style="display: flex; gap: 10px; align-items: center;">
+                    <form method="GET" action="payroll.php" style="display: flex; gap: 10px; align-items: center;">
                         <label><strong>Select Period:</strong></label>
                         <select name="month" class="form-control" style="width: auto;">
                             <?php for ($m = 1; $m <= 12; $m++): ?>
@@ -241,7 +241,7 @@ $unconfigured_count = count(array_filter($staff_structures, fn($s) => !$s['confi
                         <button type="submit" class="btn-login"><i class="fas fa-search"></i> View</button>
                     </form>
                     
-                    <form method="POST" action="admin_payroll.php" style="margin-left: auto;">
+                    <form method="POST" action="payroll.php" style="margin-left: auto;">
                         <?php csrf_field(); ?>
                         <input type="hidden" name="action" value="generate_payroll">
                         <input type="hidden" name="month" value="<?php echo $selected_month; ?>">
@@ -355,7 +355,7 @@ $unconfigured_count = count(array_filter($staff_structures, fn($s) => !$s['confi
                         <i class="fas fa-info-circle"></i> No payroll records found for this period. Click "Generate Payroll" to create records for all active staff.
                     </div>
                 <?php else: ?>
-                    <form method="POST" action="admin_payroll.php?month=<?php echo $selected_month; ?>&year=<?php echo $selected_year; ?>" id="bulk-payroll-form">
+                    <form method="POST" action="payroll.php?month=<?php echo $selected_month; ?>&year=<?php echo $selected_year; ?>" id="bulk-payroll-form">
                         <?php csrf_field(); ?>
                         <input type="hidden" name="action" value="bulk_delete_payroll">
                         <div style="margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
@@ -410,8 +410,8 @@ $unconfigured_count = count(array_filter($staff_structures, fn($s) => !$s['confi
                                         <?php if ($record['status'] === 'pending'): ?>
                                             <button type="button" class="btn-login" style="background: #28a745; padding: 5px 10px; font-size: 0.8rem;" onclick="submitApprove(<?php echo $record['id']; ?>)">Approve</button>
                                         <?php endif; ?>
-                                        <a href="admin/pay_slip.php?id=<?php echo $record['id']; ?>" class="btn-login" style="background: #17a2b8; padding: 5px 10px; font-size: 0.8rem;">Slip</a>
-                                        <a href="admin_payroll.php?delete=<?php echo $record['id']; ?>&<?php echo csrf_query(); ?>" class="btn-login" style="background: #e74c3c; padding: 5px 10px; font-size: 0.8rem;" onclick="return confirm('Delete this payroll record?');">Delete</a>
+                                        <a href="pay_slip.php?id=<?php echo $record['id']; ?>" class="btn-login" style="background: #17a2b8; padding: 5px 10px; font-size: 0.8rem;">Slip</a>
+                                        <a href="payroll.php?delete=<?php echo $record['id']; ?>&<?php echo csrf_query(); ?>" class="btn-login" style="background: #e74c3c; padding: 5px 10px; font-size: 0.8rem;" onclick="return confirm('Delete this payroll record?');">Delete</a>
                                     </td>
                                 </tr>
                                 <?php endforeach; ?>
@@ -435,7 +435,7 @@ $unconfigured_count = count(array_filter($staff_structures, fn($s) => !$s['confi
                     </form>
 
                     <!-- Standalone approve form (outside bulk form to avoid nesting) -->
-                    <form method="POST" action="admin_payroll.php" id="approve-form" style="display:none;">
+                    <form method="POST" action="payroll.php" id="approve-form" style="display:none;">
                         <?php csrf_field(); ?>
                         <input type="hidden" name="action" value="approve_payroll">
                         <input type="hidden" name="payroll_id" id="approve-payroll-id" value="">

@@ -245,10 +245,10 @@ $unread_count = count($unread_message_ids);
         <div class="profile-section">
             <h3><i class="fas fa-child"></i> My Children / Wards</h3>
             <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;">
-                <?php foreach ($children as $child): 
+                 <?php foreach ($children as $child): 
                     $stu = $child['student'];
                 ?>
-                <div style="background:#f8f9fa;border-radius:10px;padding:18px;border:1px solid #e9ecef;">
+                <a href="../parent/student.php?id=<?php echo (int)$stu['id']; ?>" style="text-decoration:none;color:inherit;display:block;background:#f8f9fa;border-radius:10px;padding:18px;border:1px solid #e9ecef;transition:all 0.2s;" onmouseover="this.style.borderColor='#1a5276';this.style.boxShadow='0 2px 12px rgba(26,82,118,0.12)';" onmouseout="this.style.borderColor='#e9ecef';this.style.boxShadow='none';">
                     <div style="display:flex;align-items:flex-start;gap:12px;">
                         <div style="width:48px;height:48px;border-radius:50%;background:#1a5276;color:white;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;flex-shrink:0;">
                             <?php echo strtoupper(substr($stu['full_name'] ?? '?', 0, 1)); ?>
@@ -269,9 +269,10 @@ $unread_count = count($unread_message_ids);
                                 <span class="badge badge-success" style="font-size:11px;margin-left:4px;">Primary</span>
                                 <?php endif; ?>
                             </div>
+                            <div style="font-size:11px;color:#1a5276;margin-top:8px;font-weight:500;"><i class="fas fa-chevron-circle-right"></i> View Profile</div>
                         </div>
                     </div>
-                </div>
+                </a>
                 <?php endforeach; ?>
             </div>
         </div>

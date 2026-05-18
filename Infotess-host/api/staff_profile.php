@@ -305,6 +305,13 @@ $csrf_token = generate_csrf_token();
             </div>
         </div>
         <?php endif; ?>
+
+        <!-- Security / Password -->
+        <div class="profile-section">
+            <h3><i class="fas fa-lock"></i> Security</h3>
+            <p style="font-size:14px;color:#666;margin-bottom:15px;">Manage your account password and security settings.</p>
+            <a href="../parent/password-reset.php" class="btn-primary" style="display:inline-flex;align-items:center;gap:8px;padding:12px 24px;"><i class="fas fa-key"></i> Change Password</a>
+        </div>
     </div>
 
     <script>

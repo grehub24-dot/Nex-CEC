@@ -20,16 +20,8 @@ $invite = null;
 // Validate token
 if (!empty($token)) {
     try {
-        $stmt = $pdo->prepare("
-            SELECT 
-                si.id AS invite_id, si.user_id, si.status AS invite_status,
-                si.expires_at, si.invited_at, si.email_sent, si.sms_sent,
-                s.*
-            FROM staff_invites si
-            JOIN staff s ON s.id = si.staff_id
-            WHERE si.token = ? AND si.status = 'pending'
-            LIMIT 1
-        ");
+        // Step 1: Look up the invite (bridge does NOT support JOINs)
+        $stmt = $pdo->prepare("SELECT * FROM staff_invites WHERE token = ? AND status = 'pending' LIMIT 1");
         $stmt->execute([$token]);
         $invite = $stmt->fetch();
 
@@ -39,11 +31,20 @@ if (!empty($token)) {
                 $error = "This invitation link has expired. Please contact the school administrator for a new invite.";
                 $invite = null;
             } else {
-                $staff = $invite;
+                // Step 2: Fetch staff member data by the FK staff_id from invite
+                $staffStmt = $pdo->prepare("SELECT * FROM staff WHERE id = ? LIMIT 1");
+                $staffStmt->execute([(int)$invite['staff_id']]);
+                $staffRow = $staffStmt->fetch();
+                if ($staffRow) {
+                    $staff = $staffRow;
+                } else {
+                    $error = "Associated staff record not found. Please contact the school administrator.";
+                    $invite = null;
+                }
             }
         } else {
             // Check if already accepted
-            $stmt2 = $pdo->prepare("SELECT status FROM staff_invites WHERE token = ? LIMIT 1");
+            $stmt2 = $pdo->prepare("SELECT * FROM staff_invites WHERE token = ? LIMIT 1");
             $stmt2->execute([$token]);
             $existing = $stmt2->fetch();
             if ($existing && $existing['status'] === 'accepted') {
@@ -148,7 +149,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $staff && isset($_POST['register'])
             $pdo->prepare("UPDATE users SET password = ? WHERE id = ?")->execute([$hashedPassword, (int)$staff['user_id']]);
 
             // Mark invite as accepted
-            $pdo->prepare("UPDATE staff_invites SET status = 'accepted', accepted_at = NOW() WHERE id = ?")->execute([(int)$invite['invite_id']]);
+            $pdo->prepare("UPDATE staff_invites SET status = 'accepted', accepted_at = NOW() WHERE id = ?")->execute([(int)$invite['id']]);
 
             $pdo->commit();
 

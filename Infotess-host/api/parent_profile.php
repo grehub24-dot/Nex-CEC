@@ -122,10 +122,18 @@ try {
     $stmt->execute([$parent_user_id]);
     $user = $stmt->fetch();
 
-    // Fetch children names for display
-    $stmt = $pdo->prepare("SELECT s.full_name FROM parent_students ps JOIN students s ON s.id = ps.student_id WHERE ps.parent_user_id = ?");
+    // Fetch children names for display (two queries — PDO bridge doesn't support JOINs)
+    $stmt = $pdo->prepare("SELECT student_id FROM parent_students WHERE parent_user_id = ?");
     $stmt->execute([$parent_user_id]);
-    $children_names = array_map(fn($r) => $r['full_name'], $stmt->fetchAll());
+    $child_ids = array_map(fn($r) => $r['student_id'] ?? 0, $stmt->fetchAll());
+    $child_ids = array_filter($child_ids);
+    $children_names = [];
+    if (!empty($child_ids)) {
+        $placeholders = implode(',', array_fill(0, count($child_ids), '?'));
+        $stmt2 = $pdo->prepare("SELECT full_name FROM students WHERE id IN ($placeholders)");
+        $stmt2->execute(array_values($child_ids));
+        $children_names = array_map(fn($r) => $r['full_name'] ?? '', $stmt2->fetchAll());
+    }
 } catch (Exception $e) {
     error_log("Parent profile fetch error: " . $e->getMessage());
 }
@@ -136,8 +144,10 @@ $user_email = $user['email'] ?? '';
 // Fetch first child's guardian phone as default
 $guardian_phone = '';
 try {
-    $stmt = $pdo->prepare("SELECT guardian_phone_primary FROM parent_students ps JOIN students s ON s.id = ps.student_id WHERE ps.parent_user_id = ? LIMIT 1");
+    $stmt = $pdo->prepare("SELECT guardian_phone_primary FROM parent_students WHERE parent_user_id = ? LIMIT 1");
     $stmt->execute([$parent_user_id]);
+    $row = $stmt->fetch();
+    if ($row && !empty($row['guardian_phone_primary'])) {
     $row = $stmt->fetch();
     if ($row && !empty($row['guardian_phone_primary'])) {
         $guardian_phone = $row['guardian_phone_primary'];

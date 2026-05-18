@@ -184,13 +184,19 @@ $unread_count = count($unread_message_ids);
     </style>
 </head>
 <body>
-    <?php echo renderStaffSidebar('dashboard', $school_name, $unread_count, getStaffProfilePictureUrl($staff['profile_picture'] ?? '', $user_id), $staff['full_name'] ?? ''); ?>
+    <?php echo renderStaffSidebar('dashboard', $school_name, $unread_count, '', $staff['full_name'] ?? ''); ?>
 
     <div class="staff-main">
         <div class="top-bar">
-            <div>
-                <h2>Welcome, <?php echo htmlspecialchars($staff['full_name'] ?? 'Staff'); ?></h2>
-                <p class="subtitle"><?php echo htmlspecialchars($staff['position'] ?? ''); ?> &bull; <?php echo htmlspecialchars($staff['department'] ?? 'General'); ?></p>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <?php $ppUrl = getStaffProfilePictureUrl($staff['profile_picture'] ?? '', $user_id); ?>
+                <?php if (!empty($ppUrl)): ?>
+                    <img src="<?php echo htmlspecialchars(resolve_storage_url($ppUrl, 'images/aamusted.jpg')); ?>" alt="Profile" style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:2px solid #1a5276;" onerror="this.src='../images/aamusted.jpg'">
+                <?php endif; ?>
+                <div>
+                    <h2>Welcome, <?php echo htmlspecialchars($staff['full_name'] ?? 'Staff'); ?></h2>
+                    <p class="subtitle"><?php echo htmlspecialchars($staff['position'] ?? ''); ?> &bull; <?php echo htmlspecialchars($staff['department'] ?? 'General'); ?></p>
+                </div>
             </div>
             <div>
                 <span style="font-size: 13px; color: #888;">Staff ID: <?php echo htmlspecialchars($staff['staff_id'] ?? 'N/A'); ?></span>

@@ -383,12 +383,8 @@ function renderStaffSidebar($currentPage = '', $schoolName = 'Nex CEC', $unreadC
     // Sidebar
     $html .= '<aside class="staff-sidebar" id="sidebar">';
     $html .= '<div class="sidebar-header">';
-    if (!empty($profilePic)) {
-        $html .= '<img src="' . htmlspecialchars(resolve_storage_url($profilePic, '')) . '" alt="Profile" class="sidebar-profile-img" onerror="this.src=\'../images/aamusted.jpg\'">';
-    } else {
-        $logoUrl = getCachedSchoolLogoUrl();
-        $html .= '<img src="' . htmlspecialchars($logoUrl) . '" alt="Logo" class="sidebar-logo-img" onerror="this.src=\'../images/aamusted.jpg\'">';
-    }
+    $logoUrl = getCachedSchoolLogoUrl();
+    $html .= '<img src="' . htmlspecialchars($logoUrl) . '" alt="Logo" class="sidebar-logo-img" onerror="this.src=\'../images/aamusted.jpg\'">';
     $html .= '<h3>' . htmlspecialchars($schoolName) . '</h3>';
     $html .= '<p>' . ($staffName ? htmlspecialchars($staffName) : 'Staff Portal') . '</p>';
     $html .= '</div>';

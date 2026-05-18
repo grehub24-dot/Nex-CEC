@@ -1,8 +1,15 @@
 <?php
 // staff_register.php — Staff self-registration via invite token
-session_start();
 require_once 'includes/db.php';
 require_once 'includes/functions.php';
+
+// $school_name (for page title/header)
+$stmt = $pdo->query("SELECT setting_key, setting_value FROM system_settings");
+$settings = [];
+while ($row = $stmt->fetch()) {
+    $settings[$row['setting_key']] = $row['setting_value'];
+}
+$school_name = $settings['school_name'] ?? 'Nex CEC';
 
 $error = '';
 $success = '';
@@ -14,7 +21,10 @@ $invite = null;
 if (!empty($token)) {
     try {
         $stmt = $pdo->prepare("
-            SELECT si.*, s.full_name, s.email, s.phone, s.staff_id, s.position, s.department, s.gender, s.date_of_birth, s.address, s.qualification, s.profile_picture, s.cv_path, s.documents
+            SELECT 
+                si.id AS invite_id, si.user_id, si.status AS invite_status,
+                si.expires_at, si.invited_at, si.email_sent, si.sms_sent,
+                s.*
             FROM staff_invites si
             JOIN staff s ON s.id = si.staff_id
             WHERE si.token = ? AND si.status = 'pending'
@@ -138,7 +148,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $staff && isset($_POST['register'])
             $pdo->prepare("UPDATE users SET password = ? WHERE id = ?")->execute([$hashedPassword, (int)$staff['user_id']]);
 
             // Mark invite as accepted
-            $pdo->prepare("UPDATE staff_invites SET status = 'accepted', accepted_at = NOW() WHERE id = ?")->execute([(int)$invite['id']]);
+            $pdo->prepare("UPDATE staff_invites SET status = 'accepted', accepted_at = NOW() WHERE id = ?")->execute([(int)$invite['invite_id']]);
 
             $pdo->commit();
 

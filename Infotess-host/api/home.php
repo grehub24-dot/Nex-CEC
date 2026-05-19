@@ -9,15 +9,15 @@ $class_count = 0;
 $years_count = 0;
 try {
     $stmt = $pdo->query("SELECT COUNT(*) as c FROM students WHERE status = 'active'");
-    $r = $stmt->fetch(); $student_count = $r ? (int)$r['c'] : 0;
+    $student_count = (int)$stmt->fetchColumn();
 } catch (Exception $e) {}
 try {
     $stmt = $pdo->query("SELECT COUNT(*) as c FROM staff WHERE status = 'active'");
-    $r = $stmt->fetch(); $staff_count = $r ? (int)$r['c'] : 0;
+    $staff_count = (int)$stmt->fetchColumn();
 } catch (Exception $e) {}
 try {
     $stmt = $pdo->query("SELECT COUNT(*) as c FROM classes");
-    $r = $stmt->fetch(); $class_count = $r ? (int)$r['c'] : 0;
+    $class_count = (int)$stmt->fetchColumn();
 } catch (Exception $e) {}
 // Graduating years (hard-coded to current + 3 for display)
 $years_count = 4;

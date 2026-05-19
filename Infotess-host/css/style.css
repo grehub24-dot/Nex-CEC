@@ -323,6 +323,14 @@ img {
     display: flex;
     align-items: center;
     gap: 10px;
+    overflow: hidden;
+}
+.logo img {
+    max-width: 100%;
+    height: 40px;
+    width: auto;
+    object-fit: contain;
+    flex-shrink: 0;
 }
 
 .nav-links {

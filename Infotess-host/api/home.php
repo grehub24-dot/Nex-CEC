@@ -29,7 +29,7 @@ $years_count = 4;
     <div id="globe-container" style="position: absolute; inset: 0; z-index: 1; pointer-events: none;"></div>
     
     <!-- Hero Content -->
-    <div style="position: relative; z-index: 2;">
+    <div style="position: relative; z-index: 2; text-align: center; width: 100%; max-width: 900px; margin: 0 auto;">
         <h1>Welcome to <?php echo htmlspecialchars($school_name); ?></h1>
         <p><?php echo htmlspecialchars($school_motto); ?> — Providing quality education from Creche through Junior High School in a safe, nurturing, and academically excellent environment.</p>
         <div class="hero-badges">

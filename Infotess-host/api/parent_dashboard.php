@@ -219,7 +219,10 @@ try {
         <div class="top-bar">
             <div style="display: flex; align-items: center; gap: 15px;">
                 <?php if (!empty($parent_profile_pic)): ?>
-                    <img src="../<?php echo htmlspecialchars($parent_profile_pic); ?>" alt="Profile" style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:2px solid #1a5276;" onerror="this.src='../images/aamusted.jpg'">
+                    <img src="../<?php echo htmlspecialchars($parent_profile_pic); ?>" alt="Profile" style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:2px solid #1a5276;" onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='inline-flex'">
+                    <div style="width:52px;height:52px;border-radius:50%;background:#1a5276;color:#fff;display:none;align-items:center;justify-content:center;font-size:22px;font-weight:700;flex-shrink:0;"><i class="fas fa-user"></i></div>
+                <?php else: ?>
+                    <div style="width:52px;height:52px;border-radius:50%;background:#1a5276;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;flex-shrink:0;"><i class="fas fa-user"></i></div>
                 <?php endif; ?>
                 <div>
                     <h2>👋 Parent Dashboard</h2>

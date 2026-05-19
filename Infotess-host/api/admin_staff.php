@@ -133,7 +133,10 @@ if (isset($_GET['delete']) && is_numeric($_GET['delete'])) {
         $pdo->prepare("DELETE FROM staff WHERE id = ?")->execute([$staff_id]);
         if ($staff && $staff['user_id']) {
             // Delete messages referencing this user to avoid FK violations
-            $pdo->prepare("DELETE FROM messages WHERE sender_id = ? OR receiver_id = ?")->execute([$staff['user_id'], $staff['user_id']]);
+            // Note: Bridge delete does NOT support OR — run separate queries
+            $pdo->prepare("DELETE FROM messages WHERE sender_id = ?")->execute([$staff['user_id']]);
+            $pdo->prepare("DELETE FROM messages WHERE receiver_id = ?")->execute([$staff['user_id']]);
+            $pdo->prepare("DELETE FROM message_reads WHERE user_id = ?")->execute([$staff['user_id']]);
             $pdo->prepare("DELETE FROM users WHERE id = ?")->execute([$staff['user_id']]);
         }
         $pdo->commit();
@@ -168,7 +171,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $pdo->prepare("DELETE FROM staff WHERE id = ?")->execute([$staffId]);
                 if ($staff && $staff['user_id']) {
                     // Delete messages referencing this user to avoid FK violations
-                    $pdo->prepare("DELETE FROM messages WHERE sender_id = ? OR receiver_id = ?")->execute([$staff['user_id'], $staff['user_id']]);
+                    // Note: Bridge delete does NOT support OR — run separate queries
+                    $pdo->prepare("DELETE FROM messages WHERE sender_id = ?")->execute([$staff['user_id']]);
+                    $pdo->prepare("DELETE FROM messages WHERE receiver_id = ?")->execute([$staff['user_id']]);
+                    $pdo->prepare("DELETE FROM message_reads WHERE user_id = ?")->execute([$staff['user_id']]);
                     $pdo->prepare("DELETE FROM users WHERE id = ?")->execute([$staff['user_id']]);
                 }
                 $pdo->commit();

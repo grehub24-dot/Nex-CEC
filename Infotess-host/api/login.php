@@ -9,12 +9,10 @@ if (isLoggedIn()) {
     } elseif ($role === 'parent') {
         redirect('parent/dashboard.php');
     } elseif (isset($_SESSION['has_children']) && $_SESSION['has_children']) {
-        // Dual-role user — show route selector
         redirect('route_selector.php');
     } elseif (in_array($role, ['staff', 'teacher'])) {
         redirect('staff/dashboard.php');
     } else {
-        // Admin and bursar go to admin dashboard
         redirect('admin/dashboard.php');
     }
 }
@@ -30,8 +28,11 @@ try {
     }
 } catch (Exception $e) {}
 
+$school_name = $settings['school_name'] ?? 'Nex CEC';
+$school_logo = $settings['school_logo_url'] ?? 'images/aamusted.jpg';
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $identifier = trim($_POST['identifier'] ?? ''); // Email or Index Number
+    $identifier = trim($_POST['identifier'] ?? '');
     $password = $_POST['password'] ?? '';
 
     if (empty($identifier) || empty($password)) {
@@ -39,14 +40,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (!validate_csrf_token($_POST['csrf_token'] ?? '')) {
         $error = "Invalid or expired session. Please refresh the page and try again.";
     } else {
-        // Check if it's an email (Admin) or Index Number (Student)
         if (filter_var($identifier, FILTER_VALIDATE_EMAIL)) {
-            // Admin/Executive Login
             $stmt = $pdo->prepare("SELECT * FROM users WHERE email = :email");
             $stmt->execute(['email' => $identifier]);
             $user = $stmt->fetch();
         } else {
-            // Student Login (Lookup student by admission number, then get user)
             $stmt = $pdo->prepare("SELECT * FROM students WHERE admission_number = ?");
             $stmt->execute([$identifier]);
             $student = $stmt->fetch();
@@ -64,12 +62,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($user['status'] !== 'active') {
                 $error = "Your account is inactive or banned. Please contact support.";
             } else {
-                // Login Success
                 $_SESSION['user_id'] = $user['id'];
                 $_SESSION['email'] = $user['email'];
                 $_SESSION['role'] = $user['role'];
-                
-                // If student, store student details in session
+
                 if ($user['role'] === 'student') {
                     $stmt_s = $pdo->prepare("SELECT * FROM students WHERE user_id = :uid");
                     $stmt_s->execute(['uid' => $user['id']]);
@@ -77,20 +73,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $_SESSION['student_id'] = $student['id'];
                     $_SESSION['admission_number'] = $student['admission_number'];
                     $_SESSION['name'] = $student['full_name'];
-                    
-                    // If password has NOT been reset (is temporal), redirect to reset page
-                    // We check if the column exists or is 0. If it doesn't exist, we assume 0 (force reset).
+
                     $is_reset = isset($user['is_password_reset']) ? $user['is_password_reset'] : 0;
                     $_SESSION['is_password_reset'] = $is_reset;
-                    
+
                     if ($is_reset == 0) {
                         redirect('student/password-reset.php');
                     }
-                    
+
                     redirect('student/dashboard.php');
                 } elseif ($user['role'] === 'parent') {
-                    // Parent login — redirect to parent dashboard
-                    // Note: bridge does not support JOINs, so we do two queries
                     $stmt_s = $pdo->prepare("SELECT student_id FROM parent_students WHERE parent_user_id = ? LIMIT 1");
                     $stmt_s->execute([$user['id']]);
                     $link = $stmt_s->fetch();
@@ -108,7 +100,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 } elseif (in_array($user['role'], ['teacher', 'staff', 'bursar'])) {
                     $_SESSION['name'] = ucfirst($user['role']);
 
-                    // If staff, check if they are a Class Teacher (so isTeacher() works without role='teacher')
                     if ($user['role'] === 'staff') {
                         $stmt_t = $pdo->prepare("SELECT position FROM staff WHERE user_id = ?");
                         $stmt_t->execute([$user['id']]);
@@ -118,7 +109,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $_SESSION['is_class_teacher'] = false;
                     }
 
-                    // Check if password needs reset (for staff/teacher/bursar too)
                     $is_reset = isset($user['is_password_reset']) ? $user['is_password_reset'] : 0;
                     $_SESSION['is_password_reset'] = $is_reset;
 
@@ -126,7 +116,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         redirect('password-reset.php');
                     }
 
-                    // Check if this user also has children (dual-role: staff + parent)
                     $stmt_hc = $pdo->prepare("SELECT id FROM parent_students WHERE parent_user_id = ? LIMIT 1");
                     $stmt_hc->execute([$user['id']]);
                     if ($stmt_hc->fetch()) {
@@ -134,17 +123,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         redirect('route_selector.php');
                     }
 
-                    // Staff and teacher roles go to staff portal; bursar goes to admin dashboard
                     if (in_array($user['role'], ['staff', 'teacher'])) {
                         redirect('staff/dashboard.php');
                     } else {
                         redirect('admin/dashboard.php');
                     }
                 } else {
-                    // Fallback for admin, super_admin, or any other role
                     $_SESSION['name'] = "User";
 
-                    // Also check for children (e.g., admin who is also a parent)
                     $stmt_hc = $pdo->prepare("SELECT id FROM parent_students WHERE parent_user_id = ? LIMIT 1");
                     $stmt_hc->execute([$user['id']]);
                     if ($stmt_hc->fetch()) {
@@ -165,58 +151,68 @@ require_once 'includes/header.php';
 ?>
 
 <style>
-    .password-field {
-        position: relative;
-    }
-    .password-field .form-control {
-        padding-right: 86px;
-    }
-    .password-toggle {
-        position: absolute;
-        top: 50%;
-        right: 10px;
-        transform: translateY(-50%);
-        border: 1px solid #d0d7de;
-        background: #f8fafc;
-        color: #1f2937;
-        border-radius: 6px;
-        padding: 5px 10px;
-        font-size: 0.8rem;
-        font-weight: 600;
-        cursor: pointer;
-        line-height: 1;
-    }
+    .login-page { min-height: 80vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); padding: 40px 20px; }
+    .login-card { width: 100%; max-width: 440px; background: #fff; border-radius: 16px; box-shadow: 0 12px 36px rgba(0,0,0,0.12); padding: 40px; animation: fadeInUp 0.5s cubic-bezier(0.16,1,0.3,1); }
+    .login-logo { text-align: center; margin-bottom: 32px; }
+    .login-logo img { max-width: 100px; max-height: 60px; width: auto; height: auto; object-fit: contain; margin-bottom: 16px; border-radius: 8px; }
+    .login-logo h2 { font-size: 1.5rem; color: #003366; margin-bottom: 4px; }
+    .login-logo p { font-size: 0.85rem; color: #888; }
+    .login-divider { height: 1px; background: #e9ecef; margin: 24px 0; }
+    .login-footer-text { text-align: center; margin-top: 20px; font-size: 0.85rem; color: #888; }
+    .login-footer-text a { color: #003366; font-weight: 600; text-decoration: none; }
+    .login-footer-text a:hover { text-decoration: underline; }
 </style>
 
-<div class="section">
-    <div class="form-container" style="text-align: center;">
-        <img src="<?php echo htmlspecialchars($settings['school_logo_url'] ?? 'images/aamusted.jpg'); ?>" alt="School Logo" style="max-width: 130px; max-height: 68px; width: auto; height: auto; object-fit: contain; margin-bottom: 20px;" onerror="this.src='images/aamusted.jpg'">
-        <h2 class="section-title">Login to Portal</h2>
+<div class="login-page">
+    <div class="login-card">
+        <div class="login-logo">
+            <img src="<?php echo htmlspecialchars($school_logo); ?>" alt="School Logo" onerror="this.src='images/aamusted.jpg'">
+            <h2><?php echo htmlspecialchars($school_name); ?></h2>
+            <p>Sign in to your portal account</p>
+        </div>
+
         <?php if ($error): ?>
-            <div class="alert alert-danger"><?php echo $error; ?></div>
-        <?php endif; ?>
-        
-        <form action="login.php" method="POST" style="text-align: left;">
-            <div class="form-group">
-                <label for="identifier">Email or Index Number</label>
-                <input type="text" name="identifier" id="identifier" class="form-control" required placeholder="Enter Email (Admin) or Index No. (Student)">
+            <div class="alert alert-danger" style="animation: fadeInDown 0.4s var(--ease-out-expo); font-size: 0.9rem;">
+                <i class="fas fa-exclamation-circle"></i> <?php echo htmlspecialchars($error); ?>
             </div>
-            
+        <?php endif; ?>
+
+        <form action="login.php" method="POST">
             <div class="form-group">
-                <label for="password">Password</label>
+                <label for="identifier" class="required">Email or Index Number</label>
+                <input type="text" name="identifier" id="identifier" class="form-control" required
+                       placeholder="Email (Admin/Staff/Parent) or Index No. (Student)">
+            </div>
+
+            <div class="form-group">
+                <label for="password" class="required">Password</label>
                 <div class="password-field">
-                    <input type="password" name="password" id="password" class="form-control" required placeholder="Enter Password">
-                    <button type="button" class="password-toggle" data-target="password" aria-label="Toggle password visibility">View</button>
+                    <input type="password" name="password" id="password" class="form-control" required
+                           placeholder="Enter your password">
+                    <button type="button" class="password-toggle" data-target="password"
+                            aria-label="Toggle password visibility">View</button>
                 </div>
             </div>
-            
+
             <?php csrf_field(); ?>
-            <button type="submit" class="btn-submit">Login</button>
-            
-            <div style="margin-top: 15px; text-align: center;">
-                <a href="forgot-password.php" style="color: var(--primary-color);">Forgot Password?</a>
+
+            <button type="submit" class="btn-submit" style="margin-top: 8px;">
+                <i class="fas fa-sign-in-alt"></i> Sign In
+            </button>
+
+            <div class="login-divider"></div>
+
+            <div style="text-align: center;">
+                <a href="forgot-password.php" style="color: var(--color-primary); font-size: 0.9rem; text-decoration: none;">
+                    <i class="fas fa-lock"></i> Forgot Password?
+                </a>
             </div>
         </form>
+
+        <div class="login-footer-text">
+            <p>Don't have an account? <a href="register.php">Enroll Now</a></p>
+            <p style="margin-top: 8px;"><a href="index.php"><i class="fas fa-arrow-left"></i> Back to Home</a></p>
+        </div>
     </div>
 </div>
 
@@ -225,9 +221,7 @@ require_once 'includes/header.php';
         button.addEventListener('click', function() {
             const targetId = button.getAttribute('data-target');
             const input = document.getElementById(targetId);
-            if (!input) {
-                return;
-            }
+            if (!input) return;
             const show = input.type === 'password';
             input.type = show ? 'text' : 'password';
             button.textContent = show ? 'Hide' : 'View';

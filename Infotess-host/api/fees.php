@@ -1,120 +1,152 @@
 <?php
-require_once 'includes/db.php';
 require_once 'includes/header.php';
-
-$settings = [];
-try {
-    $stmt = $pdo->query("SELECT setting_key, setting_value FROM system_settings");
-    while ($row = $stmt->fetch()) { $settings[$row['setting_key']] = $row['setting_value']; }
-} catch (Exception $e) {}
-$school_name = $settings['school_name'] ?? 'Nex CEC';
-$current_year = $settings['current_academic_year'] ?? date('Y') . '/' . (date('Y') + 1);
-$current_term = $settings['current_term'] ?? '1';
 
 // Fetch fee structure
 $fees = [];
 try {
-    $stmt = $pdo->prepare("SELECT * FROM fee_structures WHERE academic_year = ? AND term = ? ORDER BY is_mandatory DESC, title ASC");
-    $stmt->execute([$current_year, $current_term]);
-    $fees = $stmt->fetchAll();
-} catch (Exception $e) {}
+    $result = $pdo->query("SELECT id, class_name, term, amount, academic_year, description FROM fee_structure ORDER BY academic_year DESC, class_name ASC");
+    if ($result && $result->rowCount() > 0) {
+        $fees = $result->fetchAll(PDO::FETCH_ASSOC);
+    }
+} catch (Exception $e) {
+    // Table may not exist
+}
 
-$total_fees = 0;
-$mandatory_total = 0;
+// Group by class
+$grouped_fees = [];
 foreach ($fees as $f) {
-    $total_fees += $f['amount'];
-    if ($f['is_mandatory']) $mandatory_total += $f['amount'];
+    $cls = $f['class_name'] ?? 'General';
+    if (!isset($grouped_fees[$cls])) {
+        $grouped_fees[$cls] = [];
+    }
+    $grouped_fees[$cls][] = $f;
 }
 ?>
 
-<div class="hero" style="height: 40vh; background: linear-gradient(rgba(26,82,118,0.85), rgba(46,134,193,0.85));">
-    <h1>Fees & Payment Information</h1>
-    <p>Official fee schedule for <?php echo htmlspecialchars($school_name); ?></p>
-</div>
+<!-- Hero Inner -->
+<section class="hero-inner" style="background: linear-gradient(135deg, #002244 0%, #003366 50%, #004080 100%);">
+    <div class="container" style="text-align: center; position: relative; z-index: 2;">
+        <span class="badge-pill badge-gold" style="margin-bottom: 16px;">Transparent Pricing</span>
+        <h1 style="font-size: 2.8rem; color: #fff; margin-bottom: 12px;">Fee Structure</h1>
+        <p style="color: rgba(255,255,255,0.8); font-size: 1.1rem; max-width: 600px; margin: 0 auto;">At Chariot Educational Complex, we believe in transparency. View our detailed fee structure for the current academic year below.</p>
+    </div>
+</section>
 
-<div class="section">
+<section class="section">
     <div class="container">
-        
-        <!-- Fee Breakdown -->
-        <h2 class="section-title" style="text-align: left;">Fee Structure — <?php echo htmlspecialchars($current_year); ?> Term <?php echo htmlspecialchars($current_term); ?></h2>
-        
-        <?php if (!empty($fees)): ?>
-            <div class="table-responsive">
-                <table class="table" style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
+        <?php if (!empty($grouped_fees)): ?>
+        <?php foreach ($grouped_fees as $class => $entries): ?>
+        <div class="animate-on-scroll" style="margin-bottom: 36px;">
+            <h2 style="color: #003366; margin-bottom: 16px; display: flex; align-items: center; gap: 10px;">
+                <span style="font-size:1.3rem;">🎓</span> <?php echo htmlspecialchars($class); ?>
+            </h2>
+            <div style="overflow-x:auto;border-radius:16px;box-shadow:0 4px 20px rgba(0,51,102,0.06);border:1px solid #f0f0f0;">
+                <table style="width:100%;border-collapse:collapse;background:#fff;">
                     <thead>
-                        <tr style="background: var(--primary-color); color: white;">
-                            <th style="padding: 15px; text-align: left;">Fee Type</th>
-                            <th style="padding: 15px; text-align: right;">Amount (GHS)</th>
-                            <th style="padding: 15px; text-align: center;">Status</th>
+                        <tr style="background:linear-gradient(135deg,#003366,#004080);color:#ffcc00;">
+                            <th style="padding:14px 20px;text-align:left;font-size:0.85rem;">Term</th>
+                            <th style="padding:14px 20px;text-align:left;font-size:0.85rem;">Amount (GHS)</th>
+                            <th style="padding:14px 20px;text-align:left;font-size:0.85rem;">Academic Year</th>
+                            <?php if (!empty($entries[0]['description'])): ?>
+                            <th style="padding:14px 20px;text-align:left;font-size:0.85rem;">Details</th>
+                            <?php endif; ?>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($fees as $fee): ?>
-                        <tr style="border-bottom: 1px solid #eee;">
-                            <td style="padding: 15px;">
-                                <strong><?php echo htmlspecialchars($fee['title']); ?></strong>
-                                <?php if ($fee['is_mandatory']): ?>
-                                    <span style="background: #e74c3c; color: white; font-size: 0.7rem; padding: 2px 6px; border-radius: 3px; margin-left: 8px;">Required</span>
-                                <?php endif; ?>
+                        <?php foreach ($entries as $fee): ?>
+                        <tr style="border-bottom:1px solid #f0f0f0;transition:background 0.2s;" onmouseover="this.style.background='#f8f9fa'" onmouseout="this.style.background=''">
+                            <td style="padding:14px 20px;font-weight:600;color:#003366;"><?php echo htmlspecialchars($fee['term']); ?></td>
+                            <td style="padding:14px 20px;">
+                                <strong style="color:#e63946;font-size:1.1rem;">₵<?php echo number_format($fee['amount'], 2); ?></strong>
                             </td>
-                            <td style="padding: 15px; text-align: right; font-weight: bold;">GHS <?php echo number_format($fee['amount'], 2); ?></td>
-                            <td style="padding: 15px; text-align: center;"><?php echo $fee['is_mandatory'] ? 'Mandatory' : 'Optional'; ?></td>
+                            <td style="padding:14px 20px;color:#666;"><?php echo htmlspecialchars($fee['academic_year']); ?></td>
+                            <?php if (!empty($fee['description'])): ?>
+                            <td style="padding:14px 20px;color:#888;font-size:0.85rem;"><?php echo htmlspecialchars($fee['description']); ?></td>
+                            <?php endif; ?>
                         </tr>
                         <?php endforeach; ?>
-                        <tr style="background: #f8f9fa; font-weight: bold;">
-                            <td style="padding: 15px;">Total Fees</td>
-                            <td style="padding: 15px; text-align: right;">GHS <?php echo number_format($total_fees, 2); ?></td>
-                            <td style="padding: 15px; text-align: center;"></td>
-                        </tr>
                     </tbody>
                 </table>
             </div>
+        </div>
+        <?php endforeach; ?>
         <?php else: ?>
-            <div class="alert alert-info" style="background: #e3f2fd; padding: 20px; border-radius: 5px; margin-bottom: 30px;">
-                <i class="fas fa-info-circle"></i> Fee structure for this term will be published soon. Contact the school office for details.
+        <!-- Default Fee Structure -->
+        <div class="animate-on-scroll" style="margin-bottom: 36px;">
+            <div style="text-align: center; margin-bottom: 32px;">
+                <div style="font-size: 3rem; margin-bottom: 12px; opacity: 0.3;">💰</div>
+                <h3 style="color: #003366; margin-bottom: 8px;">Fee Structure for 2024/2025 Academic Year</h3>
+                <p style="color: #888; max-width: 500px; margin: 0 auto;">Below is the indicative fee structure. For the most current fees, please contact the school administration.</p>
             </div>
+
+            <?php
+            $sample_classes = [
+                'Nursery 1 & 2' => ['1st Term' => 450.00, '2nd Term' => 400.00, '3rd Term' => 400.00],
+                'Kindergarten 1 & 2' => ['1st Term' => 500.00, '2nd Term' => 450.00, '3rd Term' => 450.00],
+                'Class 1 - 3' => ['1st Term' => 550.00, '2nd Term' => 500.00, '3rd Term' => 500.00],
+                'Class 4 - 6' => ['1st Term' => 600.00, '2nd Term' => 550.00, '3rd Term' => 550.00],
+            ];
+            $academic_year = '2024/2025';
+            ?>
+
+            <?php foreach ($sample_classes as $class => $terms): ?>
+            <div class="animate-on-scroll" style="margin-bottom: 24px;">
+                <h3 style="color: #003366; margin-bottom: 12px; font-size: 1.1rem;"><?php echo htmlspecialchars($class); ?></h3>
+                <div style="overflow-x:auto;border-radius:12px;box-shadow:0 4px 20px rgba(0,51,102,0.06);border:1px solid #f0f0f0;">
+                    <table style="width:100%;border-collapse:collapse;background:#fff;">
+                        <thead>
+                            <tr style="background:linear-gradient(135deg,#003366,#004080);color:#ffcc00;">
+                                <th style="padding:12px 20px;text-align:left;font-size:0.85rem;">Term</th>
+                                <th style="padding:12px 20px;text-align:left;font-size:0.85rem;">Amount (GHS)</th>
+                                <th style="padding:12px 20px;text-align:left;font-size:0.85rem;">Academic Year</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($terms as $term => $amount): ?>
+                            <tr style="border-bottom:1px solid #f0f0f0;">
+                                <td style="padding:12px 20px;font-weight:600;color:#003366;"><?php echo $term; ?></td>
+                                <td style="padding:12px 20px;"><strong style="color:#e63946;">₵<?php echo number_format($amount, 2); ?></strong></td>
+                                <td style="padding:12px 20px;color:#666;"><?php echo $academic_year; ?></td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
         <?php endif; ?>
 
-        <!-- Payment Methods -->
-        <h3 class="section-title" style="text-align: left; margin-top: 40px;">How to Pay</h3>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
-            <div class="card">
-                <div class="card-content">
-                    <h3><i class="fas fa-building" style="color: var(--primary-color);"></i> School Finance Office</h3>
-                    <p>Pay cash or mobile money directly at the school finance office during office hours (Mon-Fri, 7:30 AM - 4:00 PM).</p>
-                </div>
-            </div>
-            <div class="card">
-                <div class="card-content">
-                    <h3><i class="fas fa-mobile-alt" style="color: var(--primary-color);"></i> Mobile Money</h3>
-                    <p>Send payment via MTN MoMo, Vodafone Cash, or AirtelTigo Money. Use your child's <strong>Index Number</strong> as the payment reference.</p>
-                </div>
-            </div>
-            <div class="card">
-                <div class="card-content">
-                    <h3><i class="fas fa-building" style="color: var(--primary-color);"></i> Bank Transfer</h3>
-                    <p>Transfer to the school's bank account. Contact the finance office for account details. Use the student's Index Number as reference.</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Important Notes -->
-        <div style="background: #fff3cd; color: #856404; padding: 20px; border-radius: 8px; border: 1px solid #ffeeba; margin-top: 30px;">
-            <strong><i class="fas fa-exclamation-triangle"></i> Important:</strong>
-            <ul style="margin: 10px 0 0 20px;">
-                <li>All students must be enrolled and have a valid Index Number before making payments.</li>
-                <li>Always provide the student's <strong>Index Number</strong> as payment reference.</li>
-                <li>Receipts will be issued and sent to the registered email address.</li>
-                <li>Contact the finance office for any questions or payment-related issues.</li>
+        <!-- Payment Policy -->
+        <div class="animate-on-scroll" style="background:#f8f9fa;border-radius:16px;padding:32px;margin-top:24px;border:1px solid rgba(255,204,0,0.15);">
+            <h3 style="color: #003366; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+                <span>📋</span> Payment Policy
+            </h3>
+            <ul style="padding-left: 20px; font-size: 0.9rem; color: #555; line-height: 2;">
+                <li>Fees are payable in full at the beginning of each term.</li>
+                <li>Payment can be made via mobile money, bank transfer, or cash at the school office.</li>
+                <li>A receipt will be issued for every payment made.</li>
+                <li>For siblings, a discount may apply — please inquire at the admin office.</li>
+                <li>Fee payment deadlines are communicated at the start of each term.</li>
+                <li>For any inquiries regarding fees, please contact the school administration.</li>
             </ul>
         </div>
-        
-        <div style="text-align: center; margin-top: 40px;">
-            <a href="enroll.php" class="btn-primary" style="display: inline-block; margin-right: 10px;">Enroll Now</a>
-            <a href="contact.php" class="btn-primary" style="display: inline-block; background: transparent; color: var(--primary-color); border: 2px solid var(--primary-color);">Contact Us</a>
-        </div>
-
     </div>
-</div>
+</section>
+
+<script>
+(function() {
+    var els = document.querySelectorAll('.animate-on-scroll');
+    var observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+                observer.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.1 });
+    els.forEach(function(el) { observer.observe(el); });
+})();
+</script>
 
 <?php require_once 'includes/footer.php'; ?>

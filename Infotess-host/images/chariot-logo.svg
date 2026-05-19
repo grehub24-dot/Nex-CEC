@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Chariot Educational Complex Logo">
+  <defs>
+    <linearGradient id="navyGold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#003366"/>
+      <stop offset="100%" stop-color="#001a33"/>
+    </linearGradient>
+    <linearGradient id="goldAccent" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0%" stop-color="#cca300"/>
+      <stop offset="50%" stop-color="#ffcc00"/>
+      <stop offset="100%" stop-color="#ffd633"/>
+    </linearGradient>
+  </defs>
+  <!-- Outer Shield -->
+  <rect x="16" y="16" width="480" height="480" rx="80" fill="url(#navyGold)" stroke="url(#goldAccent)" stroke-width="6"/>
+  <!-- Inner ring -->
+  <circle cx="256" cy="210" r="90" fill="none" stroke="url(#goldAccent)" stroke-width="4" opacity="0.6"/>
+  <!-- Chariot Wheel (sun-like) -->
+  <circle cx="256" cy="210" r="55" fill="none" stroke="url(#goldAccent)" stroke-width="5"/>
+  <circle cx="256" cy="210" r="12" fill="url(#goldAccent)"/>
+  <!-- Wheel spokes -->
+  <g stroke="url(#goldAccent)" stroke-width="3.5" opacity="0.8">
+    <line x1="256" y1="155" x2="256" y2="265"/>
+    <line x1="201" y1="210" x2="311" y2="210"/>
+    <line x1="218" y1="172" x2="294" y2="248"/>
+    <line x1="294" y1="172" x2="218" y2="248"/>
+  </g>
+  <!-- Open Book below wheel -->
+  <path d="M206 310 Q256 285 306 310 L306 350 Q256 330 206 350 Z" fill="url(#goldAccent)" opacity="0.85"/>
+  <path d="M206 310 L206 350 Q256 330 256 330 L256 290 Z" fill="#003366" opacity="0.5"/>
+  <path d="M306 310 L306 350 Q256 330 256 330 L256 290 Z" fill="#003366" opacity="0.3"/>
+  <!-- Torch/Flame of Knowledge -->
+  <path d="M256 130 Q248 148 244 158 Q240 168 244 176 Q248 168 256 160 Q264 168 268 176 Q272 168 268 158 Q264 148 256 130 Z" fill="url(#goldAccent)"/>
+  <rect x="252" y="176" width="8" height="14" rx="2" fill="#ffcc00" opacity="0.7"/>
+  <!-- Laurel branches -->
+  <g fill="none" stroke="url(#goldAccent)" stroke-width="3" opacity="0.5">
+    <path d="M166 210 Q140 180 136 150 Q148 160 156 180 Q162 195 166 210"/>
+    <path d="M346 210 Q372 180 376 150 Q364 160 356 180 Q350 195 346 210"/>
+  </g>
+  <!-- School name -->
+  <text x="256" y="405" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="36" font-weight="700" fill="#ffcc00" letter-spacing="2">CHARIOT</text>
+  <text x="256" y="440" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="22" font-weight="500" fill="#ffd633" letter-spacing="3" opacity="0.9">EDUCATIONAL COMPLEX</text>
+  <text x="256" y="468" text-anchor="middle" font-family="Georgia, serif" font-size="12" fill="#ffd633" opacity="0.7" letter-spacing="4">— EST. 2023 —</text>
+  <!-- Motto ribbon -->
+  <rect x="96" y="478" width="320" height="0" rx="8" fill="url(#goldAccent)" opacity="0"/>
+</svg>

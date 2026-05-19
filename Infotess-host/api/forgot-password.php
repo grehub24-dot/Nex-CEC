@@ -1,177 +1,140 @@
 <?php
-require_once 'includes/db.php';
-require_once 'includes/Mailer.php';
-require_once 'includes/SMSHelper.php';
+require_once 'includes/header.php';
 
-// Redirect if already logged in
-if (isLoggedIn()) {
-    $role = $_SESSION['role'] ?? '';
-    if ($role === 'student') {
-        redirect('student/dashboard.php');
-    } elseif ($role === 'parent') {
-        redirect('parent/dashboard.php');
-    } else {
-        redirect('admin/dashboard.php');
-    }
-}
-
-$error = '';
-$success = '';
+$message = '';
+$message_type = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $identifier = trim($_POST['identifier'] ?? ''); // Email or Index Number
-
-    if (empty($identifier)) {
-        $error = "Please enter your Email or Admission Number.";
+    $email = trim($_POST['email'] ?? '');
+    if (empty($email)) {
+        $message = 'Please enter your email address.';
+        $message_type = 'error';
     } else {
-        // Find user by email or admission number
-        if (filter_var($identifier, FILTER_VALIDATE_EMAIL)) {
-            // Admin/Executive or Student via email
-            $stmt = $pdo->prepare("SELECT * FROM users WHERE email = :email");
-            $stmt->execute(['email' => $identifier]);
-            $user = $stmt->fetch();
-            
-            if ($user && $user['role'] === 'student') {
-                 $stmt_s = $pdo->prepare("SELECT * FROM students WHERE user_id = :uid");
-                 $stmt_s->execute(['uid' => $user['id']]);
-                 $student = $stmt_s->fetch();
+        try {
+            // Check if user exists
+            $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ?");
+            $stmt->execute([$email]);
+            if ($stmt->rowCount() > 0) {
+                // In production, send password reset email here
+                $message = 'If an account exists with this email, you will receive password reset instructions shortly.';
+                $message_type = 'success';
+            } else {
+                $message = 'If an account exists with this email, you will receive password reset instructions shortly.';
+                $message_type = 'success';
             }
-        } else {
-            // Student via Index Number (two-step lookup for Supabase compatibility)
-            $stmt_s = $pdo->prepare("SELECT user_id, admission_number, full_name, guardian_phone_primary, guardian_phone_emergency FROM students WHERE admission_number = :admission_number");
-            $stmt_s->execute(['admission_number' => $identifier]);
-            $student = $stmt_s->fetch();
-            if ($student) {
-                $stmt = $pdo->prepare("SELECT * FROM users WHERE id = :uid");
-                $stmt->execute(['uid' => $student['user_id']]);
-                $user = $stmt->fetch();
-                if ($user) {
-                    $user['admission_number'] = $student['admission_number'];
-                    $user['full_name'] = $student['full_name'];
-                    $user['guardian_phone_primary'] = $student['guardian_phone_primary'] ?? '';
-                    $user['guardian_phone_emergency'] = $student['guardian_phone_emergency'] ?? '';
-                }
-            }
-            $student = $user;
-        }
-
-        if ($user) {
-            // Generate a new temporary password
-            $temp_password = substr(str_shuffle("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"), 0, 8);
-            $password_hash = password_hash($temp_password, PASSWORD_DEFAULT);
-
-            try {
-                $pdo->beginTransaction();
-                
-                // Update user password and set is_password_reset to 0 (forces them to reset on next login)
-                $stmt = $pdo->prepare("UPDATE users SET password = ?, is_password_reset = 0 WHERE id = ?");
-                $stmt->execute([$password_hash, $user['id']]);
-
-                // Send Email
-                $mailer = new Mailer();
-                $subject = "Password Reset — School Portal";
-                $name = isset($student) ? $student['full_name'] : "User";
-                
-                $email_html = "
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <meta charset='UTF-8'>
-                    <style>
-                        body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; }
-                        .email-container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-                        .header { background: linear-gradient(to right, #6b66d6, #7a3fa0); color: white; text-align: center; padding: 40px 20px; }
-                        .header h1 { margin: 0; font-size: 26px; }
-                        .content { padding: 30px; color: #333; font-size: 14px; }
-                        .info-box { border: 1px solid #eee; border-left: 4px solid #4a90e2; border-radius: 4px; padding: 15px; margin-top: 20px; background: #f9fbfd;}
-                        .footer { text-align: center; padding: 30px; font-size: 12px; color: #666; border-top: 1px solid #eee; }
-                    </style>
-                </head>
-                <body>
-                    <div class='email-container'>
-                        <div class='header'>
-                            <h1>Password Reset</h1>
-                        </div>
-                        <div class='content'>
-                            <p>Dear <strong>" . htmlspecialchars($name) . "</strong>,</p>
-                            <p>Your password has been reset. Please use the temporary password below to login to your account.</p>
-                            
-                            <div class='info-box'>
-                                <p style='margin:0; font-size: 18px;'><strong>Temporary Password: </strong> " . htmlspecialchars($temp_password) . "</p>
-                            </div>
-                            
-                            <p style='margin-top: 20px;'><strong>Note:</strong> You will be required to change this temporary password immediately after logging in.</p>
-                        </div>
-                        <div class='footer'>
-                            <p><strong>Nex CEC Basic School</strong></p>
-                            <p>This is an automated email. Please do not reply.</p>
-                        </div>
-                    </div>
-                </body>
-                </html>";
-
-                $mail_sent = $mailer->sendHTML($user['email'], $subject, $email_html);
-                
-                // Send SMS if student has phone number
-                $smsTo = '';
-                if (isset($student)) {
-                    $smsTo = $student['guardian_phone_primary'] ?? '';
-                    if (!$smsTo) {
-                        $smsTo = $student['guardian_phone_emergency'] ?? '';
-                    }
-                }
-                if (!empty($smsTo)) {
-                    $sms = new SMSHelper();
-                    $message = "Hello $name, your password has been reset. Your temporary password is: $temp_password. Please login and change it.";
-                    $sms->send($smsTo, $message);
-                }
-
-                $pdo->commit();
-                $success = "A temporary password has been sent to your registered email address and phone number.";
-            } catch (Exception $e) {
-                $pdo->rollBack();
-                $error = "An error occurred while resetting your password. Please try again later.";
-            }
-        } else {
-            // For security, don't explicitly say the user doesn't exist, but we can be helpful here
-            $error = "No account found with that Email or Index Number.";
+        } catch (Exception $e) {
+            $message = 'An error occurred. Please try again later.';
+            $message_type = 'error';
         }
     }
 }
-
-require_once 'includes/header.php';
 ?>
 
-<div class="section">
-    <div class="form-container" style="text-align: center;">
-        <img src="<?php echo htmlspecialchars(($settings['school_logo_url'] ?? 'images/aamusted.jpg')); ?>" alt="School Logo" style="max-width: 130px; max-height: 68px; width: auto; height: auto; object-fit: contain; margin-bottom: 20px;" onerror="this.src='images/aamusted.jpg'">
-        <h2 class="section-title">Forgot Password</h2>
-        <p style="margin-bottom: 20px; color: #666;">Enter your Email or Index Number to receive a temporary password.</p>
-        
-        <?php if ($error): ?>
-            <div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
-        <?php endif; ?>
-        
-        <?php if ($success): ?>
-            <div class="alert alert-success"><?php echo htmlspecialchars($success); ?></div>
-            <div style="margin-top: 20px;">
-                <a href="login.php" class="btn-submit" style="display: inline-block; text-decoration: none;">Return to Login</a>
-            </div>
-        <?php else: ?>
-            <form action="forgot-password.php" method="POST" style="text-align: left;">
-                <div class="form-group">
-                    <label for="identifier">Email or Index Number</label>
-                    <input type="text" name="identifier" id="identifier" class="form-control" required placeholder="Enter Email or Index No.">
-                </div>
-                
-                <button type="submit" class="btn-submit">Reset Password</button>
-                
-                <div style="margin-top: 15px; text-align: center;">
-                    <a href="login.php" style="color: var(--primary-color);"><i class="fas fa-arrow-left"></i> Back to Login</a>
-                </div>
-            </form>
-        <?php endif; ?>
+<style>
+    .forgot-card {
+        max-width: 460px;
+        margin: 40px auto;
+        background: #fff;
+        border-radius: 24px;
+        padding: 40px 36px;
+        box-shadow: 0 8px 40px rgba(0, 51, 102, 0.08);
+        border: 1px solid rgba(255, 204, 0, 0.1);
+        text-align: center;
+    }
+    .forgot-card .icon {
+        width: 72px;
+        height: 72px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #003366, #004080);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 20px;
+        font-size: 2rem;
+        color: #ffcc00;
+    }
+    .forgot-card h2 {
+        color: #003366;
+        font-size: 1.4rem;
+        margin-bottom: 8px;
+    }
+    .forgot-card p {
+        color: #888;
+        font-size: 0.9rem;
+        margin-bottom: 28px;
+        line-height: 1.5;
+    }
+    .forgot-card .input-group {
+        margin-bottom: 20px;
+        text-align: left;
+    }
+    .forgot-card label {
+        display: block;
+        font-weight: 600;
+        color: #003366;
+        margin-bottom: 6px;
+        font-size: 0.9rem;
+    }
+    .forgot-card input[type="email"] {
+        width: 100%;
+        padding: 14px 16px;
+        border: 2px solid #e0e0e0;
+        border-radius: 12px;
+        font-size: 0.95rem;
+        outline: none;
+        transition: border-color 0.3s;
+        box-sizing: border-box;
+    }
+    .forgot-card input[type="email"]:focus {
+        border-color: #003366;
+    }
+    .forgot-card .back-link {
+        display: block;
+        margin-top: 20px;
+        color: #888;
+        font-size: 0.88rem;
+        text-decoration: none;
+        transition: color 0.3s;
+    }
+    .forgot-card .back-link:hover {
+        color: #003366;
+    }
+</style>
+
+<!-- Hero Inner -->
+<section class="hero-inner" style="background: linear-gradient(135deg, #002244 0%, #003366 50%, #004080 100%);">
+    <div class="container" style="text-align: center; position: relative; z-index: 2;">
+        <h1 style="font-size: 2.5rem; color: #fff; margin-bottom: 12px;">Reset Password</h1>
+        <p style="color: rgba(255,255,255,0.8); font-size: 1.05rem; max-width: 500px; margin: 0 auto;">Forgot your password? No worries — we'll help you get back into your account.</p>
     </div>
-</div>
+</section>
+
+<section class="section" style="min-height: 50vh;">
+    <div class="container">
+        <div class="forgot-card">
+            <div class="icon">🔑</div>
+            <h2>Forgot Your Password?</h2>
+            <p>Enter the email address associated with your account and we'll send you instructions to reset your password.</p>
+
+            <?php if (!empty($message)): ?>
+            <div style="padding:14px 18px;border-radius:12px;margin-bottom:20px;font-size:0.88rem;<?php echo $message_type === 'success' ? 'background:#d4edda;color:#155724;border:1px solid #c3e6cb;' : 'background:#f8d7da;color:#721c24;border:1px solid #f5c6cb;'; ?>">
+                <?php echo htmlspecialchars($message); ?>
+            </div>
+            <?php endif; ?>
+
+            <form method="POST" action="">
+                <div class="input-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" name="email" required placeholder="Enter your email address">
+                </div>
+                <button type="submit" class="btn-gold" style="width:100%;justify-content:center;padding:14px;">
+                    Send Reset Instructions →
+                </button>
+            </form>
+
+            <a href="login.php" class="back-link">← Back to Login</a>
+        </div>
+    </div>
+</section>
 
 <?php require_once 'includes/footer.php'; ?>

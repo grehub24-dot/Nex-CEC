@@ -29,10 +29,7 @@
 </head>
 <body>
     <!-- Skip to main content (accessibility) -->
-    <a href="#main-content" class="skip-link" style="position: absolute; top: -100%; left: 0; background: var(--primary-color); color: #fff; padding: 10px 20px; z-index: 9999; transition: top 0.2s;">Skip to main content</a>
-    <style>
-        .skip-link:focus { top: 0; }
-    </style>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
 
     <?php
     // Load school settings for branding (available to all pages that include header)
@@ -49,17 +46,63 @@
     }
     $school_name = $settings['school_name'] ?? 'Nex CEC';
     $school_motto = $settings['school_motto'] ?? 'Excellence in Education';
+    $school_logo = $settings['school_logo_url'] ?? ($base_url . 'images/aamusted.jpg');
+
+    // Determine current page for active nav state
+    $current_page = basename($_SERVER['PHP_SELF']);
     ?>
+
+    <!-- Top announcement bar (optional) -->
+    <div class="top-announcement">
+        <div class="container">
+            <span><i class="fas fa-phone-alt"></i> <?php echo htmlspecialchars($settings['school_phone'] ?? '+233 XX XXX XXXX'); ?></span>
+            <span><i class="fas fa-envelope"></i> <?php echo htmlspecialchars($settings['school_email'] ?? 'info@school.edu.gh'); ?></span>
+            <span class="top-announcement-motto"><i class="fas fa-quote-left"></i> <?php echo htmlspecialchars($school_motto); ?></span>
+        </div>
+    </div>
+
     <!-- Navigation -->
     <nav class="navbar" role="navigation" aria-label="Main navigation">
         <div class="container">
             <a href="<?php echo $base_url; ?>index.php" class="logo" aria-label="<?php echo htmlspecialchars($school_name); ?> Home">
-                <img src="<?php echo htmlspecialchars($settings['school_logo_url'] ?? $base_url . 'images/aamusted.jpg'); ?>" alt="<?php echo htmlspecialchars($school_name); ?> Logo" height="40" onerror="this.src='<?php echo $base_url; ?>images/aamusted.jpg'"> <?php echo htmlspecialchars($school_name); ?>
+                <img src="<?php echo htmlspecialchars($school_logo); ?>" alt="<?php echo htmlspecialchars($school_name); ?> Logo" height="40" onerror="this.src='<?php echo $base_url; ?>images/aamusted.jpg'">
+                <span class="logo-text"><?php echo htmlspecialchars($school_name); ?></span>
             </a>
+
             <ul class="nav-links" role="menubar">
-                <li role="none"><a href="<?php echo $base_url; ?>index.php" role="menuitem">Home</a></li>
-                <li role="none"><a href="<?php echo $base_url; ?>about.php" role="menuitem">About</a></li>
-                <li role="none"><a href="<?php echo $base_url; ?>contact.php" role="menuitem">Contact</a></li>
+                <li role="none"><a href="<?php echo $base_url; ?>index.php" role="menuitem" class="<?php echo ($current_page === 'home.php' || $current_page === 'index.php') ? 'active' : ''; ?>">Home</a></li>
+
+                <!-- About dropdown -->
+                <li class="dropdown" role="none">
+                    <a href="<?php echo $base_url; ?>about.php" class="dropbtn" role="menuitem" aria-haspopup="true" aria-expanded="false">
+                        About <i class="fas fa-chevron-down"></i>
+                    </a>
+                    <ul class="dropdown-content" role="menu">
+                        <li role="none"><a href="<?php echo $base_url; ?>about.php" role="menuitem">Our School</a></li>
+                        <li role="none"><a href="<?php echo $base_url; ?>about.php#mission" role="menuitem">Mission & Vision</a></li>
+                        <li role="none"><a href="<?php echo $base_url; ?>public_staff_profile.php" role="menuitem">Our Staff</a></li>
+                        <li role="none"><a href="<?php echo $base_url; ?>alumni.php" role="menuitem">Alumni</a></li>
+                    </ul>
+                </li>
+
+                <!-- Programs dropdown -->
+                <li class="dropdown" role="none">
+                    <a href="#" class="dropbtn" role="menuitem" aria-haspopup="true" aria-expanded="false">
+                        Academics <i class="fas fa-chevron-down"></i>
+                    </a>
+                    <ul class="dropdown-content" role="menu">
+                        <li role="none"><a href="<?php echo $base_url; ?>about.php#early-childhood" role="menuitem">Early Childhood</a></li>
+                        <li role="none"><a href="<?php echo $base_url; ?>about.php#primary" role="menuitem">Primary School</a></li>
+                        <li role="none"><a href="<?php echo $base_url; ?>about.php#jhs" role="menuitem">Junior High School</a></li>
+                        <li role="none"><a href="<?php echo $base_url; ?>resources.php" role="menuitem">Learning Resources</a></li>
+                    </ul>
+                </li>
+
+                <li role="none"><a href="<?php echo $base_url; ?>news.php" role="menuitem" class="<?php echo ($current_page === 'news.php') ? 'active' : ''; ?>">News</a></li>
+                <li role="none"><a href="<?php echo $base_url; ?>events.php" role="menuitem" class="<?php echo ($current_page === 'events.php') ? 'active' : ''; ?>">Events</a></li>
+                <li role="none"><a href="<?php echo $base_url; ?>gallery.php" role="menuitem" class="<?php echo ($current_page === 'gallery.php') ? 'active' : ''; ?>">Gallery</a></li>
+                <li role="none"><a href="<?php echo $base_url; ?>contact.php" role="menuitem" class="<?php echo ($current_page === 'contact.php') ? 'active' : ''; ?>">Contact</a></li>
+
                 <?php if (isset($_SESSION['user_id'])): ?>
                     <?php if (isset($_SESSION['has_children']) && $_SESSION['has_children']): ?>
                         <li role="none"><a href="<?php echo $base_url; ?>route_selector.php" class="btn-login" role="menuitem">Portals</a></li>
@@ -72,14 +115,17 @@
                     <?php else: ?>
                         <li role="none"><a href="<?php echo $base_url; ?>student/dashboard.php" class="btn-login" role="menuitem">Dashboard</a></li>
                     <?php endif; ?>
-                    <li role="none"><a href="<?php echo $base_url; ?>logout.php" role="menuitem">Logout</a></li>
+                    <li role="none"><a href="<?php echo $base_url; ?>logout.php" role="menuitem"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
                 <?php else: ?>
-                    <li role="none"><a href="<?php echo $base_url; ?>register.php" class="btn-login" role="menuitem">Enroll Now</a></li>
-                    <li role="none"><a href="<?php echo $base_url; ?>login.php" class="btn-login" role="menuitem">Login</a></li>
+                    <li role="none"><a href="<?php echo $base_url; ?>register.php" class="btn-cta" role="menuitem"><i class="fas fa-user-plus"></i> Enroll Now</a></li>
+                    <li role="none"><a href="<?php echo $base_url; ?>login.php" class="btn-login" role="menuitem"><i class="fas fa-sign-in-alt"></i> Login</a></li>
                 <?php endif; ?>
             </ul>
-            <div class="hamburger" aria-label="Toggle navigation menu" role="button" tabindex="0">
+
+            <button class="hamburger" aria-label="Toggle navigation menu" aria-expanded="false">
                 <i class="fas fa-bars"></i>
-            </div>
+            </button>
         </div>
     </nav>
+
+    <main id="main-content">

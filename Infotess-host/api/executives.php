@@ -1,170 +1,164 @@
 <?php
-require_once 'includes/db.php';
 require_once 'includes/header.php';
 
-function fetchHtml(string $url): string {
-    $context = stream_context_create([
-        'http' => [
-            'method' => 'GET',
-            'header' => "User-Agent: Mozilla/5.0\r\nAccept: text/html\r\n",
-            'timeout' => 8,
-        ],
-        'ssl' => [
-            'verify_peer' => true,
-            'verify_peer_name' => true,
-        ],
-    ]);
-
-    $html = @file_get_contents($url, false, $context);
-    return $html !== false ? (string)$html : '';
+// Try to fetch from executives table
+$executives = [];
+try {
+    $result = $pdo->query("SELECT id, full_name, position, image_url, bio FROM executives ORDER BY id ASC");
+    if ($result && $result->rowCount() > 0) {
+        $executives = $result->fetchAll(PDO::FETCH_ASSOC);
+    }
+} catch (Exception $e) {
+    // Table may not exist
 }
-
-function fetchRandomUstedPhotos(int $count): array {
-    if ($count < 1) {
-        return [];
-    }
-
-    $listingHtml = fetchHtml('https://usted.edu.gh/fasme/staff/');
-    if ($listingHtml === '') {
-        return [];
-    }
-
-    preg_match_all('/https:\/\/usted\.edu\.gh\/staff\/[^"\']+/i', $listingHtml, $matches);
-    $profileUrls = array_values(array_unique($matches[0] ?? []));
-    if (empty($profileUrls)) {
-        return [];
-    }
-
-    shuffle($profileUrls);
-    $photos = [];
-
-    foreach ($profileUrls as $profileUrl) {
-        $profileHtml = fetchHtml($profileUrl);
-        if ($profileHtml === '') {
-            continue;
-        }
-
-        if (preg_match('/<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']/i', $profileHtml, $og)) {
-            $photo = trim((string)$og[1]);
-            if ($photo !== '') {
-                $photos[] = $photo;
-            }
-        } elseif (preg_match('/<meta[^>]+name=["\']twitter:image["\'][^>]+content=["\']([^"\']+)["\']/i', $profileHtml, $tw)) {
-            $photo = trim((string)$tw[1]);
-            if ($photo !== '') {
-                $photos[] = $photo;
-            }
-        }
-
-        if (count($photos) >= $count) {
-            break;
-        }
-    }
-
-    return $photos;
-}
-
-$stmt = $pdo->query("SELECT * FROM executives ORDER BY id ASC");
-$executives = $stmt->fetchAll();
-
-if (empty($executives)) {
-    $executives = [
-        [
-            'full_name' => 'Dela Stephen Dunyo',
-            'position' => 'President',
-            'image_url' => '',
-            'bio' => 'Cybersecurity • Level 300',
-            'email' => ''
-        ],
-        [
-            'full_name' => 'Tetteh Reuben',
-            'position' => 'Vice President',
-            'image_url' => '',
-            'bio' => 'BSc ITE • Level 300',
-            'email' => ''
-        ],
-        [
-            'full_name' => 'Poleson Godwin',
-            'position' => 'General Secretary',
-            'image_url' => '',
-            'bio' => 'Level 300',
-            'email' => ''
-        ],
-        [
-            'full_name' => 'Kitsi Roland',
-            'position' => 'Financial Secretary',
-            'image_url' => '',
-            'bio' => 'Level 300',
-            'email' => ''
-        ],
-        [
-            'full_name' => 'Naazir Godfred',
-            'position' => 'Organizer',
-            'image_url' => '',
-            'bio' => 'Level 300',
-            'email' => ''
-        ],
-        [
-            'full_name' => 'Abdul Razzaq Adama',
-            'position' => 'Treasurer',
-            'image_url' => '',
-            'bio' => 'Level 300',
-            'email' => ''
-        ],
-        [
-            'full_name' => 'Dosuntey Rose',
-            'position' => 'WOCOM',
-            'image_url' => '',
-            'bio' => 'Level 300',
-            'email' => ''
-        ],
-    ];
-}
-
-/*
-$randomPhotos = fetchRandomUstedPhotos(count($executives));
-if (!empty($randomPhotos)) {
-    $photoCount = count($randomPhotos);
-    foreach ($executives as $index => $exec) {
-        $executives[$index]['image_url'] = $randomPhotos[$index % $photoCount];
-    }
-}
-*/
 ?>
 
-<div class="hero" style="height: 50vh;">
-    <h1>Our Leadership</h1>
-    <p>Meet the executives serving the 2025/2026 administration.</p>
-</div>
+<!-- Hero Inner -->
+<section class="hero-inner" style="background: linear-gradient(135deg, #002244 0%, #003366 50%, #004080 100%);">
+    <div class="container" style="text-align: center; position: relative; z-index: 2;">
+        <span class="badge-pill badge-gold" style="margin-bottom: 16px;">Leadership</span>
+        <h1 style="font-size: 2.8rem; color: #fff; margin-bottom: 12px;">Our Leadership & Structure</h1>
+        <p style="color: rgba(255,255,255,0.8); font-size: 1.1rem; max-width: 600px; margin: 0 auto;">Meet the dedicated leaders guiding Chariot Educational Complex toward excellence in education and character formation.</p>
+    </div>
+</section>
 
-<div class="section">
+<section class="section">
     <div class="container">
-        <div class="card-grid">
-            <?php foreach ($executives as $exec): ?>
-            <div class="card" style="text-align: center;">
-                <div style="padding: 20px;">
-                    <img src="<?php echo htmlspecialchars($exec['image_url'] ?: 'images/aamusted.jpg'); ?>" alt="<?php echo htmlspecialchars($exec['full_name']); ?>" style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover;">
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title"><?php echo htmlspecialchars($exec['full_name']); ?></h3>
-                    <p style="color: var(--secondary-color); font-weight: bold;"><?php echo htmlspecialchars($exec['position']); ?></p>
-                    <p style="margin: 10px 0;"><?php echo htmlspecialchars($exec['bio'] ?? ''); ?></p>
-                    <div style="margin-top: 15px;">
-                        <?php if (!empty($exec['email'])): ?>
-                        <a href="mailto:<?php echo htmlspecialchars($exec['email']); ?>" style="color: var(--primary-color); margin: 0 10px;"><i class="fas fa-envelope"></i></a>
-                        <?php endif; ?>
-                        <?php if (!empty($exec['linkedin_url'])): ?>
-                        <a href="<?php echo htmlspecialchars($exec['linkedin_url']); ?>" style="color: var(--primary-color); margin: 0 10px;"><i class="fab fa-linkedin"></i></a>
-                        <?php endif; ?>
-                        <?php if (!empty($exec['github_url'])): ?>
-                        <a href="<?php echo htmlspecialchars($exec['github_url']); ?>" style="color: var(--primary-color); margin: 0 10px;"><i class="fab fa-github"></i></a>
+        <?php if (!empty($executives)): ?>
+        <div class="animate-on-scroll" style="margin-bottom: 48px;">
+            <h2 style="color: #003366; margin-bottom: 24px; text-align: center;">School Leadership</h2>
+            <div class="stagger-children" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:24px;">
+                <?php foreach ($executives as $ex): ?>
+                <div class="card-premium" style="text-align:center;">
+                    <div style="padding:32px 24px 20px;">
+                        <div style="width:120px;height:120px;border-radius:50%;margin:0 auto 16px;overflow:hidden;border:4px solid #ffcc00;">
+                            <img src="<?php echo htmlspecialchars($ex['image_url'] ?? ''); ?>" 
+                                 alt="<?php echo htmlspecialchars($ex['full_name']); ?>"
+                                 style="width:100%;height:100%;object-fit:cover;"
+                                 onerror="this.onerror=null;this.parentElement.innerHTML='<div style=\"width:120px;height:120px;border-radius:50%;background:linear-gradient(135deg,#003366,#004080);display:flex;align-items:center;justify-content:center;color:#ffcc00;font-size:3rem;font-weight:700;\">' + (this.alt ? this.alt.charAt(0).toUpperCase() : 'L') + '</div>';">
+                        </div>
+                        <h3 style="color:#003366;font-size:1.15rem;margin-bottom:4px;"><?php echo htmlspecialchars($ex['full_name']); ?></h3>
+                        <span class="badge-pill badge-gold" style="margin-bottom:10px;"><?php echo htmlspecialchars($ex['position']); ?></span>
+                        <?php if (!empty($ex['bio'])): ?>
+                        <p style="font-size:0.85rem;color:#666;margin-top:8px;"><?php echo htmlspecialchars($ex['bio']); ?></p>
                         <?php endif; ?>
                     </div>
                 </div>
+                <?php endforeach; ?>
             </div>
-            <?php endforeach; ?>
+        </div>
+        <?php else: ?>
+        <!-- Organizational Chart -->
+        <div class="animate-on-scroll" style="margin-bottom: 48px;">
+            <h2 style="color: #003366; margin-bottom: 24px; text-align: center;">Organizational Structure</h2>
+            
+            <div class="org-chart" style="max-width: 800px; margin: 0 auto;">
+                <!-- Level 0: Proprietor -->
+                <div class="org-level">
+                    <div class="org-node level-0">
+                        <div style="font-size:2rem;margin-bottom:6px;">👑</div>
+                        <h4>Proprietor</h4>
+                        <p>Founder & Owner</p>
+                    </div>
+                </div>
+                
+                <div class="org-connector"></div>
+
+                <!-- Level 1: Manager + Board -->
+                <div class="org-level">
+                    <div class="org-node level-1">
+                        <div style="font-size:1.5rem;margin-bottom:4px;">👤</div>
+                        <h4>School Manager</h4>
+                        <p>Day-to-Day Operations</p>
+                    </div>
+                    <div class="org-node level-1">
+                        <div style="font-size:1.5rem;margin-bottom:4px;">📋</div>
+                        <h4>Board of Directors</h4>
+                        <p>Strategic Oversight</p>
+                    </div>
+                </div>
+
+                <div class="org-connector"></div>
+
+                <!-- Level 2: Staff + Teachers -->
+                <div class="org-level">
+                    <div class="org-node level-2">
+                        <div style="font-size:1.5rem;margin-bottom:4px;">🧹</div>
+                        <h4>Cleaning Staff</h4>
+                        <p>Campus Maintenance</p>
+                    </div>
+                    <div class="org-node level-2">
+                        <div style="font-size:1.5rem;margin-bottom:4px;">🍳</div>
+                        <h4>Kitchen Staff</h4>
+                        <p>Meals & Nutrition</p>
+                    </div>
+                    <div class="org-node level-2">
+                        <div style="font-size:1.5rem;margin-bottom:4px;">👩‍🏫</div>
+                        <h4>Teaching Staff</h4>
+                        <p>Academic Delivery</p>
+                    </div>
+                </div>
+
+                <div class="org-connector"></div>
+
+                <!-- Level 3: Categories -->
+                <div class="org-level">
+                    <div class="org-node level-3">
+                        <h4 style="font-size:0.85rem;">Support Services</h4>
+                    </div>
+                    <div class="org-node level-3">
+                        <h4 style="font-size:0.85rem;">Catering</h4>
+                    </div>
+                    <div class="org-node level-3">
+                        <h4 style="font-size:0.85rem;">Academic Departments</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
+
+        <!-- Core Values Section -->
+        <div class="animate-on-scroll" style="margin-top: 48px; text-align: center;">
+            <h2 style="color: #003366; margin-bottom: 24px;">Our Guiding Values</h2>
+            <div class="stagger-children" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:16px;max-width:800px;margin:0 auto;">
+                <div style="background:#f8f9fa;border-radius:16px;padding:24px 16px;border:1px solid rgba(255,204,0,0.15);">
+                    <div style="font-size:2rem;margin-bottom:8px;">⭐</div>
+                    <h4 style="color:#003366;font-size:0.95rem;margin:0;">Excellence</h4>
+                </div>
+                <div style="background:#f8f9fa;border-radius:16px;padding:24px 16px;border:1px solid rgba(255,204,0,0.15);">
+                    <div style="font-size:2rem;margin-bottom:8px;">📏</div>
+                    <h4 style="color:#003366;font-size:0.95rem;margin:0;">Discipline</h4>
+                </div>
+                <div style="background:#f8f9fa;border-radius:16px;padding:24px 16px;border:1px solid rgba(255,204,0,0.15);">
+                    <div style="font-size:2rem;margin-bottom:8px;">🔥</div>
+                    <h4 style="color:#003366;font-size:0.95rem;margin:0;">Dedication</h4>
+                </div>
+                <div style="background:#f8f9fa;border-radius:16px;padding:24px 16px;border:1px solid rgba(255,204,0,0.15);">
+                    <div style="font-size:2rem;margin-bottom:8px;">❤️</div>
+                    <h4 style="color:#003366;font-size:0.95rem;margin:0;">Love</h4>
+                </div>
+                <div style="background:#f8f9fa;border-radius:16px;padding:24px 16px;border:1px solid rgba(255,204,0,0.15);">
+                    <div style="font-size:2rem;margin-bottom:8px;">🙏</div>
+                    <h4 style="color:#003366;font-size:0.95rem;margin:0;">Humility</h4>
+                </div>
+            </div>
         </div>
     </div>
-</div>
+</section>
+
+<script>
+(function() {
+    var els = document.querySelectorAll('.animate-on-scroll, .stagger-children');
+    var observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+                observer.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.1 });
+    els.forEach(function(el) { observer.observe(el); });
+})();
+</script>
 
 <?php require_once 'includes/footer.php'; ?>

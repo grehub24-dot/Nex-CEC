@@ -4,6 +4,20 @@ require_once 'includes/db.php';
 // Enforce access control
 requireAccess('users');
 
+// Attempt to fix FK constraint — add ON DELETE CASCADE (runs silently)
+// Only tries once per session to avoid repeated API calls
+if (empty($_SESSION['_fk_cascade_fixed'])) {
+    try {
+        global $supabase;
+        $supabase->executeSql("ALTER TABLE message_reads DROP CONSTRAINT IF EXISTS message_reads_user_id_fkey");
+        $supabase->executeSql("ALTER TABLE message_reads ADD CONSTRAINT message_reads_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE");
+        $_SESSION['_fk_cascade_fixed'] = true;
+    } catch (Exception $e) {
+        // Cannot auto-fix — manual delete in code handles it
+        $_SESSION['_fk_cascade_fixed'] = true;
+    }
+}
+
 // Fetch Settings
 $settings = [];
 try {
@@ -21,13 +35,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['delete_user'])) {
         $user_id = intval($_POST['user_id']);
         if ($user_id !== $_SESSION['user_id']) { // Prevent self-delete
-            // Delete messages first to avoid FK violations
-            $pdo->prepare("DELETE FROM messages WHERE sender_id = ? OR receiver_id = ?")->execute([$user_id, $user_id]);
-            $stmt = $pdo->prepare("DELETE FROM users WHERE id = ?");
-            if ($stmt->execute([$user_id])) {
-                $message = "User deleted successfully.";
-            } else {
-                $error = "Failed to delete user.";
+            try {
+                $pdo->beginTransaction();
+                // Delete from referencing tables first to avoid FK violations
+                // Note: Bridge delete does NOT support OR — run separate queries
+                $pdo->prepare("DELETE FROM messages WHERE sender_id = ?")->execute([$user_id]);
+                $pdo->prepare("DELETE FROM messages WHERE receiver_id = ?")->execute([$user_id]);
+                $pdo->prepare("DELETE FROM message_reads WHERE user_id = ?")->execute([$user_id]);
+                $stmt = $pdo->prepare("DELETE FROM users WHERE id = ?");
+                if ($stmt->execute([$user_id])) {
+                    $pdo->commit();
+                    $message = "User deleted successfully.";
+                } else {
+                    $pdo->rollBack();
+                    $error = "Failed to delete user.";
+                }
+            } catch (Exception $e) {
+                try { $pdo->rollBack(); } catch (Exception $ignored) {}
+                $error = "Delete failed: " . $e->getMessage();
             }
         } else {
             $error = "You cannot delete your own account.";
@@ -55,12 +80,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     $pdo->beginTransaction();
                     // Delete messages referencing this user to avoid FK violations
-                    $pdo->prepare("DELETE FROM messages WHERE sender_id = ? OR receiver_id = ?")->execute([$userId, $userId]);
+                    // Note: Bridge delete does NOT support OR — run separate queries
+                    $pdo->prepare("DELETE FROM messages WHERE sender_id = ?")->execute([$userId]);
+                    $pdo->prepare("DELETE FROM messages WHERE receiver_id = ?")->execute([$userId]);
+                    $pdo->prepare("DELETE FROM message_reads WHERE user_id = ?")->execute([$userId]);
                     $pdo->prepare("DELETE FROM users WHERE id = ?")->execute([$userId]);
                     $pdo->commit();
                     $deleted_count++;
                 } catch (Exception $e) {
-                    $pdo->rollBack();
+                    try { $pdo->rollBack(); } catch (Exception $ignored) {}
                     $error_count++;
                 }
             }

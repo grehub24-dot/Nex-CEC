@@ -50,6 +50,12 @@ foreach ($publicPages as $page) {
     $routes["$page.php"] = "$page.php";
 }
 
+// Public informational pages
+$publicInfoPages = ['about', 'contact', 'gallery', 'news', 'events', 'activities', 'alumni', 'resources', 'department', 'executives', 'fees', 'membership', 'projects'];
+foreach ($publicInfoPages as $page) {
+    $routes["$page.php"] = "$page.php";
+}
+
 // Auth pages
 $routes['login.php'] = 'login.php';
 $routes['logout.php'] = 'logout.php';

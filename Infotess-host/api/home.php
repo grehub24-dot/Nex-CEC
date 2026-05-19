@@ -30,8 +30,8 @@ $years_count = 4;
     
     <!-- Hero Content -->
     <div style="position: relative; z-index: 2; text-align: center; width: 100%; max-width: 900px; margin: 0 auto;">
-        <h1>Welcome to <?php echo htmlspecialchars($school_name); ?></h1>
-        <p style="font-size: var(--text-lg); line-height: var(--leading-relaxed); color: var(--color-gray-700); margin-bottom: 30px;"><?php echo htmlspecialchars($school_motto); ?> — Providing quality education from Creche through Junior High School in a safe, nurturing, and academically excellent environment.</p>
+        <h1 style="color: #ffffff;">Welcome to <?php echo htmlspecialchars($school_name); ?></h1>
+        <p style="font-size: 1.2rem; line-height: 1.7; color: #ffffff; margin-bottom: 30px;"><?php echo htmlspecialchars($school_motto); ?> — Providing quality education from Creche through Junior High School in a safe, nurturing, and academically excellent environment.</p>
         <div class="hero-badges">
             <span class="hero-badge"><i class="fas fa-calendar-check"></i> <span>18+ Years of Excellence</span></span>
             <span class="hero-badge"><i class="fas fa-chalkboard-teacher"></i> <span>Dedicated Staff</span></span>

@@ -82,47 +82,31 @@ ALTER TABLE contact_submissions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE activities ENABLE ROW LEVEL SECURITY;
 
 -- Allow public read access for frontend display
--- (Uses DO blocks because CREATE POLICY does not support IF NOT EXISTS)
-DO $$ BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Public select for executives') THEN
-        CREATE POLICY "Public select for executives" ON executives FOR SELECT USING (true);
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Public select for alumni') THEN
-        CREATE POLICY "Public select for alumni" ON alumni FOR SELECT USING (true);
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Public select for gallery') THEN
-        CREATE POLICY "Public select for gallery" ON gallery FOR SELECT USING (true);
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Public select for projects') THEN
-        CREATE POLICY "Public select for projects" ON projects FOR SELECT USING (true);
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Public select for activities') THEN
-        CREATE POLICY "Public select for activities" ON activities FOR SELECT USING (true);
-    END IF;
-    -- Allow public insert into contact_submissions (for the contact form)
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Public insert for contact_submissions') THEN
-        CREATE POLICY "Public insert for contact_submissions" ON contact_submissions FOR INSERT WITH CHECK (true);
-    END IF;
-END $$;
+-- Drop first (safe no-op if missing) then recreate to guarantee idempotency
+DROP POLICY IF EXISTS "Public select for executives" ON executives;
+CREATE POLICY "Public select for executives" ON executives FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Public select for alumni" ON alumni;
+CREATE POLICY "Public select for alumni" ON alumni FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Public select for gallery" ON gallery;
+CREATE POLICY "Public select for gallery" ON gallery FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Public select for projects" ON projects;
+CREATE POLICY "Public select for projects" ON projects FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Public select for activities" ON activities;
+CREATE POLICY "Public select for activities" ON activities FOR SELECT USING (true);
+-- Allow public insert into contact_submissions (for the contact form)
+DROP POLICY IF EXISTS "Public insert for contact_submissions" ON contact_submissions;
+CREATE POLICY "Public insert for contact_submissions" ON contact_submissions FOR INSERT WITH CHECK (true);
 
 -- Allow service_role full access (admin operations)
-DO $$ BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Service role all for executives') THEN
-        CREATE POLICY "Service role all for executives" ON executives TO service_role USING (true) WITH CHECK (true);
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Service role all for alumni') THEN
-        CREATE POLICY "Service role all for alumni" ON alumni TO service_role USING (true) WITH CHECK (true);
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Service role all for gallery') THEN
-        CREATE POLICY "Service role all for gallery" ON gallery TO service_role USING (true) WITH CHECK (true);
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Service role all for projects') THEN
-        CREATE POLICY "Service role all for projects" ON projects TO service_role USING (true) WITH CHECK (true);
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Service role all for contact_submissions') THEN
-        CREATE POLICY "Service role all for contact_submissions" ON contact_submissions TO service_role USING (true) WITH CHECK (true);
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Service role all for activities') THEN
-        CREATE POLICY "Service role all for activities" ON activities TO service_role USING (true) WITH CHECK (true);
-    END IF;
-END $$;
+DROP POLICY IF EXISTS "Service role all for executives" ON executives;
+CREATE POLICY "Service role all for executives" ON executives TO service_role USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Service role all for alumni" ON alumni;
+CREATE POLICY "Service role all for alumni" ON alumni TO service_role USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Service role all for gallery" ON gallery;
+CREATE POLICY "Service role all for gallery" ON gallery TO service_role USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Service role all for projects" ON projects;
+CREATE POLICY "Service role all for projects" ON projects TO service_role USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Service role all for contact_submissions" ON contact_submissions;
+CREATE POLICY "Service role all for contact_submissions" ON contact_submissions TO service_role USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Service role all for activities" ON activities;
+CREATE POLICY "Service role all for activities" ON activities TO service_role USING (true) WITH CHECK (true);

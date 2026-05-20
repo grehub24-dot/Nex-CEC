@@ -37,11 +37,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute([$name, $year, $image_url]);
         $message = "Alumni added successfully!";
     } elseif ($action === 'add_gallery') {
-        $title = sanitize($_POST['title']);
+        $caption = sanitize($_POST['caption'] ?? '');
+        $category = sanitize($_POST['category'] ?? 'School');
         $image_url = upload_to_supabase_storage($_FILES['image'] ?? [], 'gallery', '', 'images/gallery-placeholder.png');
 
-        $stmt = $pdo->prepare("INSERT INTO gallery (title, image_url) VALUES (?, ?)");
-        $stmt->execute([$title, $image_url]);
+        $stmt = $pdo->prepare("INSERT INTO gallery (caption, image_url, category) VALUES (?, ?, ?)");
+        $stmt->execute([$caption, $image_url, $category]);
         $message = "Gallery item added successfully!";
     } elseif ($action === 'add_project') {
         $title = sanitize($_POST['title']);
@@ -109,11 +110,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $message = "Gallery item deleted successfully!";
     } elseif ($action === 'update_gallery') {
         $id = intval($_POST['id']);
-        $title = sanitize($_POST['title']);
+        $caption = sanitize($_POST['caption'] ?? '');
+        $category = sanitize($_POST['category'] ?? 'School');
         $image_url = upload_to_supabase_storage($_FILES['image'] ?? [], 'gallery', '', sanitize($_POST['current_image_url'] ?? 'images/gallery-placeholder.png'));
 
-        $stmt = $pdo->prepare("UPDATE gallery SET title = ?, image_url = ? WHERE id = ?");
-        $stmt->execute([$title, $image_url, $id]);
+        $stmt = $pdo->prepare("UPDATE gallery SET caption = ?, image_url = ?, category = ? WHERE id = ?");
+        $stmt->execute([$caption, $image_url, $category, $id]);
         $message = "Gallery item updated successfully!";
     } elseif ($action === 'delete_project') {
         $id = intval($_POST['id']);

@@ -16,9 +16,9 @@ try {
 <!-- Hero Inner -->
 <section class="hero-inner">
     <div class="container" style="text-align: center; position: relative; z-index: 2;">
-        <span class="badge-pill badge-gold" style="margin-bottom: 16px;">Building a Legacy</span>
-        <h1 style="font-size: 2.8rem; color: #fff; margin-bottom: 12px;">Alumni Network</h1>
-        <p style="color: rgba(255,255,255,0.8); font-size: 1.1rem; max-width: 600px; margin: 0 auto;">Building a Legacy of Excellence — our alumni are the pride of Chariot Educational Complex. Stay connected, give back, and inspire the next generation.</p>
+        <span class="badge-pill badge-gold" style="margin-bottom: 16px;">Our Heritage</span>
+        <h1 style="font-size: 2.8rem; color: #fff; margin-bottom: 12px;">Past Students</h1>
+        <p style="color: rgba(255,255,255,0.8); font-size: 1.1rem; max-width: 600px; margin: 0 auto;">Our past students are the pride of Chariot Educational Complex. Stay connected, share your story, and inspire the next generation.</p>
     </div>
 </section>
 
@@ -29,7 +29,7 @@ try {
         <div class="animate-on-scroll" style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:48px;text-align:center;">
             <div style="background:#f8f9fa;border-radius:16px;padding:24px 16px;">
                 <div style="font-size:2rem;font-weight:800;color:#003366;"><?php echo count($alumni); ?></div>
-                <div style="font-size:0.85rem;color:#888;">Registered Alumni</div>
+                <div style="font-size:0.85rem;color:#888;">Past Students</div>
             </div>
             <div style="background:#f8f9fa;border-radius:16px;padding:24px 16px;">
                 <div style="font-size:2rem;font-weight:800;color:#003366;">
@@ -85,15 +85,15 @@ try {
         <!-- Empty State -->
         <div class="animate-on-scroll" style="text-align: center; padding: 40px 20px;">
             <div style="font-size: 4rem; margin-bottom: 20px; opacity: 0.3;">🎓</div>
-            <h3 style="color: #003366; margin-bottom: 12px;">Alumni Network Coming Soon</h3>
-            <p style="color: #888; max-width: 550px; margin: 0 auto 32px;">We are building our alumni community! If you are a graduate of Chariot Educational Complex, we would love to hear from you. Share your story and help us build a legacy of excellence.</p>
+            <h3 style="color: #003366; margin-bottom: 12px;">Past Students Network Coming Soon</h3>
+            <p style="color: #888; max-width: 550px; margin: 0 auto 32px;">We are building our past students community! If you are a former student of Chariot Educational Complex, we would love to hear from you. Share your story and help us build a legacy of excellence.</p>
             
             <!-- Placeholder show of pride -->
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;max-width:700px;margin:0 auto;">
                 <div style="background:#f5f5f5;border-radius:12px;padding:24px;text-align:center;">
                     <div style="font-size:2rem;margin-bottom:8px;">🤝</div>
                     <h4 style="color:#003366;font-size:0.95rem;margin-bottom:4px;">Stay Connected</h4>
-                    <p style="font-size:0.82rem;color:#888;margin:0;">Join our alumni directory and network with old classmates.</p>
+                    <p style="font-size:0.82rem;color:#888;margin:0;">Join our past students directory and connect with former classmates.</p>
                 </div>
                 <div style="background:#f5f5f5;border-radius:12px;padding:24px;text-align:center;">
                     <div style="font-size:2rem;margin-bottom:8px;">💬</div>

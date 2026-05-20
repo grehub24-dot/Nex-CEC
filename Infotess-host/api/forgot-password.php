@@ -102,7 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </style>
 
 <!-- Hero Inner -->
-<section class="hero-inner" style="background: linear-gradient(135deg, #002244 0%, #003366 50%, #004080 100%);">
+<section class="hero-inner">
     <div class="container" style="text-align: center; position: relative; z-index: 2;">
         <h1 style="font-size: 2.5rem; color: #fff; margin-bottom: 12px;">Reset Password</h1>
         <p style="color: rgba(255,255,255,0.8); font-size: 1.05rem; max-width: 500px; margin: 0 auto;">Forgot your password? No worries — we'll help you get back into your account.</p>

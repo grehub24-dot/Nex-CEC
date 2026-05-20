@@ -30,7 +30,7 @@ foreach ($events as $ev) {
 ?>
 
 <!-- Hero Inner -->
-<section class="hero-inner" style="background: linear-gradient(135deg, #002244 0%, #003366 50%, #004080 100%);">
+<section class="hero-inner">
     <div class="container" style="text-align: center; position: relative; z-index: 2;">
         <span class="badge-pill badge-gold" style="margin-bottom: 16px;">Save the Date</span>
         <h1 style="font-size: 2.8rem; color: #fff; margin-bottom: 12px;">Upcoming Events</h1>

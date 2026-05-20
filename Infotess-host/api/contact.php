@@ -115,18 +115,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </section>
 
 <!-- Map / Location Section -->
-<section class="section" style="background: var(--color-gray-50); padding-top: var(--space-8); padding-bottom: var(--space-8);">
+<section class="section section-photo-bg section-photo-bg-contact" style="background: var(--color-gray-50); padding-top: var(--space-8); padding-bottom: var(--space-8);">
+    <style>
+        .section-photo-bg-contact::before {
+            background-image: url('images/students/gallery-1.jpg');
+        }
+    </style>
     <div class="container">
-        <div style="text-align: center;">
-            <h2 class="section-title">Find Us</h2>
-            <p style="color: var(--text-muted); margin-bottom: 30px;">
-                We are located in the heart of the community. Use the map below to find directions to our campus.
-            </p>
-            <div style="border-radius: var(--radius-xl); overflow: hidden; box-shadow: var(--shadow-md); max-width: 800px; margin: 0 auto; height: 300px; background: var(--color-gray-200); display: flex; align-items: center; justify-content: center;">
-                <div style="text-align: center; padding: 20px; color: var(--text-muted);">
-                    <i class="fas fa-map-marked-alt" style="font-size: 3rem; color: var(--color-primary); margin-bottom: 15px; display: block;"></i>
-                    <p style="font-weight: 600; color: var(--color-gray-700);"><?php echo htmlspecialchars($settings['school_address'] ?? 'School Address, City, Ghana'); ?></p>
-                    <p style="font-size: var(--text-sm);">Interactive map available on Google Maps</p>
+        <div class="photo-split" style="align-items: stretch;">
+            <div class="photo-split-image" style="min-height: 300px;">
+                <img src="images/students/students-group-2.jpg" alt="<?php echo htmlspecialchars($school_name); ?> campus life" loading="lazy" style="min-height: 300px;">
+            </div>
+            <div class="photo-split-content" style="display: flex; flex-direction: column; justify-content: center;">
+                <h2 style="font-size: var(--text-3xl); color: var(--color-primary); margin-bottom: var(--space-4);">Find Us</h2>
+                <p style="color: var(--text-muted); margin-bottom: var(--space-4);">We are located in the heart of the community. Visit our campus to see our facilities and meet our team.</p>
+                <div style="border-radius: var(--radius-lg); padding: var(--space-6); background: var(--color-gray-50); border: 1px solid var(--color-gray-200); text-align: center;">
+                    <i class="fas fa-map-marked-alt" style="font-size: 2rem; color: var(--color-primary); margin-bottom: 10px; display: block;"></i>
+                    <p style="font-weight: 600; color: var(--color-gray-700); margin-bottom: 4px;"><?php echo htmlspecialchars($settings['school_address'] ?? 'School Address, City, Ghana'); ?></p>
+                    <p style="font-size: var(--text-sm); color: var(--text-muted);">Interactive map available on Google Maps</p>
                 </div>
             </div>
         </div>

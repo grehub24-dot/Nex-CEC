@@ -404,7 +404,7 @@ img {
    5. HERO
    ========================================== */
 .hero {
-    background: linear-gradient(rgba(0,51,102,0.8), rgba(0,51,102,0.8)), url('../images/aamusted.jpg') no-repeat center center/cover;
+    background: linear-gradient(rgba(0,51,102,0.8), rgba(0,51,102,0.8)), url('../images/hero-bg.jpg') no-repeat center center/cover;
     height: 80vh;
     color: var(--white);
     display: flex;
@@ -444,7 +444,7 @@ img {
     height: 35vh;
     min-height: 250px;
     position: relative;
-    background: linear-gradient(135deg, rgba(0,51,102,0.88), rgba(0,51,102,0.7)), url('../images/aamusted.jpg') no-repeat center center/cover;
+    background: linear-gradient(135deg, rgba(0,51,102,0.88), rgba(0,51,102,0.7)), url('../images/hero-inner-bg.jpg') no-repeat center center/cover;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -728,7 +728,214 @@ img {
 }
 
 /* ==========================================
-    5f. MISSION / VISION SECTION (About page)
+    5f. IMAGE + TEXT SPLIT LAYOUT (Photo integration)
+    ========================================== */
+.photo-split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-10);
+    align-items: center;
+}
+.photo-split-image {
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
+    position: relative;
+}
+.photo-split-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform var(--transition-slow);
+}
+.photo-split-image:hover img {
+    transform: scale(1.03);
+}
+.photo-split-image::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: var(--radius-xl);
+    border: 2px solid rgba(255,204,0,0.2);
+    pointer-events: none;
+}
+.photo-split-content {
+    padding: var(--space-4);
+}
+.photo-split-content h2 {
+    font-size: var(--text-3xl);
+    color: var(--color-primary);
+    margin-bottom: var(--space-6);
+    position: relative;
+}
+.photo-split-content h2::after {
+    content: '';
+    display: block;
+    width: 60px;
+    height: 4px;
+    background: var(--color-secondary);
+    border-radius: 2px;
+    margin-top: var(--space-3);
+}
+.photo-split-content p {
+    font-size: var(--text-base);
+    line-height: var(--leading-relaxed);
+    color: var(--text-muted);
+    margin-bottom: var(--space-4);
+}
+@media (max-width: 768px) {
+    .photo-split { grid-template-columns: 1fr; gap: var(--space-6); }
+    .photo-split-image { order: -1; max-height: 300px; }
+    .photo-split-content h2 { font-size: var(--text-2xl); }
+}
+
+/* ==========================================
+    5g. PHOTO CARD (Feature card with image)
+    ========================================== */
+.photo-card {
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    background: var(--color-white);
+    box-shadow: var(--shadow-md);
+    transition: transform var(--transition-base), box-shadow var(--transition-base);
+    display: flex;
+    flex-direction: column;
+}
+.photo-card:hover {
+    transform: translateY(-6px);
+    box-shadow: var(--shadow-xl);
+}
+.photo-card-image {
+    height: 200px;
+    overflow: hidden;
+    position: relative;
+}
+.photo-card-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform var(--transition-slow);
+}
+.photo-card:hover .photo-card-image img {
+    transform: scale(1.08);
+}
+.photo-card-image::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 50%;
+    background: linear-gradient(transparent, rgba(0,0,0,0.3));
+    pointer-events: none;
+}
+.photo-card-body {
+    padding: var(--space-6);
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+.photo-card-body h3 {
+    font-size: var(--text-lg);
+    color: var(--color-primary);
+    margin-bottom: var(--space-3);
+}
+.photo-card-body p {
+    font-size: var(--text-base);
+    color: var(--text-muted);
+    line-height: var(--leading-relaxed);
+    flex: 1;
+}
+.photo-card-body .btn-link {
+    margin-top: var(--space-4);
+    color: var(--color-primary);
+    font-weight: var(--font-semibold);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    transition: gap var(--transition-fast);
+}
+.photo-card-body .btn-link:hover {
+    gap: var(--space-3);
+    color: var(--color-secondary);
+}
+
+/* ==========================================
+    5h. PHOTO STRIP / GALLERY STRIP
+    ========================================== */
+.photo-strip {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-4);
+    margin-top: var(--space-8);
+}
+.photo-strip-item {
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    height: 160px;
+    position: relative;
+    box-shadow: var(--shadow-sm);
+    transition: transform var(--transition-base), box-shadow var(--transition-base);
+}
+.photo-strip-item:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+}
+.photo-strip-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform var(--transition-slow);
+}
+.photo-strip-item:hover img {
+    transform: scale(1.08);
+}
+@media (max-width: 768px) {
+    .photo-strip { grid-template-columns: repeat(2, 1fr); }
+    .photo-strip-item { height: 120px; }
+}
+@media (max-width: 480px) {
+    .photo-strip { grid-template-columns: 1fr; }
+}
+
+/* ==========================================
+    5i. CARD GRID (Photo-enhanced cards)
+    ========================================== */
+.photo-card-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-8);
+}
+@media (max-width: 768px) {
+    .photo-card-grid { grid-template-columns: 1fr; gap: var(--space-6); }
+}
+
+/* ==========================================
+    5j. SECTION WITH PHOTO OVERLAY
+    ========================================== */
+.section-photo-bg {
+    position: relative;
+    overflow: hidden;
+}
+.section-photo-bg::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    opacity: 0.12;
+    pointer-events: none;
+    z-index: 0;
+}
+.section-photo-bg > * {
+    position: relative;
+    z-index: 1;
+}
+
+/* ==========================================
+    5k. MISSION / VISION SECTION (About page)
     ========================================== */
 .mission-vision-grid {
     display: grid;
@@ -777,7 +984,7 @@ img {
 }
 
 /* ==========================================
-    5g. VALUES SECTION (About page)
+    5l. VALUES SECTION (About page)
     ========================================== */
 .values-grid {
     display: grid;
@@ -831,7 +1038,7 @@ img {
 }
 
 /* ==========================================
-    5h. TWO-COLUMN LAYOUT (Contact page)
+    5m. TWO-COLUMN LAYOUT (Contact page)
     ========================================== */
 .contact-grid {
     display: grid;
@@ -926,7 +1133,7 @@ img {
 }
 
 /* ==========================================
-    5i. FOOTER ENHANCEMENTS
+    5n. FOOTER ENHANCEMENTS
     ========================================== */
 .footer-logo {
     margin-bottom: var(--space-4);
@@ -1050,7 +1257,7 @@ img {
 }
 
 /* ==========================================
-    5j. LOGIN PAGE (Centered Card)
+    5o. LOGIN PAGE (Centered Card)
     ========================================== */
 .login-page {
     min-height: 70vh;

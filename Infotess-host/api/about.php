@@ -20,14 +20,15 @@ $school_motto = $settings['school_motto'] ?? 'Excellence in Education';
 <!-- About Intro -->
 <section class="section">
     <div class="container">
-        <div style="max-width: 800px; margin: 0 auto; text-align: center;">
-            <h2 class="section-title">Our Story</h2>
-            <p style="font-size: var(--text-lg); line-height: var(--leading-relaxed); color: var(--color-gray-700); margin-bottom: 20px;">
-                <?php echo htmlspecialchars($school_name); ?> is a nurturing learning environment dedicated to building strong academic foundations, character development, and holistic growth for every child from Creche to Junior High School.
-            </p>
-            <p style="color: var(--text-muted); line-height: var(--leading-relaxed);">
-                Our school is committed to the Ghana Education Service curriculum while fostering creativity, discipline, and a love for lifelong learning. We believe in partnering with parents to provide the best possible educational experience for every child in a safe, supportive, and stimulating environment.
-            </p>
+        <div class="photo-split">
+            <div class="photo-split-content">
+                <h2 style="font-size: var(--text-3xl); color: var(--color-primary); margin-bottom: var(--space-6);">Our Story</h2>
+                <p><?php echo htmlspecialchars($school_name); ?> is a nurturing learning environment dedicated to building strong academic foundations, character development, and holistic growth for every child from Creche to Junior High School.</p>
+                <p>Our school is committed to the Ghana Education Service curriculum while fostering creativity, discipline, and a love for lifelong learning. We believe in partnering with parents to provide the best possible educational experience for every child in a safe, supportive, and stimulating environment.</p>
+            </div>
+            <div class="photo-split-image">
+                <img src="images/story-photo.jpg" alt="<?php echo htmlspecialchars($school_name); ?> classroom learning" loading="lazy">
+            </div>
         </div>
     </div>
 </section>
@@ -84,28 +85,45 @@ $school_motto = $settings['school_motto'] ?? 'Excellence in Education';
             We offer a complete educational journey from early childhood through junior high school.
         </p>
 
-        <div class="features-grid" style="margin-top: 30px;">
-            <div class="feature-card" id="early-childhood">
-                <div class="feature-icon"><i class="fas fa-baby"></i></div>
-                <h3>Early Childhood</h3>
-                <p><strong>Creche, Nursery, KG 1 & 2</strong> — Play-based learning and early development in a warm, caring environment. Our early childhood programme focuses on social, emotional, and cognitive development through structured play, music, art, and guided exploration.</p>
+        <div class="photo-card-grid" style="margin-top: 30px;">
+            <div class="photo-card" id="early-childhood">
+                <div class="photo-card-image">
+                    <img src="images/students/early-childhood.jpg" alt="Early Childhood students at <?php echo htmlspecialchars($school_name); ?>" loading="lazy">
+                </div>
+                <div class="photo-card-body">
+                    <h3>Early Childhood</h3>
+                    <p><strong>Creche, Nursery, KG 1 & 2</strong> — Play-based learning and early development in a warm, caring environment. Our early childhood programme focuses on social, emotional, and cognitive development through structured play, music, art, and guided exploration.</p>
+                </div>
             </div>
-            <div class="feature-card" id="primary">
-                <div class="feature-icon"><i class="fas fa-book-open"></i></div>
-                <h3>Primary School</h3>
-                <p><strong>Basic 1 – 6</strong> — Comprehensive GES curriculum covering English, Mathematics, Science, Social Studies, ICT, Creative Arts, and Physical Education. We emphasize critical thinking and problem-solving skills.</p>
+            <div class="photo-card" id="primary">
+                <div class="photo-card-image">
+                    <img src="images/students/primary.jpg" alt="Primary students at <?php echo htmlspecialchars($school_name); ?>" loading="lazy">
+                </div>
+                <div class="photo-card-body">
+                    <h3>Primary School</h3>
+                    <p><strong>Basic 1 – 6</strong> — Comprehensive GES curriculum covering English, Mathematics, Science, Social Studies, ICT, Creative Arts, and Physical Education. We emphasize critical thinking and problem-solving skills.</p>
+                </div>
             </div>
-            <div class="feature-card" id="jhs">
-                <div class="feature-icon"><i class="fas fa-graduation-cap"></i></div>
-                <h3>Junior High School</h3>
-                <p><strong>JHS 1 – 3</strong> — Rigorous academic programme preparing students for the BECE. Subjects include core academics, pre-vocational skills, and life skills education to ensure holistic development.</p>
+            <div class="photo-card" id="jhs">
+                <div class="photo-card-image">
+                    <img src="images/students/jhs.jpg" alt="Junior High School students at <?php echo htmlspecialchars($school_name); ?>" loading="lazy">
+                </div>
+                <div class="photo-card-body">
+                    <h3>Junior High School</h3>
+                    <p><strong>JHS 1 – 3</strong> — Rigorous academic programme preparing students for the BECE. Subjects include core academics, pre-vocational skills, and life skills education to ensure holistic development.</p>
+                </div>
             </div>
         </div>
     </div>
 </section>
 
 <!-- Why Choose Us -->
-<section class="section" style="background: var(--color-gray-50);">
+<section class="section section-photo-bg section-photo-bg-about" style="background: var(--color-gray-50);">
+    <style>
+        .section-photo-bg-about::before {
+            background-image: url('images/students/students-group-1.jpg');
+        }
+    </style>
     <div class="container">
         <h2 class="section-title">Why Choose <?php echo htmlspecialchars($school_name); ?></h2>
         <div class="card-grid">

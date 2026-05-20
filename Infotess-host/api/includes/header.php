@@ -12,7 +12,7 @@
     <meta name="theme-color" content="#003366">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="<?php echo $base_url; ?>images/aamusted.jpg">
+    <link rel="apple-touch-icon" href="<?php echo $base_url; ?>images/chariot-logo.svg">
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
@@ -46,7 +46,7 @@
     }
     $school_name = $settings['school_name'] ?? 'Nex CEC';
     $school_motto = $settings['school_motto'] ?? 'Excellence in Education';
-    $school_logo = $settings['school_logo_url'] ?? ($base_url . 'images/aamusted.jpg');
+    $school_logo = $settings['school_logo_url'] ?? ($base_url . 'images/chariot-logo.svg');
 
     // Determine current page for active nav state
     $current_page = basename($_SERVER['PHP_SELF']);
@@ -65,7 +65,7 @@
     <nav class="navbar" role="navigation" aria-label="Main navigation">
         <div class="container">
             <a href="<?php echo $base_url; ?>index.php" class="logo" aria-label="<?php echo htmlspecialchars($school_name); ?> Home">
-                <img src="<?php echo htmlspecialchars($school_logo); ?>" alt="<?php echo htmlspecialchars($school_name); ?> Logo" height="40" onerror="this.src='<?php echo $base_url; ?>images/aamusted.jpg'">
+                <img src="<?php echo htmlspecialchars($school_logo); ?>" alt="<?php echo htmlspecialchars($school_name); ?> Logo" height="40" onerror="this.src='<?php echo $base_url; ?>images/logo.png'">
                 <span class="logo-text"><?php echo htmlspecialchars($school_name); ?></span>
             </a>
 

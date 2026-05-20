@@ -24,7 +24,7 @@ $years_count = 4;
 ?>
 
 <!-- Hero Section -->
-<section class="hero" style="position: relative; overflow: hidden; background: linear-gradient(rgba(0,51,102,0.85), rgba(0,34,68,0.75)), url('images/aamusted.jpg') no-repeat center center/cover; background-attachment: fixed;">
+<section class="hero" style="position: relative; overflow: hidden;">
     <!-- 3D Globe Canvas -->
     <div id="globe-container" style="position: absolute; inset: 0; z-index: 1; pointer-events: none;"></div>
     
@@ -79,21 +79,36 @@ $years_count = 4;
         <p style="text-align: center; max-width: 700px; margin: -20px auto 50px; color: var(--text-muted);">
             Comprehensive educational programmes designed to nurture every child's potential from early childhood through junior high school.
         </p>
-        <div class="features-grid">
-            <div class="feature-card">
-                <div class="feature-icon"><i class="fas fa-baby"></i></div>
-                <h3>Early Childhood</h3>
-                <p>Creche, Nursery, and Kindergarten programmes designed to spark curiosity, creativity, and a lifelong love for learning in our youngest students.</p>
+        <div class="photo-card-grid">
+            <div class="photo-card">
+                <div class="photo-card-image">
+                    <img src="images/students/early-childhood.jpg" alt="Early Childhood students at <?php echo htmlspecialchars($school_name); ?>" loading="lazy">
+                </div>
+                <div class="photo-card-body">
+                    <h3>Early Childhood</h3>
+                    <p>Creche, Nursery, and Kindergarten programmes designed to spark curiosity, creativity, and a lifelong love for learning in our youngest students.</p>
+                    <a href="about.php#early-childhood" class="btn-link">Learn More <i class="fas fa-arrow-right"></i></a>
+                </div>
             </div>
-            <div class="feature-card">
-                <div class="feature-icon"><i class="fas fa-book-reader"></i></div>
-                <h3>Primary Education</h3>
-                <p>Basic 1 to 6 with a comprehensive curriculum covering core subjects, creative arts, ICT, and physical education for well-rounded development.</p>
+            <div class="photo-card">
+                <div class="photo-card-image">
+                    <img src="images/students/primary.jpg" alt="Primary students at <?php echo htmlspecialchars($school_name); ?>" loading="lazy">
+                </div>
+                <div class="photo-card-body">
+                    <h3>Primary Education</h3>
+                    <p>Basic 1 to 6 with a comprehensive curriculum covering core subjects, creative arts, ICT, and physical education for well-rounded development.</p>
+                    <a href="about.php#primary" class="btn-link">Learn More <i class="fas fa-arrow-right"></i></a>
+                </div>
             </div>
-            <div class="feature-card">
-                <div class="feature-icon"><i class="fas fa-graduation-cap"></i></div>
-                <h3>Junior High School</h3>
-                <p>JHS 1 to 3 preparing students for the BECE with strong academics, practical skills, and character formation for future success.</p>
+            <div class="photo-card">
+                <div class="photo-card-image">
+                    <img src="images/students/jhs.jpg" alt="Junior High School students at <?php echo htmlspecialchars($school_name); ?>" loading="lazy">
+                </div>
+                <div class="photo-card-body">
+                    <h3>Junior High School</h3>
+                    <p>JHS 1 to 3 preparing students for the BECE with strong academics, practical skills, and character formation for future success.</p>
+                    <a href="about.php#jhs" class="btn-link">Learn More <i class="fas fa-arrow-right"></i></a>
+                </div>
             </div>
         </div>
     </div>
@@ -102,15 +117,16 @@ $years_count = 4;
 <!-- About Preview -->
 <section class="section" style="background: var(--color-gray-50);">
     <div class="container">
-        <h2 class="section-title">Our School</h2>
-        <div style="max-width: 800px; margin: 0 auto; text-align: center;">
-            <p style="font-size: var(--text-lg); line-height: var(--leading-relaxed); color: var(--color-gray-700); margin-bottom: 30px;">
-                <?php echo htmlspecialchars($school_name); ?> is a nurturing learning environment dedicated to building strong academic foundations, character development, and holistic growth for every child from Creche to JHS 3.
-            </p>
-            <p style="color: var(--text-muted); margin-bottom: 30px;">
-                Our school follows the Ghana Education Service curriculum while fostering creativity, discipline, and a love for lifelong learning. We believe in partnering with parents to provide the best possible educational experience for every child.
-            </p>
-            <a href="about.php" class="btn-primary"><i class="fas fa-arrow-right"></i> Learn More About Us</a>
+        <div class="photo-split">
+            <div class="photo-split-image">
+                <img src="images/story-photo.jpg" alt="<?php echo htmlspecialchars($school_name); ?> students in class" loading="lazy">
+            </div>
+            <div class="photo-split-content">
+                <h2>Our School</h2>
+                <p><?php echo htmlspecialchars($school_name); ?> is a nurturing learning environment dedicated to building strong academic foundations, character development, and holistic growth for every child from Creche to JHS 3.</p>
+                <p>Our school follows the Ghana Education Service curriculum while fostering creativity, discipline, and a love for lifelong learning. We believe in partnering with parents to provide the best possible educational experience for every child.</p>
+                <a href="about.php" class="btn-primary"><i class="fas fa-arrow-right"></i> Learn More About Us</a>
+            </div>
         </div>
     </div>
 </section>
@@ -161,6 +177,18 @@ $years_count = 4;
                         <span>Alumni Parent</span>
                     </div>
                 </div>
+            </div>
+        </div>
+        <!-- Student Photo Strip -->
+        <div class="photo-strip">
+            <div class="photo-strip-item">
+                <img src="images/students/students-group-1.jpg" alt="<?php echo htmlspecialchars($school_name); ?> students" loading="lazy">
+            </div>
+            <div class="photo-strip-item">
+                <img src="images/students/gallery-1.jpg" alt="<?php echo htmlspecialchars($school_name); ?> student activity" loading="lazy">
+            </div>
+            <div class="photo-strip-item">
+                <img src="images/students/students-group-2.jpg" alt="<?php echo htmlspecialchars($school_name); ?> student life" loading="lazy">
             </div>
         </div>
     </div>

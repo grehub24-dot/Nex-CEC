@@ -47,12 +47,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'add_project') {
         $title = sanitize($_POST['title']);
         $desc = sanitize($_POST['description']);
-        $status = sanitize($_POST['status']);
-        $date = sanitize($_POST['project_date']);
+        $year = sanitize($_POST['project_date'] ?? date('Y'));
         $image_url = upload_to_supabase_storage($_FILES['image'] ?? [], 'projects', '', 'images/project-placeholder.png');
 
-        $stmt = $pdo->prepare("INSERT INTO projects (title, description, status, project_date, image_url) VALUES (?, ?, ?, ?, ?)");
-        $stmt->execute([$title, $desc, $status, $date, $image_url]);
+        $stmt = $pdo->prepare("INSERT INTO projects (title, description, status, project_date, image_url) VALUES (?, ?, 'completed', ?, ?)");
+        $stmt->execute([$title, $desc, $year . '-01-01', $image_url]);
         $message = "Project added successfully!";
     } elseif ($action === 'respond_contact') {
         $sub_id = intval($_POST['submission_id']);
@@ -126,12 +125,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id = intval($_POST['id']);
         $title = sanitize($_POST['title']);
         $desc = sanitize($_POST['description']);
-        $status = sanitize($_POST['status']);
-        $date = sanitize($_POST['project_date']);
+        $year = sanitize($_POST['project_date'] ?? date('Y'));
         $image_url = upload_to_supabase_storage($_FILES['image'] ?? [], 'projects', '', sanitize($_POST['current_image_url'] ?? 'images/project-placeholder.png'));
 
-        $stmt = $pdo->prepare("UPDATE projects SET title = ?, description = ?, status = ?, project_date = ?, image_url = ? WHERE id = ?");
-        $stmt->execute([$title, $desc, $status, $date, $image_url, $id]);
+        $stmt = $pdo->prepare("UPDATE projects SET title = ?, description = ?, project_date = ?, image_url = ? WHERE id = ?");
+        $stmt->execute([$title, $desc, $year . '-01-01', $image_url, $id]);
         $message = "Project updated successfully!";
     } elseif ($action === 'setup_tables') {
         $migrationFile = __DIR__ . '/migrate_module_tables.sql';
@@ -196,7 +194,7 @@ $submissions_paginated = array_slice($submissions, $sub_offset, $sub_limit);
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Module Settings - Admin</title>
+    <title>Content Manager - Admin</title>
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -431,8 +429,8 @@ $submissions_paginated = array_slice($submissions, $sub_offset, $sub_limit);
             <div class="top-bar">
                 <h2><i class="fas fa-cog" style="color:#ffcc00;background:#003366;padding:8px;border-radius:10px;margin-right:8px;"></i> Module & Contact Settings</h2>
                 <div style="display:flex; gap:8px; flex-wrap: wrap;">
-                    <button onclick="document.getElementById('execModal').style.display='block'" class="btn-admin-action"><i class="fas fa-user-tie"></i> Add Executive</button>
-                    <button onclick="document.getElementById('alumniModal').style.display='block'" class="btn-admin-action"><i class="fas fa-graduation-cap"></i> Add Alumni</button>
+                    <button onclick="document.getElementById('execModal').style.display='block'" class="btn-admin-action"><i class="fas fa-user-tie"></i> Add Staff</button>
+                    <button onclick="document.getElementById('alumniModal').style.display='block'" class="btn-admin-action"><i class="fas fa-graduation-cap"></i> Add Past Student</button>
                     <button onclick="document.getElementById('galleryModal').style.display='block'" class="btn-admin-action"><i class="fas fa-images"></i> Add Gallery</button>
                     <button onclick="document.getElementById('projectModal').style.display='block'" class="btn-admin-action"><i class="fas fa-project-diagram"></i> Add Project</button>
                 </div>
@@ -451,7 +449,7 @@ $submissions_paginated = array_slice($submissions, $sub_offset, $sub_limit);
             <?php if (!$all_tables_exist): ?>
             <div class="setup-banner">
                 <h3><i class="fas fa-database"></i> Database Setup Required</h3>
-                <p>Some module tables are missing. These are needed to store executives, alumni, gallery items, projects, and contact form submissions.</p>
+                <p>Some tables are missing. These store staff, past students, photos, school projects, and contact messages.</p>
                 <div class="table-status-list">
                     <?php foreach ($table_status as $tbl => $exists): ?>
                     <span class="status-badge <?php echo $exists ? 'status-ok' : 'status-missing'; ?>">
@@ -571,7 +569,7 @@ $submissions_paginated = array_slice($submissions, $sub_offset, $sub_limit);
 
             <div class="section" style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
                 <div class="card">
-                    <h3>Current Executives</h3>
+                    <h3>School Leadership</h3>
                     <table class="table">
                         <thead>
                             <tr>
@@ -590,7 +588,7 @@ $submissions_paginated = array_slice($submissions, $sub_offset, $sub_limit);
                                         <td><?php echo htmlspecialchars($exec['position']); ?></td>
                                         <td>
                                             <button type="button" onclick="document.getElementById('edit-exec-<?php echo $exec['id']; ?>').style.display='block'" class="btn-admin-action btn-admin-secondary btn-admin-sm"><i class="fas fa-pen"></i> Edit</button>
-                                            <form method="POST" onsubmit="return confirm('Are you sure you want to delete this executive?');" style="display:inline;">
+                                            <form method="POST" onsubmit="return confirm('Delete this staff member?');" style="display:inline;">
                                                 <?php csrf_field(); ?>
                                                 <input type="hidden" name="action" value="delete_executive">
                                                 <input type="hidden" name="id" value="<?php echo $exec['id']; ?>">
@@ -602,7 +600,7 @@ $submissions_paginated = array_slice($submissions, $sub_offset, $sub_limit);
                                                     <input type="hidden" name="action" value="update_executive">
                                                     <input type="hidden" name="id" value="<?php echo $exec['id']; ?>">
                                                     <input type="hidden" name="current_image_url" value="<?php echo htmlspecialchars($exec['image_url'] ?: 'images/aamusted.jpg'); ?>">
-                                                    <img id="editExecPreview-<?php echo $exec['id']; ?>" src="<?php echo resolve_storage_url($exec['image_url'] ?? ''); ?>" class="upload-preview" alt="Executive image">
+                                                    <img id="editExecPreview-<?php echo $exec['id']; ?>" src="<?php echo resolve_storage_url($exec['image_url'] ?? ''); ?>" class="upload-preview" alt="Staff photo">
                                                     <input type="file" name="image" class="form-control image-upload-input" accept="image/*" data-preview-target="editExecPreview-<?php echo $exec['id']; ?>" data-file-name-target="editExecFileName-<?php echo $exec['id']; ?>" data-default-src="<?php echo resolve_storage_url($exec['image_url'] ?? ''); ?>" style="margin-bottom:8px;">
                                                     <div id="editExecFileName-<?php echo $exec['id']; ?>" class="upload-file-name" style="margin-bottom:8px;">No image selected</div>
                                                     <input type="text" name="full_name" class="form-control" value="<?php echo htmlspecialchars($exec['full_name']); ?>" style="margin-bottom:8px;" required>
@@ -618,7 +616,7 @@ $submissions_paginated = array_slice($submissions, $sub_offset, $sub_limit);
                                     <td colspan="4">
                                         <div class="empty-table-msg">
                                             <i class="fas fa-user-tie"></i>
-                                            No executives added yet.
+                                            No staff added yet.
                                             <?php if (!$all_tables_exist): ?><br><span style="font-size:0.82rem;color:#999;">Complete database setup above first.</span><?php endif; ?>
                                         </div>
                                     </td>
@@ -628,7 +626,7 @@ $submissions_paginated = array_slice($submissions, $sub_offset, $sub_limit);
                     </table>
                 </div>
                 <div class="card">
-                    <h3>Current Alumni</h3>
+                    <h3>Past Students</h3>
                     <table class="table">
                         <thead>
                             <tr>
@@ -647,7 +645,7 @@ $submissions_paginated = array_slice($submissions, $sub_offset, $sub_limit);
                                         <td><?php echo htmlspecialchars($alum['graduation_year']); ?></td>
                                         <td>
                                             <button type="button" onclick="document.getElementById('edit-alum-<?php echo $alum['id']; ?>').style.display='block'" class="btn-admin-action btn-admin-secondary btn-admin-sm"><i class="fas fa-pen"></i> Edit</button>
-                                            <form method="POST" onsubmit="return confirm('Are you sure you want to delete this alumni?');" style="display:inline;">
+                                            <form method="POST" onsubmit="return confirm('Delete this past student?');" style="display:inline;">
                                                 <?php csrf_field(); ?>
                                                 <input type="hidden" name="action" value="delete_alumni">
                                                 <input type="hidden" name="id" value="<?php echo $alum['id']; ?>">
@@ -659,7 +657,7 @@ $submissions_paginated = array_slice($submissions, $sub_offset, $sub_limit);
                                                     <input type="hidden" name="action" value="update_alumni">
                                                     <input type="hidden" name="id" value="<?php echo $alum['id']; ?>">
                                                     <input type="hidden" name="current_image_url" value="<?php echo htmlspecialchars($alum['image_url'] ?: 'images/aamusted.jpg'); ?>">
-                                                    <img id="editAlumPreview-<?php echo $alum['id']; ?>" src="<?php echo resolve_storage_url($alum['image_url'] ?? ''); ?>" class="upload-preview" alt="Alumni image">
+                                                    <img id="editAlumPreview-<?php echo $alum['id']; ?>" src="<?php echo resolve_storage_url($alum['image_url'] ?? ''); ?>" class="upload-preview" alt="Student photo">
                                                     <input type="file" name="image" class="form-control image-upload-input" accept="image/*" data-preview-target="editAlumPreview-<?php echo $alum['id']; ?>" data-file-name-target="editAlumFileName-<?php echo $alum['id']; ?>" data-default-src="<?php echo resolve_storage_url($alum['image_url'] ?? ''); ?>" style="margin-bottom:8px;">
                                                     <div id="editAlumFileName-<?php echo $alum['id']; ?>" class="upload-file-name" style="margin-bottom:8px;">No image selected</div>
                                                     <input type="text" name="full_name" class="form-control" value="<?php echo htmlspecialchars($alum['full_name']); ?>" style="margin-bottom:8px;" required>
@@ -675,7 +673,7 @@ $submissions_paginated = array_slice($submissions, $sub_offset, $sub_limit);
                                     <td colspan="4">
                                         <div class="empty-table-msg">
                                             <i class="fas fa-graduation-cap"></i>
-                                            No alumni added yet.
+                                            No past students added yet.
                                             <?php if (!$all_tables_exist): ?><br><span style="font-size:0.82rem;color:#999;">Complete database setup above first.</span><?php endif; ?>
                                         </div>
                                     </td>
@@ -776,13 +774,17 @@ $submissions_paginated = array_slice($submissions, $sub_offset, $sub_limit);
                                                 <button type="submit" class="btn-login" style="background:#dc3545; padding: 5px 10px; font-size: 0.8rem;"><i class="fas fa-trash"></i></button>
                                             </form>
                                             <div id="edit-proj-<?php echo $proj['id']; ?>" style="display:none; margin-top:10px;">
-                                                <form method="POST">
+                                                <form method="POST" enctype="multipart/form-data">
                                                     <?php csrf_field(); ?>
                                                     <input type="hidden" name="action" value="update_project">
                                                     <input type="hidden" name="id" value="<?php echo $proj['id']; ?>">
+                                                    <input type="hidden" name="current_image_url" value="<?php echo htmlspecialchars($proj['image_url'] ?? ''); ?>">
+                                                    <img id="editProjPreview-<?php echo $proj['id']; ?>" src="<?php echo resolve_storage_url($proj['image_url'] ?? ''); ?>" class="upload-preview" alt="Project photo">
+                                                    <input type="file" name="image" class="form-control image-upload-input" accept="image/*" data-preview-target="editProjPreview-<?php echo $proj['id']; ?>" data-file-name-target="editProjFileName-<?php echo $proj['id']; ?>" data-default-src="<?php echo resolve_storage_url($proj['image_url'] ?? ''); ?>" style="margin-bottom:8px;">
+                                                    <div id="editProjFileName-<?php echo $proj['id']; ?>" class="upload-file-name" style="margin-bottom:8px;">No image selected</div>
                                                     <input type="text" name="title" class="form-control" value="<?php echo htmlspecialchars($proj['title']); ?>" style="margin-bottom:8px;" required>
                                                     <textarea name="description" class="form-control" rows="3" style="margin-bottom:8px;" required><?php echo htmlspecialchars($proj['description']); ?></textarea>
-                                                    <input type="text" name="year" class="form-control" value="<?php echo htmlspecialchars($proj['year'] ?? ''); ?>" style="margin-bottom:8px;">
+                                                    <input type="text" name="project_date" class="form-control" value="<?php echo htmlspecialchars(!empty($proj['project_date']) ? substr($proj['project_date'], 0, 4) : ''); ?>" style="margin-bottom:8px;" placeholder="Year">
                                                     <button type="submit" class="btn-submit">Save Changes</button>
                                                 </form>
                                             </div>
@@ -807,17 +809,17 @@ $submissions_paginated = array_slice($submissions, $sub_offset, $sub_limit);
         </main>
     </div>
 
-    <!-- Executive Modal -->
+    <!-- Staff Modal -->
     <div id="execModal" class="modal">
         <div class="modal-content">
             <span class="close-btn" onclick="document.getElementById('execModal').style.display='none'">&times;</span>
-            <h3>Add Executive</h3>
+            <h3>Add Staff Member</h3>
             <form method="POST" enctype="multipart/form-data" style="margin-top: 15px;">
                 <?php csrf_field(); ?>
                 <input type="hidden" name="action" value="add_executive">
                 <div class="form-group">
-                    <label>Profile Picture</label>
-                    <img id="execImagePreview" src="../images/aamusted.jpg" alt="Executive Preview" class="upload-preview">
+                    <label>Photo</label>
+                    <img id="execImagePreview" src="../images/aamusted.jpg" alt="Staff photo" class="upload-preview">
                     <input type="file" name="image" class="form-control image-upload-input" accept="image/*" data-preview-target="execImagePreview" data-file-name-target="execImageFileName" data-default-src="../images/aamusted.jpg">
                     <div id="execImageFileName" class="upload-file-name">No image selected</div>
                 </div>
@@ -826,25 +828,25 @@ $submissions_paginated = array_slice($submissions, $sub_offset, $sub_limit);
                     <input type="text" name="full_name" class="form-control" placeholder="Enter Full Name" required>
                 </div>
                 <div class="form-group">
-                    <label>Position</label>
-                    <input type="text" name="position" class="form-control" placeholder="Enter Position" required>
+                    <label>Position/Role</label>
+                    <input type="text" name="position" class="form-control" placeholder="e.g. Headteacher, Administrator" required>
                 </div>
-                <button type="submit" class="btn-primary" style="width: 100%;">Add Executive</button>
+                <button type="submit" class="btn-primary" style="width: 100%;">Add Staff Member</button>
             </form>
         </div>
     </div>
 
-    <!-- Alumni Modal -->
+    <!-- Past Student Modal -->
     <div id="alumniModal" class="modal">
         <div class="modal-content">
             <span class="close-btn" onclick="document.getElementById('alumniModal').style.display='none'">&times;</span>
-            <h3>Add Alumni</h3>
+            <h3>Add Past Student</h3>
             <form method="POST" enctype="multipart/form-data" style="margin-top: 15px;">
                 <?php csrf_field(); ?>
                 <input type="hidden" name="action" value="add_alumni">
                 <div class="form-group">
-                    <label>Profile Picture</label>
-                    <img id="alumniImagePreview" src="../images/aamusted.jpg" alt="Alumni Preview" class="upload-preview">
+                    <label>Photo</label>
+                    <img id="alumniImagePreview" src="../images/aamusted.jpg" alt="Student photo" class="upload-preview">
                     <input type="file" name="image" class="form-control image-upload-input" accept="image/*" data-preview-target="alumniImagePreview" data-file-name-target="alumniImageFileName" data-default-src="../images/aamusted.jpg">
                     <div id="alumniImageFileName" class="upload-file-name">No image selected</div>
                 </div>
@@ -853,49 +855,39 @@ $submissions_paginated = array_slice($submissions, $sub_offset, $sub_limit);
                     <input type="text" name="full_name" class="form-control" placeholder="Enter Full Name" required>
                 </div>
                 <div class="form-group">
-                    <label>Year</label>
-                    <input type="text" name="graduation_year" class="form-control" placeholder="Enter Graduation Year" required>
+                    <label>Year Left</label>
+                    <input type="text" name="graduation_year" class="form-control" placeholder="e.g. 2025" required>
                 </div>
-                <button type="submit" class="btn-primary" style="width: 100%;">Add Alumni</button>
+                <button type="submit" class="btn-primary" style="width: 100%;">Add Past Student</button>
             </form>
         </div>
     </div>
 
     <!-- Project Modal -->
     <div id="projectModal" class="modal">
-        <div class="modal-content" style="width: 500px;">
+        <div class="modal-content">
             <span class="close-btn" onclick="document.getElementById('projectModal').style.display='none'">&times;</span>
-            <h3>Add Project</h3>
+            <h3>Add School Project</h3>
             <form method="POST" enctype="multipart/form-data" style="margin-top: 15px;">
                 <?php csrf_field(); ?>
                 <input type="hidden" name="action" value="add_project">
                 <div class="form-group">
-                    <label>Project Image</label>
-                    <img id="projectImagePreview" src="../images/aamusted.jpg" alt="Project Preview" class="upload-preview">
+                    <label>Photo (optional)</label>
+                    <img id="projectImagePreview" src="../images/aamusted.jpg" alt="Project photo" class="upload-preview">
                     <input type="file" name="image" class="form-control image-upload-input" accept="image/*" data-preview-target="projectImagePreview" data-file-name-target="projectImageFileName" data-default-src="../images/aamusted.jpg">
                     <div id="projectImageFileName" class="upload-file-name">No image selected</div>
                 </div>
                 <div class="form-group">
                     <label>Title</label>
-                    <input type="text" name="title" class="form-control" placeholder="Project Title" required>
+                    <input type="text" name="title" class="form-control" placeholder="e.g. New Classroom Block" required>
                 </div>
                 <div class="form-group">
                     <label>Description</label>
                     <textarea name="description" class="form-control" rows="3" placeholder="Brief description"></textarea>
                 </div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                    <div class="form-group">
-                        <label>Status</label>
-                        <select name="status" class="form-control">
-                            <option value="completed">Completed</option>
-                            <option value="ongoing">Ongoing</option>
-                            <option value="planned">Planned</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Date</label>
-                        <input type="date" name="project_date" class="form-control" value="<?php echo date('Y-m-d'); ?>">
-                    </div>
+                <div class="form-group">
+                    <label>Year</label>
+                    <input type="text" name="project_date" class="form-control" placeholder="e.g. 2025" value="<?php echo date('Y'); ?>">
                 </div>
                 <button type="submit" class="btn-primary" style="width: 100%;">Add Project</button>
             </form>
@@ -906,19 +898,30 @@ $submissions_paginated = array_slice($submissions, $sub_offset, $sub_limit);
     <div id="galleryModal" class="modal">
         <div class="modal-content">
             <span class="close-btn" onclick="document.getElementById('galleryModal').style.display='none'">&times;</span>
-            <h3>Add Gallery Item</h3>
+            <h3>Add Photo to Gallery</h3>
             <form method="POST" enctype="multipart/form-data" style="margin-top: 15px;">
                 <?php csrf_field(); ?>
                 <input type="hidden" name="action" value="add_gallery">
                 <div class="form-group">
-                    <label>Image</label>
-                    <img id="galleryImagePreview" src="../images/aamusted.jpg" alt="Gallery Preview" class="upload-preview">
+                    <label>Photo</label>
+                    <img id="galleryImagePreview" src="../images/aamusted.jpg" alt="Gallery preview" class="upload-preview">
                     <input type="file" name="image" class="form-control image-upload-input" accept="image/*" required data-preview-target="galleryImagePreview" data-file-name-target="galleryImageFileName" data-default-src="../images/aamusted.jpg">
                     <div id="galleryImageFileName" class="upload-file-name">No image selected</div>
                 </div>
                 <div class="form-group">
-                    <label>Title/Caption</label>
-                    <input type="text" name="title" class="form-control" placeholder="Image Title" required>
+                    <label>Caption</label>
+                    <input type="text" name="caption" class="form-control" placeholder="e.g. Annual Sports Day 2025" required>
+                </div>
+                <div class="form-group">
+                    <label>Category</label>
+                    <select name="category" class="form-control">
+                        <option value="School">School</option>
+                        <option value="Sports">Sports</option>
+                        <option value="Events">Events</option>
+                        <option value="Graduation">Graduation</option>
+                        <option value="Infrastructure">Infrastructure</option>
+                        <option value="Cultural">Cultural</option>
+                    </select>
                 </div>
                 <button type="submit" class="btn-primary" style="width: 100%;">Add to Gallery</button>
             </form>

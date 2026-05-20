@@ -13,7 +13,7 @@ $message = '';
 $error = '';
 
 if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
-    redirect('admin_staff.php');
+    redirect('admin/staff.php');
 }
 
 $staff_id = (int)$_GET['id'];
@@ -22,7 +22,7 @@ $stmt->execute([$staff_id]);
 $staff = $stmt->fetch();
 
 if (!$staff) {
-    redirect('admin_staff.php');
+    redirect('admin/staff.php');
 }
 
 // Handle Update
@@ -76,7 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         <main class="main-content">
             <div class="top-bar">
                 <h2>Edit Staff Member</h2>
-                <a href="staff.php" class="btn-login" style="background: #6c757d;"><i class="fas fa-arrow-left"></i> Back to Staff</a>
+                <a href="admin/staff.php" class="btn-login" style="background: #6c757d;"><i class="fas fa-arrow-left"></i> Back to Staff</a>
             </div>
 
             <?php if ($message): ?>

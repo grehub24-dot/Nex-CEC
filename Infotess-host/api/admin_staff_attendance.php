@@ -220,7 +220,7 @@ try {
             </div>
             <?php else: ?>
                 <div class="alert alert-info">
-                    <i class="fas fa-info-circle"></i> No active staff members found. <a href="staff.php">Add staff first</a>.
+                    <i class="fas fa-info-circle"></i> No active staff members found. <a href="admin/staff.php">Add staff first</a>.
                 </div>
             <?php endif; ?>
         </main>

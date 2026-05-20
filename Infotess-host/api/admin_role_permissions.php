@@ -404,7 +404,7 @@ function levelIcon($level) {
                                     </td>
                                     <td>
                                         <?php if ($hasUser): ?>
-                                            <a href="admin/edit_staff.php?id=<?php echo $staff['id']; ?>" class="btn-admin-action btn-admin-sm" title="Edit staff details">
+                                            <a href="edit_staff.php?id=<?php echo $staff['id']; ?>" class="btn-admin-action btn-admin-sm" title="Edit staff details">
                                                 <i class="fas fa-edit"></i>
                                             </a>
                                         <?php endif; ?>

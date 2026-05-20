@@ -92,7 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     // Send invite
                     $inviteResult = sendStaffInvite($staff_id_inserted, $user_id, (int)$_SESSION['user_id'], $email, $phone, $full_name);
                     if ($inviteResult['success']) {
-                        $message = "Staff member added. " . $inviteResult['message'] . " <a href='admin/staff.php' style='color:#27ae60;'>Back to staff list</a>";
+                        $message = "Staff member added. " . $inviteResult['message'] . " <a href='staff.php' style='color:#27ae60;'>Back to staff list</a>";
                     } else {
                         $message = "Staff member added! However, invite sending failed: " . $inviteResult['message'];
                     }
@@ -145,7 +145,7 @@ if (isset($_GET['delete']) && is_numeric($_GET['delete'])) {
         $pdo->rollBack();
         $error = "Error deleting staff: " . $e->getMessage();
     }
-    header("Location: admin/staff.php?msg=" . urlencode($message));
+    header("Location: staff.php?msg=" . urlencode($message));
     exit;
 }
 
@@ -213,7 +213,7 @@ if (isset($_GET['resend_invite']) && is_numeric($_GET['resend_invite'])) {
         $error = "Error resending invite: " . $e->getMessage();
     }
     $redirectParam = $message ? "msg=" . urlencode($message) : "err=" . urlencode($error);
-    header("Location: admin/staff.php?" . $redirectParam);
+    header("Location: staff.php?" . $redirectParam);
     exit;
 }
 
@@ -240,7 +240,7 @@ if (isset($_GET['activate']) && is_numeric($_GET['activate'])) {
         $error = "Error activating staff: " . $e->getMessage();
     }
     $redirectParam = $message ? "msg=" . urlencode($message) : "err=" . urlencode($error);
-    header("Location: admin/staff.php?" . $redirectParam);
+    header("Location: staff.php?" . $redirectParam);
     exit;
 }
 
@@ -368,7 +368,7 @@ $total_pages = $total_rows > 0 ? (int)ceil($total_rows / $limit) : 1;
                 <div class="modal-content">
                     <span class="close-btn">&times;</span>
                     <h3>Add New Staff Member</h3>
-                    <form action="admin/staff.php" method="POST" style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-top: 15px;">
+                    <form action="staff.php" method="POST" style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-top: 15px;">
                         <input type="hidden" name="action" value="add_staff">
                         <?php csrf_field(); ?>
                         
@@ -463,14 +463,14 @@ $total_pages = $total_rows > 0 ? (int)ceil($total_rows / $limit) : 1;
             <div class="section">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
                     <h3>All Staff Members</h3>
-                    <form action="admin/staff.php" method="GET" style="display:flex; gap:10px;">
+                    <form action="staff.php" method="GET" style="display:flex; gap:10px;">
                         <input type="text" name="search" placeholder="Search name, ID, or position..." class="form-control" value="<?php echo htmlspecialchars($search); ?>">
                         <button type="submit" class="btn-login"><i class="fas fa-search"></i></button>
                     </form>
                 </div>
 
                 <!-- Bulk Delete Toolbar -->
-                <form method="POST" action="admin/staff.php" id="staffBulkForm">
+                <form method="POST" action="staff.php" id="staffBulkForm">
                     <input type="hidden" name="action" value="bulk_delete_staff">
                     <?php csrf_field(); ?>
                     <div style="margin-bottom:15px; display:flex; align-items:center; gap:10px;">
@@ -541,7 +541,7 @@ $total_pages = $total_rows > 0 ? (int)ceil($total_rows / $limit) : 1;
                                             $hasDocs = !empty($staff['documents']) && json_decode($staff['documents'], true);
                                             if ($hasCv || $hasDocs):
                                             ?>
-                                                <a href="admin/edit_staff.php?id=<?php echo $staff['id']; ?>" title="View documents" style="color:#1a5276;text-decoration:none;">
+                                                <a href="edit_staff.php?id=<?php echo $staff['id']; ?>" title="View documents" style="color:#1a5276;text-decoration:none;">
                                                     <?php if ($hasCv): ?>
                                                         <i class="fas fa-file-pdf" style="color:#e74c3c;font-size:16px;" title="CV Uploaded"></i>
                                                     <?php endif; ?>
@@ -554,17 +554,17 @@ $total_pages = $total_rows > 0 ? (int)ceil($total_rows / $limit) : 1;
                                             <?php endif; ?>
                                         </td>
                                         <td style="white-space: nowrap;">
-                                            <a href="admin/edit_staff.php?id=<?php echo $staff['id']; ?>" class="btn-login" style="background:#f0ad4e; padding: 5px 10px; font-size: 0.8rem; text-decoration:none; display:inline-block; margin-bottom:2px;" title="Edit staff details">Edit</a>
+                                            <a href="edit_staff.php?id=<?php echo $staff['id']; ?>" class="btn-login" style="background:#f0ad4e; padding: 5px 10px; font-size: 0.8rem; text-decoration:none; display:inline-block; margin-bottom:2px;" title="Edit staff details">Edit</a>
                                             <?php if (($staff['status'] ?? 'active') !== 'active' && $inviteStatus === 'accepted'): ?>
-                                                <a href="admin/staff.php?activate=<?php echo $staff['id']; ?>&<?php echo $csrfAttr; ?>" class="btn-login" style="background:#27ae60; padding: 5px 10px; font-size: 0.8rem; text-decoration:none; display:inline-block; margin-bottom:2px;" onclick="return confirm('Activate this staff account? They will be able to log in immediately.');">Activate</a>
+                                                <a href="staff.php?activate=<?php echo $staff['id']; ?>&<?php echo $csrfAttr; ?>" class="btn-login" style="background:#27ae60; padding: 5px 10px; font-size: 0.8rem; text-decoration:none; display:inline-block; margin-bottom:2px;" onclick="return confirm('Activate this staff account? They will be able to log in immediately.');">Activate</a>
                                             <?php endif; ?>
                                             <?php if ($inviteStatus === 'pending' || $inviteStatus === 'expired'): ?>
-                                                <a href="admin/staff.php?resend_invite=<?php echo $staff['id']; ?>&<?php echo $csrfAttr; ?>" class="btn-login" style="background:#3498db; padding: 5px 10px; font-size: 0.8rem; text-decoration:none; display:inline-block; margin-bottom:2px;" title="Resend invite email/SMS">Resend</a>
+                                                <a href="staff.php?resend_invite=<?php echo $staff['id']; ?>&<?php echo $csrfAttr; ?>" class="btn-login" style="background:#3498db; padding: 5px 10px; font-size: 0.8rem; text-decoration:none; display:inline-block; margin-bottom:2px;" title="Resend invite email/SMS">Resend</a>
                                             <?php endif; ?>
                                             <?php if ($inviteStatus === 'not_invited'): ?>
-                                                <a href="admin/staff.php?resend_invite=<?php echo $staff['id']; ?>&<?php echo $csrfAttr; ?>" class="btn-login" style="background:#3498db; padding: 5px 10px; font-size: 0.8rem; text-decoration:none; display:inline-block; margin-bottom:2px;">Send Invite</a>
+                                                <a href="staff.php?resend_invite=<?php echo $staff['id']; ?>&<?php echo $csrfAttr; ?>" class="btn-login" style="background:#3498db; padding: 5px 10px; font-size: 0.8rem; text-decoration:none; display:inline-block; margin-bottom:2px;">Send Invite</a>
                                             <?php endif; ?>
-                                            <a href="admin/staff.php?delete=<?php echo $staff['id']; ?>" class="btn-login" style="background:#e74c3c; padding: 5px 10px; font-size: 0.8rem; text-decoration:none; display:inline-block; margin-bottom:2px;" onclick="return confirm('Are you sure you want to delete this staff member?');">Delete</a>
+                                            <a href="staff.php?delete=<?php echo $staff['id']; ?>" class="btn-login" style="background:#e74c3c; padding: 5px 10px; font-size: 0.8rem; text-decoration:none; display:inline-block; margin-bottom:2px;" onclick="return confirm('Are you sure you want to delete this staff member?');">Delete</a>
                                         </td>
                                     </tr>
                                     <?php endforeach; ?>

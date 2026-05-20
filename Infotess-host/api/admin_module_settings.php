@@ -693,66 +693,14 @@ $submissions_paginated = array_slice($submissions, $sub_offset, $sub_limit);
                         <thead>
                             <tr>
                                 <th>Image</th>
-                                <th>Title</th>
+                                <th>Caption</th>
+                                <th>Category</th>
                                 <th>Action</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <?php if (count($projects) > 0): ?>
-                                <?php foreach ($projects as $proj): ?>
-                                    <tr>
-                                        <td><?php echo htmlspecialchars($proj['year'] ?? ''); ?></td>
-                                        <td><?php echo htmlspecialchars($proj['title']); ?></td>
-                                        <td>
-                                            <button type="button" onclick="document.getElementById('edit-proj-<?php echo $proj['id']; ?>').style.display='block'" class="btn-admin-action btn-admin-secondary btn-admin-sm"><i class="fas fa-pen"></i> Edit</button>
-                                            <form method="POST" onsubmit="return confirm('Are you sure you want to delete this project?');" style="display:inline;">
-                                                <?php csrf_field(); ?>
-                                                <input type="hidden" name="action" value="delete_project">
-                                                <input type="hidden" name="id" value="<?php echo $proj['id']; ?>">
-                                                <button type="submit" class="btn-login" style="background:#dc3545; padding: 5px 10px; font-size: 0.8rem;"><i class="fas fa-trash"></i></button>
-                                            </form>
-                                            <div id="edit-proj-<?php echo $proj['id']; ?>" style="display:none; margin-top:10px;">
-                                                <form method="POST">
-                                                    <?php csrf_field(); ?>
-                                                    <input type="hidden" name="action" value="update_project">
-                                                    <input type="hidden" name="id" value="<?php echo $proj['id']; ?>">
-                                                    <input type="text" name="title" class="form-control" value="<?php echo htmlspecialchars($proj['title']); ?>" style="margin-bottom:8px;" required>
-                                                    <textarea name="description" class="form-control" rows="3" style="margin-bottom:8px;" required><?php echo htmlspecialchars($proj['description']); ?></textarea>
-                                                    <input type="text" name="year" class="form-control" value="<?php echo htmlspecialchars($proj['year'] ?? ''); ?>" style="margin-bottom:8px;">
-                                                    <button type="submit" class="btn-submit">Save Changes</button>
-                                                </form>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            <?php else: ?>
-                                <tr>
-                                    <td colspan="3">
-                                        <div class="empty-table-msg">
-                                            <i class="fas fa-project-diagram"></i>
-                                            No projects added yet.
-                                            <?php if (!$all_tables_exist): ?><br><span style="font-size:0.82rem;color:#999;">Complete database setup above first.</span><?php endif; ?>
-                                        </div>
-                                    </td>
-                                </tr>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
-                </div>
-                <div class="card">
-                    <h3>Current Projects</h3>
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Image</th>
-                                <th>Title</th>
-                                <th>Status</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php if (count($gallery_items) > 0): ?>
-                                <?php foreach ($gallery_items as $g): ?>
+                            <?php if (count($gallery) > 0): ?>
+                                <?php foreach ($gallery as $g): ?>
                                     <tr>
                                         <td><img src="<?php echo resolve_storage_url($g['image_url']); ?>" style="width:60px; height:40px; object-fit:cover; border-radius:4px;"></td>
                                         <td><?php echo htmlspecialchars($g['caption']); ?></td>
@@ -795,6 +743,58 @@ $submissions_paginated = array_slice($submissions, $sub_offset, $sub_limit);
                                         <div class="empty-table-msg">
                                             <i class="fas fa-images"></i>
                                             No gallery images uploaded yet.
+                                            <?php if (!$all_tables_exist): ?><br><span style="font-size:0.82rem;color:#999;">Complete database setup above first.</span><?php endif; ?>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card">
+                    <h3>Current Projects</h3>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Year</th>
+                                <th>Title</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if (count($projects) > 0): ?>
+                                <?php foreach ($projects as $proj): ?>
+                                    <tr>
+                                        <td><?php echo htmlspecialchars($proj['year'] ?? ''); ?></td>
+                                        <td><?php echo htmlspecialchars($proj['title']); ?></td>
+                                        <td>
+                                            <button type="button" onclick="document.getElementById('edit-proj-<?php echo $proj['id']; ?>').style.display='block'" class="btn-admin-action btn-admin-secondary btn-admin-sm"><i class="fas fa-pen"></i> Edit</button>
+                                            <form method="POST" onsubmit="return confirm('Are you sure you want to delete this project?');" style="display:inline;">
+                                                <?php csrf_field(); ?>
+                                                <input type="hidden" name="action" value="delete_project">
+                                                <input type="hidden" name="id" value="<?php echo $proj['id']; ?>">
+                                                <button type="submit" class="btn-login" style="background:#dc3545; padding: 5px 10px; font-size: 0.8rem;"><i class="fas fa-trash"></i></button>
+                                            </form>
+                                            <div id="edit-proj-<?php echo $proj['id']; ?>" style="display:none; margin-top:10px;">
+                                                <form method="POST">
+                                                    <?php csrf_field(); ?>
+                                                    <input type="hidden" name="action" value="update_project">
+                                                    <input type="hidden" name="id" value="<?php echo $proj['id']; ?>">
+                                                    <input type="text" name="title" class="form-control" value="<?php echo htmlspecialchars($proj['title']); ?>" style="margin-bottom:8px;" required>
+                                                    <textarea name="description" class="form-control" rows="3" style="margin-bottom:8px;" required><?php echo htmlspecialchars($proj['description']); ?></textarea>
+                                                    <input type="text" name="year" class="form-control" value="<?php echo htmlspecialchars($proj['year'] ?? ''); ?>" style="margin-bottom:8px;">
+                                                    <button type="submit" class="btn-submit">Save Changes</button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <tr>
+                                    <td colspan="3">
+                                        <div class="empty-table-msg">
+                                            <i class="fas fa-project-diagram"></i>
+                                            No projects added yet.
                                             <?php if (!$all_tables_exist): ?><br><span style="font-size:0.82rem;color:#999;">Complete database setup above first.</span><?php endif; ?>
                                         </div>
                                     </td>

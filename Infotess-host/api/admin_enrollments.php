@@ -67,7 +67,7 @@ function createParentAccount($pdo, $student, $school_name) {
             $email_html = "
             <!DOCTYPE html>
             <html>
-            <head><meta charset='UTF-8'><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>
+            <head><meta charset='UTF-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'><style>
                 body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 20px; }
                 .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; }
                 .header { background: linear-gradient(to right, #1a5276, #2e86c1); color: white; text-align: center; padding: 40px 20px; }
@@ -142,7 +142,7 @@ function createParentAccount($pdo, $student, $school_name) {
                 $email_html = "
                 <!DOCTYPE html>
                 <html>
-                <head><meta charset='UTF-8'><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>
+                <head><meta charset='UTF-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'><style>
                     body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 20px; }
                     .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; }
                     .header { background: linear-gradient(to right, #1a5276, #2e86c1); color: white; text-align: center; padding: 30px 20px; }
@@ -221,7 +221,7 @@ if (isset($_GET['action']) && isset($_GET['id'])) {
                 $email_html = "
                 <!DOCTYPE html>
                 <html>
-                <head><meta charset='UTF-8'><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>
+                <head><meta charset='UTF-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'><style>
                     body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 20px; }
                     .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; }
                     .header { background: #e74c3c; color: white; text-align: center; padding: 30px 20px; }

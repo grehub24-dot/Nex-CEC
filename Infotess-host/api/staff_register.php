@@ -148,8 +148,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $staff && !empty($_POST['password']
                 $pdo->prepare("UPDATE staff SET " . implode(', ', $updFields) . " WHERE id = ?")->execute($updVals);
             }
 
-            // Update users table — set password, keep status as inactive
-            $pdo->prepare("UPDATE users SET password = ? WHERE id = ?")->execute([$hashedPassword, (int)$staff['user_id']]);
+            // Update users table — set password and activate account
+            $pdo->prepare("UPDATE users SET password = ?, status = 'active' WHERE id = ?")->execute([$hashedPassword, (int)$staff['user_id']]);
+
+            // Also sync staff.status to 'active'
+            $pdo->prepare("UPDATE staff SET status = 'active' WHERE id = ?")->execute([(int)$staff['id']]);
 
             // Mark invite as accepted — use PHP date() not SQL NOW()
             // because the Supabase bridge sends literals as JSON strings (NOW() becomes literal 'NOW()')
@@ -158,7 +161,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $staff && !empty($_POST['password']
 
             $pdo->commit();
 
-            $success = "Registration completed successfully! Your account is now pending activation by an administrator. You will be able to log in once your account is activated.";
+            $success = "Registration completed successfully! Your account is now active. You can log in with your password.";
             $staff = null; // hide form
 
         } catch (Exception $e) {

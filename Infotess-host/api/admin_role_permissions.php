@@ -102,11 +102,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
+// Handle toggle account status (approve / suspend)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'toggle_account_status') {
+    validate_request_csrf();
+    $staff_id = (int)($_POST['staff_id'] ?? 0);
+    $new_status = $_POST['new_status'] ?? '';
+
+    if ($staff_id <= 0 || !in_array($new_status, ['active', 'inactive'])) {
+        $error = "Invalid request.";
+    } else {
+        try {
+            $stmt = $pdo->prepare("SELECT user_id FROM staff WHERE id = ?");
+            $stmt->execute([$staff_id]);
+            $staffRow = $stmt->fetch();
+
+            if (!$staffRow || !$staffRow['user_id']) {
+                $error = "Staff member has no linked user account.";
+            } else {
+                $pdo->beginTransaction();
+                $pdo->prepare("UPDATE users SET status = ? WHERE id = ?")->execute([$new_status, (int)$staffRow['user_id']]);
+                $pdo->prepare("UPDATE staff SET status = ? WHERE id = ?")->execute([$new_status, $staff_id]);
+                $pdo->commit();
+
+                $message = "Account status updated to " . ($new_status === 'active' ? 'Approved' : 'Suspended') . ".";
+            }
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            $error = "Error updating account status: " . $e->getMessage();
+        }
+    }
+    $redirectPage = isset($_POST['page']) ? '?page=' . (int)$_POST['page'] : '';
+    header("Location: role_permissions.php{$redirectPage}");
+    exit;
+}
+
 // Fetch ALL staff with their linked user accounts
 $allStaff = [];
 try {
     $stmt = $pdo->query("
-        SELECT s.*, u.role AS user_role, u.email AS user_email, u.is_password_reset
+        SELECT s.*, u.role AS user_role, u.email AS user_email, u.is_password_reset, u.status AS user_status
         FROM staff s
         LEFT JOIN users u ON s.user_id = u.id
         ORDER BY s.department, s.full_name
@@ -354,6 +388,7 @@ function levelIcon($level) {
                                 <th>Department</th>
                                 <th>Current Access</th>
                                 <th>Set Access Level</th>
+                                <th>Account Status</th>
                                 <th style="width:80px;">Action</th>
                             </tr>
                         </thead>
@@ -404,6 +439,30 @@ function levelIcon($level) {
                                         <?php endif; ?>
                                     </td>
                                     <td>
+                                        <?php
+                                        $userStatus = $staff['user_status'] ?? 'inactive';
+                                        $isActive = $userStatus === 'active';
+                                        ?>
+                                        <span style="color:<?php echo $isActive ? 'green' : '#e74c3c'; ?>; font-weight:bold; font-size:0.85rem;">
+                                            <i class="fas fa-<?php echo $isActive ? 'check-circle' : 'ban'; ?>"></i>
+                                            <?php echo $isActive ? 'Approved' : 'Suspended'; ?>
+                                        </span>
+                                        <?php if ($hasUser): ?>
+                                            <form method="POST" style="display:inline; margin-left:6px;">
+                                                <input type="hidden" name="action" value="toggle_account_status">
+                                                <input type="hidden" name="staff_id" value="<?php echo $staff['id']; ?>">
+                                                <input type="hidden" name="new_status" value="<?php echo $isActive ? 'inactive' : 'active'; ?>">
+                                                <input type="hidden" name="page" value="<?php echo $staff_page; ?>">
+                                                <?php csrf_field(); ?>
+                                                <button type="submit" class="update-btn" style="background:<?php echo $isActive ? '#e74c3c' : '#27ae60'; ?>;"
+                                                    onclick="return confirm('<?php echo $isActive ? 'Suspend' : 'Approve'; ?> this staff account?');">
+                                                    <i class="fas fa-<?php echo $isActive ? 'ban' : 'check'; ?>"></i>
+                                                    <?php echo $isActive ? 'Suspend' : 'Approve'; ?>
+                                                </button>
+                                            </form>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
                                         <?php if ($hasUser): ?>
                                             <a href="edit_staff.php?id=<?php echo $staff['id']; ?>" class="btn-admin-action btn-admin-sm" title="Edit staff details">
                                                 <i class="fas fa-edit"></i>
@@ -415,7 +474,7 @@ function levelIcon($level) {
 
                             <?php if (empty($allStaff)): ?>
                                 <tr>
-                                    <td colspan="6" style="text-align:center; padding:40px; color:#888;">
+                                    <td colspan="7" style="text-align:center; padding:40px; color:#888;">
                                         <i class="fas fa-users" style="font-size:2rem; display:block; margin-bottom:10px;"></i>
                                         No staff members found.
                                     </td>

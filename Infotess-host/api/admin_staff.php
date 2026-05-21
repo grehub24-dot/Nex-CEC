@@ -284,7 +284,7 @@ $search = $_GET['search'] ?? '';
 // Complex search filtering is done in PHP.
 // Select ONLY columns needed for the listing — avoids pulling large fields (cv_path, documents)
 // that bloat the Vercel serverless response beyond the 4.5MB limit (413 PAYLOAD_TOO_LARGE).
-$all_staff = $pdo->query("SELECT id, staff_id, full_name, position, department, phone, status, cv_path, documents, created_at FROM staff")->fetchAll();
+$all_staff = $pdo->query("SELECT s.id, s.staff_id, s.full_name, s.position, s.department, s.phone, s.status AS staff_status, COALESCE(u.status, 'inactive') AS user_status, s.cv_path, s.documents, s.created_at FROM staff s LEFT JOIN users u ON s.user_id = u.id")->fetchAll();
 
 // Apply search filter in PHP (matches full_name, staff_id, and position)
 if ($search !== '') {
@@ -732,8 +732,8 @@ $total_pages = $total_rows > 0 ? (int)ceil($total_rows / $limit) : 1;
                                         <td data-label="Department"><?php echo htmlspecialchars($staff['department'] ?? '-'); ?></td>
                                         <td data-label="Phone"><?php echo htmlspecialchars($staff['phone'] ?? '-'); ?></td>
                                         <td data-label="Status">
-                                            <span style="color: <?php echo ($staff['status'] ?? 'active') === 'active' ? 'green' : '#e74c3c'; ?>; font-weight: bold;">
-                                                <?php echo ucfirst($staff['status'] ?? 'active'); ?>
+                                            <span style="color: <?php echo ($staff['user_status'] ?? 'inactive') === 'active' ? 'green' : '#e74c3c'; ?>; font-weight: bold;">
+                                                <?php echo ucfirst($staff['user_status'] ?? 'inactive'); ?>
                                             </span>
                                         </td>
                                         <td data-label="Invite">
@@ -775,7 +775,7 @@ $total_pages = $total_rows > 0 ? (int)ceil($total_rows / $limit) : 1;
                                         </td>
                                         <td data-label="Actions" style="white-space: nowrap;">
                                             <a href="edit_staff.php?id=<?php echo $staff['id']; ?>" class="btn-login" style="background:#f0ad4e; padding: 5px 10px; font-size: 0.8rem; text-decoration:none; display:inline-block; margin-bottom:2px;" title="Edit staff details">Edit</a>
-                                            <?php if (($staff['status'] ?? 'active') !== 'active' && $inviteStatus === 'accepted'): ?>
+                                            <?php if (($staff['user_status'] ?? 'inactive') !== 'active' && $inviteStatus === 'accepted'): ?>
                                                 <a href="staff.php?activate=<?php echo $staff['id']; ?>&<?php echo $csrfAttr; ?>" class="btn-login" style="background:#27ae60; padding: 5px 10px; font-size: 0.8rem; text-decoration:none; display:inline-block; margin-bottom:2px;" onclick="return confirm('Activate this staff account? They will be able to log in immediately.');">Activate</a>
                                             <?php endif; ?>
                                             <?php if ($inviteStatus === 'pending' || $inviteStatus === 'expired'): ?>

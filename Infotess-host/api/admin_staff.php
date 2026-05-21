@@ -92,7 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     // Send invite
                     $inviteResult = sendStaffInvite($staff_id_inserted, $user_id, (int)$_SESSION['user_id'], $email, $phone, $full_name);
                     if ($inviteResult['success']) {
-                        $message = "Staff member added. " . $inviteResult['message'] . " <a href='staff.php' style='color:#27ae60;'>Back to staff list</a>";
+                        $message = "Staff member added. " . $inviteResult['message'];
                     } else {
                         $message = "Staff member added! However, invite sending failed: " . $inviteResult['message'];
                     }
@@ -335,7 +335,7 @@ $total_pages = $total_rows > 0 ? (int)ceil($total_rows / $limit) : 1;
             $displayErr = $error ?: (isset($_GET['err']) ? $_GET['err'] : '');
             ?>
             <?php if ($displayMsg): ?>
-                <div class="alert alert-success"><?php echo htmlspecialchars($displayMsg); ?></div>
+                <div class="alert alert-success"><?php echo htmlspecialchars($displayMsg); ?> <a href="staff.php" style="color:#27ae60;font-weight:600;">&larr; Back to staff list</a></div>
             <?php endif; ?>
             <?php if ($displayErr): ?>
                 <div class="alert alert-danger"><?php echo htmlspecialchars($displayErr); ?></div>

@@ -35,6 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     
     $student_id_input = (int)($_POST['student_id'] ?? 0);
     $admission_number = sanitize($_POST['admission_number'] ?? '');
+    $transaction_reference = sanitize($_POST['transaction_reference'] ?? '');
     $class_name = sanitize($_POST['class_name']);
     $amount = floatval($_POST['amount']);
     $year = sanitize($_POST['academic_year']);
@@ -72,8 +73,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $receipt_number = strtoupper(substr(preg_replace('/[^A-Z]/', '', $school_name), 0, 4)) . "-" . date('ym') . "-" . rand(1000, 9999);
 
             // Insert Payment
-            $stmt = $pdo->prepare("INSERT INTO payments (student_id, amount, academic_year, semester, payment_method, payment_date, receipt_number, recorded_by, fee_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-            $stmt->execute([$student['id'], $amount, $year, $term, $method, $date, $receipt_number, $_SESSION['user_id'], $fee_type]);
+            $stmt = $pdo->prepare("INSERT INTO payments (student_id, amount, academic_year, semester, payment_method, payment_date, receipt_number, recorded_by, fee_type, transaction_reference) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt->execute([$student['id'], $amount, $year, $term, $method, $date, $receipt_number, $_SESSION['user_id'], $fee_type, $transaction_reference]);
             $payment_id = $pdo->lastInsertId();
 
             // Generate Receipt
@@ -278,7 +279,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $offset = ($page - 1) * $limit;
 
                 // Bridge doesn't support COUNT(*) or SUM() — fetch all, count & sum in PHP (narrow columns to prevent 413)
-                $allPayments = $pdo->query("SELECT id, student_id, amount, payment_date, created_at, receipt_number, fee_type, payment_method, academic_year FROM payments ORDER BY created_at DESC");
+                $allPayments = $pdo->query("SELECT id, student_id, amount, payment_date, created_at, receipt_number, fee_type, payment_method, academic_year, transaction_reference FROM payments ORDER BY created_at DESC");
                 $allPayments = $allPayments ? $allPayments->fetchAll() : [];
                 $total_rows = count($allPayments);
                 $total_pages = ceil($total_rows / $limit);
@@ -316,6 +317,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                                 <th>Receipt #</th>
                                 <th>Student</th>
                                 <th>Fee Type</th>
+                                <th>Trans. Ref</th>
                                 <th>Amount (GHS)</th>
                                 <th>Balance (GHS)</th>
                                 <th>Date</th>
@@ -334,6 +336,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                                     <small><?php echo htmlspecialchars($payment['admission_number']); ?></small>
                                 </td>
                                 <td><?php echo htmlspecialchars($payment['fee_type'] ?? 'General'); ?></td>
+                                <td><small style="color:#666;"><?php echo htmlspecialchars($payment['transaction_reference'] ?? '-'); ?></small></td>
                                 <td><?php echo number_format($payment['amount'], 2); ?></td>
                                 <td>
                                     <span style="color: <?php echo $balance > 0 ? 'red' : 'green'; ?>; font-weight: bold;">

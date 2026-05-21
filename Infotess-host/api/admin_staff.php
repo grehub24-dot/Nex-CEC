@@ -246,38 +246,7 @@ if (isset($_GET['resend_invite']) && is_numeric($_GET['resend_invite'])) {
     exit;
 }
 
-// Handle Toggle Account Status (POST — from toggle switch)
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'toggle_account_status') {
-    validate_request_csrf();
-    $staff_id = (int)($_POST['staff_id'] ?? 0);
-    $new_status = $_POST['new_status'] ?? '';
-    if ($staff_id <= 0 || !in_array($new_status, ['active', 'inactive'])) {
-        $error = "Invalid request.";
-    } else {
-        try {
-            $stmt = $pdo->prepare("SELECT user_id FROM staff WHERE id = ?");
-            $stmt->execute([$staff_id]);
-            $staffRow = $stmt->fetch();
-            if (!$staffRow || !$staffRow['user_id']) {
-                $error = "Staff member has no linked user account.";
-            } else {
-                $pdo->beginTransaction();
-                $pdo->prepare("UPDATE users SET status = ? WHERE id = ?")->execute([$new_status, (int)$staffRow['user_id']]);
-                $pdo->prepare("UPDATE staff SET status = ? WHERE id = ?")->execute([$new_status, $staff_id]);
-                $pdo->commit();
-                $message = "Account status updated to " . ($new_status === 'active' ? 'Approved' : 'Suspended') . ".";
-            }
-        } catch (Exception $e) {
-            $pdo->rollBack();
-            $error = "Error updating account status: " . $e->getMessage();
-        }
-    }
-    $redirectParam = $message ? "msg=" . urlencode($message) : "err=" . urlencode($error);
-    header("Location: staff.php?" . $redirectParam);
-    exit;
-}
-
-// Handle Activate Staff (legacy GET)
+// Handle Activate Staff
 if (isset($_GET['activate']) && is_numeric($_GET['activate'])) {
     validate_request_csrf();
     $staffId = (int)$_GET['activate'];
@@ -535,57 +504,6 @@ $total_pages = $total_rows > 0 ? (int)ceil($total_rows / $limit) : 1;
             }
         }
 
-        /* === Toggle Switch for Account Status === */
-        .status-toggle-wrap {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .toggle-switch {
-            position: relative;
-            width: 44px;
-            height: 22px;
-            flex-shrink: 0;
-        }
-        .toggle-switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-        .toggle-slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0; left: 0; right: 0; bottom: 0;
-            border-radius: 22px;
-            transition: 0.3s;
-        }
-        .toggle-slider.active {
-            background: #27ae60;
-        }
-        .toggle-slider.inactive {
-            background: #b0b0b0;
-        }
-        .toggle-slider::before {
-            content: "";
-            position: absolute;
-            left: 2px;
-            bottom: 2px;
-            width: 18px;
-            height: 18px;
-            background: white;
-            border-radius: 50%;
-            transition: 0.3s;
-        }
-        .toggle-switch input:checked + .toggle-slider::before {
-            transform: translateX(22px);
-        }
-        .toggle-status-label {
-            font-weight: 600;
-            font-size: 0.8rem;
-            white-space: nowrap;
-        }
-        .toggle-status-label.active { color: #27ae60; }
-        .toggle-status-label.inactive { color: #b0b0b0; }
     </style>
 </head>
 <body>
@@ -815,27 +733,9 @@ $total_pages = $total_rows > 0 ? (int)ceil($total_rows / $limit) : 1;
                                         <td data-label="Department"><?php echo htmlspecialchars($staff['department'] ?? '-'); ?></td>
                                         <td data-label="Phone"><?php echo htmlspecialchars($staff['phone'] ?? '-'); ?></td>
                                         <td data-label="Status">
-                                            <div class="status-toggle-wrap">
-                                                <?php
-                                                $uStatus = $staff['user_status'] ?? 'inactive';
-                                                $uActive = $uStatus === 'active';
-                                                ?>
-                                                <form method="POST" style="margin:0;">
-                                                    <input type="hidden" name="action" value="toggle_account_status">
-                                                    <input type="hidden" name="staff_id" value="<?php echo $staff['id']; ?>">
-                                                    <input type="hidden" name="new_status" value="<?php echo $uActive ? 'inactive' : 'active'; ?>">
-                                                    <input type="hidden" name="page" value="1">
-                                                    <?php csrf_field(); ?>
-                                                    <label class="toggle-switch" title="Click to <?php echo $uActive ? 'suspend' : 'approve'; ?>">
-                                                        <input type="checkbox" <?php echo $uActive ? 'checked' : ''; ?>
-                                                            onchange="if(confirm('<?php echo $uActive ? 'Suspend' : 'Approve'; ?> this staff account?')){this.closest('form').submit();}else{this.checked=<?php echo $uActive ? 'true' : 'false'; ?>};">
-                                                        <span class="toggle-slider <?php echo $uActive ? 'active' : 'inactive'; ?>"></span>
-                                                    </label>
-                                                </form>
-                                                <span class="toggle-status-label <?php echo $uActive ? 'active' : 'inactive'; ?>">
-                                                    <?php echo $uActive ? 'Active' : 'Suspended'; ?>
-                                                </span>
-                                            </div>
+                                            <span style="color: <?php echo ($staff['user_status'] ?? 'inactive') === 'active' ? 'green' : '#e74c3c'; ?>; font-weight: bold;">
+                                                <?php echo ucfirst($staff['user_status'] ?? 'inactive'); ?>
+                                            </span>
                                         </td>
                                         <td data-label="Invite">
                                             <?php if ($inviteStatus === 'accepted'): ?>
@@ -876,6 +776,9 @@ $total_pages = $total_rows > 0 ? (int)ceil($total_rows / $limit) : 1;
                                         </td>
                                         <td data-label="Actions" style="white-space: nowrap;">
                                             <a href="edit_staff.php?id=<?php echo $staff['id']; ?>" class="btn-login" style="background:#f0ad4e; padding: 5px 10px; font-size: 0.8rem; text-decoration:none; display:inline-block; margin-bottom:2px;" title="Edit staff details">Edit</a>
+                                            <?php if (($staff['user_status'] ?? 'inactive') !== 'active' && $inviteStatus === 'accepted'): ?>
+                                                <a href="staff.php?activate=<?php echo $staff['id']; ?>&<?php echo $csrfAttr; ?>" class="btn-login" style="background:#27ae60; padding: 5px 10px; font-size: 0.8rem; text-decoration:none; display:inline-block; margin-bottom:2px;" onclick="return confirm('Activate this staff account? They will be able to log in immediately.');">Activate</a>
+                                            <?php endif; ?>
                                             <?php if ($inviteStatus === 'pending' || $inviteStatus === 'expired'): ?>
                                                 <a href="staff.php?resend_invite=<?php echo $staff['id']; ?>&<?php echo $csrfAttr; ?>" class="btn-login" style="background:#3498db; padding: 5px 10px; font-size: 0.8rem; text-decoration:none; display:inline-block; margin-bottom:2px;" title="Resend invite email/SMS">Resend</a>
                                             <?php endif; ?>

@@ -2002,7 +2002,7 @@ img {
     transition: opacity 0.3s var(--transition-base);
 }
 
-.sidebar-overlay.inactive {
+.sidebar-overlay.active {
     display: block;
 }
 
@@ -2394,7 +2394,7 @@ input[type="radio"] {
     /* Elevate sidebar z-index on mobile so hamburger/sidebar sit above content */
     .hamburger-btn { z-index: 1200 !important; }
     .sidebar { z-index: 1150 !important; }
-    .sidebar-overlay { z-index: 1100 !important; }
+    
     .sidebar-close-btn { z-index: 1160 !important; }
 
     /* Main content adjustments for mobile */

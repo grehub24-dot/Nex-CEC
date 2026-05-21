@@ -329,6 +329,15 @@ try {
     $allStudents = [];
 }
 
+// Fetch enrollment inquiries
+$inquiries = [];
+try {
+    $inquiries = $pdo->query("SELECT * FROM enrollment_inquiries ORDER BY created_at DESC")->fetchAll();
+} catch (Exception $e) {
+    $inquiries = [];
+}
+$totalInquiries = count($inquiries);
+
 $totalStudents = count($allStudents);
 $totalApproved  = count(array_filter($allStudents, fn($s) => !empty($s['admission_number'])));
 $totalRejected  = count(array_filter($allStudents, fn($s) => ($s['status'] ?? '') === 'rejected'));
@@ -342,9 +351,10 @@ $enrolledToday  = count(array_filter($allStudents, fn($s) => !empty($s['admissio
 // All filtering is done in PHP.
 $filter = $_GET['filter'] ?? 'all';
 $search = $_GET['search'] ?? '';
+$showInquiries = ($filter === 'inquiries');
 
 // PHP-side filter matches the tab logic
-$enrollments = array_filter($allStudents, function($s) use ($filter, $search) {
+$enrollments = $showInquiries ? [] : array_filter($allStudents, function($s) use ($filter, $search) {
     // Apply tab filter first
     if ($filter === 'pending')   { if ( !empty($s['admission_number']) || ($s['status'] ?? '') === 'rejected') return false; }
     if ($filter === 'enrolled') { if ( empty($s['admission_number']) || ($s['status'] ?? '') === 'rejected') return false; }
@@ -429,6 +439,7 @@ $enrollments = array_slice($enrollments, $offset, $limit);
             <?php endif; ?>
 
             <!-- Stats Cards -->
+            <?php if (!$showInquiries): ?>
             <div class="stats-grid">
                 <div class="stat-card pending">
                     <div class="stat-number"><?php echo (int)$pendingCount; ?></div>
@@ -447,6 +458,15 @@ $enrollments = array_slice($enrollments, $offset, $limit);
                     <div class="stat-label">Rejected</div>
                 </div>
             </div>
+            <?php else: ?>
+            <!-- Inquiries stat -->
+            <div class="stats-grid">
+                <div class="stat-card pending">
+                    <div class="stat-number"><?php echo (int)$totalInquiries; ?></div>
+                    <div class="stat-label">Total Inquiries</div>
+                </div>
+            </div>
+            <?php endif; ?>
 
             <!-- Search and Filter -->
             <div class="section">
@@ -456,15 +476,57 @@ $enrollments = array_slice($enrollments, $offset, $limit);
                         <a href="?filter=enrolled&page=1" class="<?php echo $filter === 'enrolled' ? 'active' : ''; ?>">Approved</a>
                         <a href="?filter=rejected&page=1" class="<?php echo $filter === 'rejected' ? 'active' : ''; ?>">Rejected</a>
                         <a href="?filter=all&page=1" class="<?php echo $filter === 'all' ? 'active' : ''; ?>">All</a>
+                        <a href="?filter=inquiries&page=1" class="<?php echo $filter === 'inquiries' ? 'active' : ''; ?>" style="display:inline-flex;align-items:center;gap:6px;">Inquiries <?php if ($totalInquiries > 0): ?><span style="background:#e74c3c;color:#fff;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700;"><?php echo $totalInquiries; ?></span><?php endif; ?></a>
                     </div>
+                    <?php if (!$showInquiries): ?>
                     <form action="enrollments.php" method="GET" style="display:flex; gap:10px;">
                         <input type="hidden" name="filter" value="<?php echo htmlspecialchars($filter); ?>">
                         <input type="hidden" name="page" value="1">
                         <input type="text" name="search" placeholder="Search name or admission #..." class="form-control" value="<?php echo htmlspecialchars($search); ?>">
                         <button type="submit" class="btn-login"><i class="fas fa-search"></i></button>
                     </form>
+                    <?php endif; ?>
                 </div>
 
+                <?php if ($showInquiries): ?>
+
+                <!-- Inquiries Table -->
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Parent Name</th>
+                                <th>Email</th>
+                                <th>Phone</th>
+                                <th>Child Name</th>
+                                <th>Class Applying</th>
+                                <th>Message</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if (empty($inquiries)): ?>
+                                <tr><td colspan="7" style="text-align:center; padding: 30px; color: #888;">No inquiries yet.</td></tr>
+                            <?php else: ?>
+                                <?php foreach ($inquiries as $inq): ?>
+                                <tr>
+                                    <td style="white-space:nowrap;"><?php echo $inq['created_at'] ? date('n/j/Y g:i a', strtotime($inq['created_at'])) : '-'; ?></td>
+                                    <td><strong><?php echo htmlspecialchars($inq['parent_name'] ?? '-'); ?></strong></td>
+                                    <td><a href="mailto:<?php echo htmlspecialchars($inq['email'] ?? ''); ?>"><?php echo htmlspecialchars($inq['email'] ?? '-'); ?></a></td>
+                                    <td><?php echo htmlspecialchars($inq['phone'] ?? '-'); ?></td>
+                                    <td><?php echo htmlspecialchars($inq['child_name'] ?? '-'); ?></td>
+                                    <td><?php echo htmlspecialchars($inq['class_applying'] ?? '-'); ?></td>
+                                    <td style="max-width:250px; white-space:normal; word-break:break-word; font-size:13px; color:#555;"><?php echo htmlspecialchars($inq['message'] ?? '-'); ?></td>
+                                </tr>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+
+                <?php else: ?>
+
+                <!-- Enrollments Table -->
                 <div class="table-responsive">
                     <table class="table">
                         <thead>
@@ -507,7 +569,7 @@ $enrollments = array_slice($enrollments, $offset, $limit);
                     </table>
                 </div>
 
-                <?php if ($total_pages > 1): ?>
+                <?php if (!$showInquiries && $total_pages > 1): ?>
                 <div style="display:flex; justify-content:center; gap:5px; margin-top:20px; flex-wrap:wrap;">
                     <?php if ($page > 1): ?>
                         <a href="?page=<?php echo $page - 1; ?>&filter=<?php echo urlencode($filter); ?><?php echo $search ? '&search='.urlencode($search) : ''; ?>" style="display:inline-flex; align-items:center; gap:5px; padding:8px 16px; background:#f8f9fa; color:#000; border:1px solid #ddd; border-radius:6px; text-decoration:none; font-size:14px;">&laquo; Prev</a>
@@ -522,6 +584,8 @@ $enrollments = array_slice($enrollments, $offset, $limit);
                 <div style="text-align:center; margin-top:10px; font-size:13px; color:#888;">
                     Showing page <?php echo $page; ?> of <?php echo $total_pages; ?> (<?php echo $total_enrollments; ?> total enrollments)
                 </div>
+                <?php endif; ?>
+
                 <?php endif; ?>
             </div>
         </main>

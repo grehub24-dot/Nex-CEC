@@ -2002,7 +2002,7 @@ img {
     transition: opacity 0.3s var(--transition-base);
 }
 
-.sidebar-overlay.inactive {
+.sidebar-overlay.active {
     display: block;
 }
 

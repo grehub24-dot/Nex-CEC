@@ -1048,7 +1048,7 @@ function sendStaffInvite(int $staffId, int $userId, int $invitedBy, string $emai
             ];
         } else {
             return [
-                'success' => true,
+                'success' => false,
                 'token' => $token,
                 'message' => 'Invite link created but delivery failed. Check SMTP/SMS configuration in environment variables. Link: ' . $inviteLink
             ];

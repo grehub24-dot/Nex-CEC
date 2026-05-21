@@ -325,12 +325,124 @@ function renderSidebar($currentPage = '', $schoolName = 'Nex CEC') {
         
         function openSidebar() {
             sidebar.classList.add("open");
-            if (overlay) overlay.classList.add("inactive");
+            overlay.classList.add("active");
             document.body.style.overflow = "hidden";
         }
         function closeSidebar() {
             sidebar.classList.remove("open");
-            if (overlay) overlay.classList.remove("inactive");
+            overlay.classList.remove("active");
+            document.body.style.overflow = "";
+        }
+        
+        hamburger.addEventListener("click", openSidebar);
+        overlay.addEventListener("click", closeSidebar);
+        if (closeBtn) closeBtn.addEventListener("click", closeSidebar);
+        
+        // Close sidebar when clicking a menu link (mobile)
+        var links = sidebar.querySelectorAll(".sidebar-menu a");
+        for (var i = 0; i < links.length; i++) {
+            links[i].addEventListener("click", function() {
+                if (window.innerWidth <= 768) closeSidebar();
+            });
+        }
+        
+        // Close on Escape key
+        document.addEventListener("keydown", function(e) {
+            if (e.key === "Escape") closeSidebar();
+        });
+        
+        // Close on window resize to desktop
+        window.addEventListener("resize", function() {
+            if (window.innerWidth > 768) closeSidebar();
+        });
+    })();
+    </script>';
+    
+    return $html;
+}
+
+/**
+ * Render sidebar for staff pages (consistent across all staff/* pages).
+ *
+ * @param string $currentPage  Active page key for highlighting
+ * @param string $schoolName   School name displayed in header
+ * @param int    $unreadCount  Unread messages badge count
+ * @param string $profilePic   Staff profile picture URL (absolute or relative)
+ * @param string $staffName    Staff display name (shown instead of "Staff Portal")
+ */
+function renderStaffSidebar($currentPage = '', $schoolName = 'Nex CEC', $unreadCount = 0, $profilePic = '', $staffName = '') {
+    $isTchr = \isTeacher();
+    
+    $html = '';
+    
+    // Hamburger button (visible on mobile) — NO inline onclick, handled by JS below to avoid double-toggle
+    $html .= '<button class="hamburger-menu" id="hamburgerBtn"><i class="fas fa-bars"></i></button>';
+    
+    // Sidebar overlay (tapping it closes sidebar)
+    $html .= '<div class="sidebar-overlay" id="sidebarOverlay" style="z-index:90;"></div>';
+    
+    // Sidebar
+    $html .= '<aside class="staff-sidebar" id="sidebar">';
+    $html .= '<div class="sidebar-header">';
+    $logoUrl = getCachedSchoolLogoUrl();
+    $html .= '<img src="' . htmlspecialchars($logoUrl) . '" alt="Logo" style="width:64px;height:64px;border-radius:50%;object-fit:cover;background:white;padding:3px;margin-bottom:10px;" onerror="this.src=\'../images/aamusted.jpg\'">';
+    $html .= '<h3>' . htmlspecialchars($schoolName) . '</h3>';
+    $html .= '<p>' . ($staffName ? htmlspecialchars($staffName) : 'Staff Portal') . '</p>';
+    $html .= '</div>';
+    $html .= '<ul>';
+    
+    // Build menu items
+    $hasChildren = isset($_SESSION['has_children']) && $_SESSION['has_children'] === true;
+    
+    $items = [
+        ['href' => '../staff/dashboard.php', 'icon' => 'fas fa-home',        'label' => 'Dashboard',        'key' => 'dashboard'],
+        ['href' => '../staff/grades.php',    'icon' => 'fas fa-clipboard-list', 'label' => 'SBA / Grades',    'key' => 'grades',      'teacherOnly' => true],
+        ['href' => '../staff/attendance.php','icon' => 'fas fa-calendar-check','label' => 'My Attendance',   'key' => 'attendance'],
+        ['href' => '../staff/payslip.php',   'icon' => 'fas fa-file-invoice-dollar','label' => 'Pay Slips',  'key' => 'payslip'],
+        ['href' => '../staff/profile.php',   'icon' => 'fas fa-user-cog',   'label' => 'Profile',           'key' => 'profile'],
+        ['href' => '../staff/messaging.php', 'icon' => 'fas fa-envelope',    'label' => 'Messages',          'key' => 'messaging',   'badge' => $unreadCount],
+        ['href' => '../staff/student_attendance.php','icon' => 'fas fa-user-check', 'label' => 'Student Attendance','key' => 'student_attendance', 'teacherOnly' => true],
+    ];
+    
+    // Add Parent Portal link for dual-role staff (staff + parent)
+    if ($hasChildren) {
+        $items[] = ['href' => '../parent/dashboard.php', 'icon' => 'fas fa-child', 'label' => 'My Children / Wards', 'key' => 'children'];
+    }
+    
+    $items[] = ['href' => '../logout.php', 'icon' => 'fas fa-sign-out-alt', 'label' => 'Logout', 'key' => 'logout'];
+    
+    foreach ($items as $item) {
+        // Skip teacher-only items for non-teachers
+        if (!empty($item['teacherOnly']) && !$isTchr) {
+            continue;
+        }
+        
+        $active = ($currentPage === $item['key']) ? ' class="active"' : '';
+        $html .= '<li><a href="' . htmlspecialchars($item['href']) . '"' . $active . '>';
+        $html .= '<i class="' . $item['icon'] . '"></i> ' . htmlspecialchars($item['label']);
+        if (!empty($item['badge']) && $item['badge'] > 0) {
+            $html .= ' <span class="msg-count">' . (int)$item['badge'] . '</span>';
+        }
+        $html .= '</a></li>';
+    }
+    
+    $html .= '</ul></aside>';
+    
+    // Mobile sidebar toggle script — removes inline onclick conflict, adds overlay support
+    $html .= '<script>
+    (function() {
+        var hamburger = document.getElementById("hamburgerBtn");
+        var sidebar = document.getElementById("sidebar");
+        var overlay = document.getElementById("sidebarOverlay");
+        if (!hamburger || !sidebar) return;
+        function openSidebar() {
+            sidebar.classList.add("open");
+            if (overlay) overlay.classList.add("active");
+            document.body.style.overflow = "hidden";
+        }
+        function closeSidebar() {
+            sidebar.classList.remove("open");
+            if (overlay) overlay.classList.remove("active");
             document.body.style.overflow = "";
         }
         hamburger.addEventListener("click", function(e) {
@@ -429,116 +541,12 @@ function renderParentSidebar($currentPage = '', $schoolName = 'Nex CEC', $unread
         if (!hamburger || !sidebar) return;
         function openSidebar() {
             sidebar.classList.add("open");
-            if (overlay) overlay.classList.add("inactive");
+            if (overlay) overlay.classList.add("active");
             document.body.style.overflow = "hidden";
         }
         function closeSidebar() {
             sidebar.classList.remove("open");
-            if (overlay) overlay.classList.remove("inactive");
-            document.body.style.overflow = "";
-        }
-        hamburger.addEventListener("click", function(e) {
-            e.stopPropagation();
-            if (sidebar.classList.contains("open")) {
-                closeSidebar();
-            } else {
-                openSidebar();
-            }
-        });
-        if (overlay) overlay.addEventListener("click", closeSidebar);
-        var links = sidebar.querySelectorAll("a");
-        for (var i = 0; i < links.length; i++) {
-            links[i].addEventListener("click", function() {
-                if (window.innerWidth <= 768) closeSidebar();
-            });
-        }
-        document.addEventListener("keydown", function(e) {
-            if (e.key === "Escape") closeSidebar();
-        });
-        window.addEventListener("resize", function() {
-            if (window.innerWidth > 768) closeSidebar();
-        });
-    })();
-    </script>';
-    
-    return $html;
-}
-
-/**
- * Render parent portal sidebar with hamburger and navigation.
- * 
- * @param string $currentPage  Key of the active page (dashboard, messages, profile, password, fees, student, report)
- * @param string $schoolName   School name to display in header
- * @param int    $unreadCount  Number of unread messages for badge
- * @param string $profilePic   URL/path to profile picture
- * @param bool   $hasChildren  Whether user has linked children (shows Staff Dashboard link)
- * @return string HTML output
- */
-function renderParentSidebar($currentPage = '', $schoolName = 'Nex CEC', $unreadCount = 0, $profilePic = '', $hasChildren = false) {
-    $html = '';
-    
-    // Hamburger button (visible on mobile) — NO inline onclick, handled by JS below
-    $html .= '<button class="hamburger-menu" id="hamburgerBtn"><i class="fas fa-bars"></i></button>';
-    
-    // Sidebar overlay (tapping it closes sidebar) — z-index:90 keeps it between hamburger(200) and before page content
-    $html .= '<div class="sidebar-overlay" id="sidebarOverlay" style="z-index:90;"></div>';
-    
-    // Sidebar
-    $html .= '<aside class="parent-sidebar" id="sidebar">';
-    $html .= '<div class="sidebar-header">';
-        $logoUrl = getCachedSchoolLogoUrl();
-        $html .= '<img src="' . htmlspecialchars($logoUrl) . '" alt="Logo" style="width:64px;height:64px;border-radius:50%;object-fit:cover;background:white;padding:3px;margin-bottom:10px;" onerror="this.src=\'../images/aamusted.jpg\'">';
-    $html .= '<h3>' . htmlspecialchars($schoolName) . '</h3>';
-    $html .= '<p>Parent Portal</p>';
-    $html .= '</div>';
-    $html .= '<ul>';
-    
-    // Staff Dashboard link (for dual-role users who have children)
-    if ($hasChildren) {
-        $active = ($currentPage === 'staff_dashboard') ? ' class="active"' : '';
-        $html .= '<li><a href="../staff/dashboard.php"' . $active . '><i class="fas fa-chalkboard-teacher"></i> Staff Dashboard</a></li>';
-    }
-    
-    // My Children
-    $active = ($currentPage === 'dashboard') ? ' class="active"' : '';
-    $html .= '<li><a href="../parent/dashboard.php"' . $active . '><i class="fas fa-home"></i> My Children</a></li>';
-    
-    // Messages (with unread badge)
-    $active = ($currentPage === 'messages') ? ' class="active"' : '';
-    $html .= '<li><a href="../parent/messages.php"' . $active . '><i class="fas fa-envelope"></i> Messages';
-    if ($unreadCount > 0) {
-        $html .= ' <span class="msg-count">' . (int)$unreadCount . '</span>';
-    }
-    $html .= '</a></li>';
-    
-    // My Profile
-    $active = ($currentPage === 'profile') ? ' class="active"' : '';
-    $html .= '<li><a href="../parent/profile.php"' . $active . '><i class="fas fa-user-cog"></i> My Profile</a></li>';
-    
-    // Change Password
-    $active = ($currentPage === 'password') ? ' class="active"' : '';
-    $html .= '<li><a href="../parent/password-reset.php"' . $active . '><i class="fas fa-key"></i> Change Password</a></li>';
-    
-    // Logout
-    $html .= '<li><a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>';
-    
-    $html .= '</ul></aside>';
-    
-    // Mobile sidebar toggle script — no inline onclick conflict, overlay support, body scroll lock
-    $html .= '<script>
-    (function() {
-        var hamburger = document.getElementById("hamburgerBtn");
-        var sidebar = document.getElementById("sidebar");
-        var overlay = document.getElementById("sidebarOverlay");
-        if (!hamburger || !sidebar) return;
-        function openSidebar() {
-            sidebar.classList.add("open");
-            if (overlay) overlay.classList.add("inactive");
-            document.body.style.overflow = "hidden";
-        }
-        function closeSidebar() {
-            sidebar.classList.remove("open");
-            if (overlay) overlay.classList.remove("inactive");
+            if (overlay) overlay.classList.remove("active");
             document.body.style.overflow = "";
         }
         hamburger.addEventListener("click", function(e) {

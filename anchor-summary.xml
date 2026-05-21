@@ -1,0 +1,175 @@
+<template>
+## Goal
+- Complete staff self-registration flow (invite → register → login) and fix all UI/DB regressions: profile picture saving/rendering, school logo display, form submission persistence, and invite delivery.
+
+## Constraints & Preferences
+- All form actions and sidebar links must use correct relative paths (pages served under `/admin/` must omit the `admin/` prefix).
+- Nested `<form>` elements are invalid HTML and must be avoided.
+- The Supabase PDO bridge must support `WHERE col IN (?, ?, ?)` for DELETE operations (used by bulk delete).
+- School logo should be configurable via the settings page and referenced dynamically across all pages.
+- New staff invite link must NOT be on public pages — only accessible with a valid token.
+- Staff registration form must be comprehensive (CV, documents, profile picture upload) and must NOT auto-assign permissions — admin activates manually.
+- Invite link expires after 48 hours; admin sends invite via checkbox in Add Staff modal; existing staff without password reset can be invited; single-send with resend option; staff redirected to login after registration.
+- `isset()` vs `empty()` distinction matters: `isset('')` is `true`, `empty('')` is `true` — use `empty()` for error checks.
+- The Supabase PDO bridge (`db.php`) **does not support JOINs** — only the `FROM` table is queried; JOIN clauses are silently ignored.
+- On Vercel's read-only filesystem, `Mailer::sendHTML()` must return a truthy value on success even when `emails/` dir is unwritable.
+- Invite link domain must match the actual Vercel project URL — hardcoded fallback was `nexcec.vercel.app` instead of `nex-cec.vercel.app`.
+- **New:** Disabled `<button>` elements in multipart forms cause some browsers to omit the button's name/value from POST data — do not rely on `isset($_POST['button_name'])` for form submission detection.
+- **New:** The Supabase bridge sends SQL function literals like `NOW()` as JSON strings — always use PHP-computed values passed as `?` parameters for timestamps.
+- **New:** Sidebar images (profile vs. logo) need distinct CSS classes — `img` selector with `border-radius: 50%` destroys logo aspect ratio.
+
+## Progress
+### Done
+- Created `renderParentSidebar()` in `includes/functions.php` — reusable function renders sidebar, profile header, nav links, unread badge, hamburger menu, and responsive CSS.
+- Migrated all 7 parent pages to use `renderParentSidebar()`.
+- Renamed `parent_password_reset.php` → `parent_password-reset.php` (underscore to hyphen) for correct router mapping.
+- Fixed `renderParentSidebar()` staff-dashboard link: `../admin/dashboard.php` → `../staff/dashboard.php`.
+- Fixed `route_selector.php`: Staff Portal card uses role-based link (`isAdmin()` → `admin/dashboard.php`, else `staff/dashboard.php`).
+- Fixed admin sidebar payroll link: `admin_payroll.php` → `payroll.php`.
+- Fixed `admin_payroll.php` — all form actions/links changed to `payroll.php` / `pay_slip.php` (6 occurrences).
+- Fixed `admin_payroll.php` nested forms bug — replaced individual `<form>` around Approve buttons with hidden standalone form + `submitApprove(id)` JS.
+- Fixed `admin_pay_slip.php` — "Back to Payroll" link from `admin_payroll.php` to `payroll.php`.
+- Simplified unread message count query across all parent pages: single `NOT EXISTS` SQL replaces complex chunked multi-step.
+- Fixed PDO bridge (`includes/db.php` `LegacyStatement::execute()`) DELETE handler to support `WHERE col IN (?, ?, ?)` — previously only parsed `col = ?`, causing Supabase "Table and filters required for delete" error.
+- Added "My Children / Wards" nav link in staff sidebar (`renderStaffSidebar()`) — shown only for dual-role staff (`has_children` in session).
+- Made children/ward cards clickable on staff dashboard — each card is an `<a>` linking to `parent/student.php?id=X`.
+- Added "Security" section with "Change Password" button on staff profile — links to `../parent/password-reset.php`.
+- **School Logo Upload** (`admin_settings.php`):
+  - Added upload handler (POST `upload_logo`) that uploads to Supabase `logos` bucket, stores URL in `system_settings` as `school_logo_url`.
+  - Added remove handler (POST `remove_logo`) to delete the setting and revert to default.
+  - Validate file ≤2MB, allowed types: JPG/PNG/GIF/WebP/SVG.
+  - UI: current logo preview + file input + Upload button + Remove button.
+- **Dynamic Logo References** — updated 20+ hardcoded `school-logo.png` references across the system:
+  - Created helpers in `functions.php`: `getSchoolLogoUrl()`, `getSchoolLogoFilePath()`, `getCachedSchoolLogoUrl()`.
+  - All three sidebar functions now show uploaded logo via `getCachedSchoolLogoUrl()`.
+  - Updated `router_selector.php`, `login.php`, `forgot-password.php`, `student_dashboard.php`, `student_history.php`, `student_profile.php`, `student_fees.php`, `student_messages.php`, `header.php`, `view_receipt.php`, `enrollment_bill.php`, `enrollment_print.php`, `enrollment_blank_form.php`, `report_card_pdf.php`, `ReceiptGenerator.php`, `BillGenerator.php`.
+  - All file-path-based PDF generators now use `getSchoolLogoFilePath()` with fallback chain.
+- **Staff Self-Registration — SQL Migration** (`migrate-all.sql`):
+  - Added `staff_invites` table (id, staff_id, user_id, token, status, invited_by, invited_at, accepted_at, expires_at, email_sent, sms_sent).
+  - Added columns to `staff` table: `profile_picture TEXT`, `cv_path TEXT`, `documents TEXT`.
+  - Indexes: `idx_staff_invites_token`, `idx_staff_invites_staff_id`.
+- **Staff Self-Registration — Helper Functions** (`api/includes/functions.php`):
+  - `generateStaffInviteToken()` — 64-char hex via `random_bytes(32)`.
+  - `sendStaffInvite()` — creates/reuses pending invite, sends email via `Mailer::sendHTML()`, sends SMS via `SMSHelper::send()`, logs delivery, reports per-channel success.
+  - `getStaffInviteStatus()` — returns `'not_invited'`, `'pending'`, `'expired'`, `'accepted'`.
+  - `uploadStaffFile()` — Supabase `staff_documents` bucket upload with mime type detection.
+  - `formatStaffDocuments()` — renders JSON doc URLs as HTML links.
+- **Staff Self-Registration — Route** (`api/index.php`): added `"staff/register.php" => "staff_register.php"`.
+- **Staff Self-Registration — Registration Page** (`api/staff_register.php`):
+  - Token GET validation: checks exists, not expired, not already accepted.
+  - Prefilled readonly fields: full_name, email, staff_id, position, department.
+  - Editable fields: gender, DOB, address, phone, qualifications.
+  - File uploads: profile picture (JPG/PNG/GIF/WebP), CV (PDF/DOC), additional documents (multiple).
+  - Password + confirm with client-side mismatch check + 6-char minimum.
+  - On submit: updates staff record, hashes password in `users` table, marks invite as `'accepted'`, redirects to login.
+  - Status stays `'inactive'` — admin must activate before login.
+- **Staff Self-Registration — Admin Staff Page** (`api/admin_staff.php`):
+  - Add Staff modal: removed bank details section (now on self-registration form), added "Send Invite" checkbox (default checked).
+  - Invite mode: creates user with `status='inactive'`, placeholder password hash, calls `sendStaffInvite()`.
+  - Legacy mode: unchanged (auto-password, `status='active'`).
+  - Staff table: new "Invite Status" column with color-coded badges (Not Invited, Pending, Expired, Registered ✓).
+  - Action buttons: Activate (green, for registered inactive staff), Send Invite / Resend (blue, for not invited / pending / expired), Edit (orange), Delete (red).
+  - GET handlers: `resend_invite` and `activate` with CSRF validation via `validate_request_csrf()`.
+  - Redirect URLs use `msg` (success) or `err` (error) query parameters; alert display updated to read both.
+  - Added `$GLOBALS['school_name']` so email templates show actual school name.
+- **Bug Fixes — Staff Creation & Invite Delivery**:
+  - Changed `if (!isset($error))` → `if (empty($error))` in admin_staff.php add handler — `isset('')` is `true` so block never executed, preventing ALL staff creation.
+  - Fixed SMSHelper loading: uses `new SMSHelper()` (global namespace) instead of namespaced `\App\Helpers\SMSHelper()`.
+  - `sendStaffInvite()` now returns accurate message (reports per-channel delivery success/failure instead of always `'success'`).
+  - Added `error_log("sendStaffInvite result ...")` for debugging delivery in Vercel logs.
+- **Bug Fixes — Staff Register Page**:
+  - Removed duplicate `session_start()` call (already in `functions.php` line 9).
+  - Replaced JOIN SQL with two separate queries (bridge ignores JOINs): first fetches invite by token, then fetches staff by FK `staff_id`.
+  - Fixed column name collision: `si.staff_id` (integer FK) was overwriting `s.staff_id` (display ID string) — now separate queries avoid the conflict.
+  - Fixed CSS path: `css/style.css` → `/css/style.css` (relative from `/staff/` dir was producing 404).
+  - Added `$school_name` fetch from `system_settings` for page title/header.
+  - **NEW:** Replaced SQL `NOW()` literal with PHP `date('c')` parameter — bridge sends literals as JSON strings causing PostgreSQL "invalid input syntax for type timestamp" error.
+  - **NEW:** Added hidden `<input name="token">` field so token is available in both `$_GET` and `$_POST` for reliability.
+  - **NEW:** Changed submission check from `isset($_POST['register'])` (disabled button — dropped by browsers) to `!empty($_POST['password'])` (always present on valid submission).
+  - **NEW:** Changed all 3 "Go to Login" links from relative `login.php` to absolute `/login.php` — relative from `/staff/` resolved to `/staff/login.php` (404).
+- **Bug Fixes — Invite Link Domain**:
+  - `sendStaffInvite()` default `APP_URL` was `https://nexcec.vercel.app` (no hyphen) but project is at `https://nex-cec.vercel.app` — corrected. Added `APP_URL` to `.env`.
+- **Bug Fixes — Invite Expiry**: Fixed 24h (86400s) vs 48h (172800s) discrepancy — actual value was 24h, comment said 48h. Now truly 48 hours.
+- **Bug Fixes — Logo Upload**: Fixed `createBucket($bucket, ['public' => true])` call type error — signature expects `bool` for 2nd param, not array.
+- **Bug Fixes — Route**: Added `"staff/login.php" => "login.php"` route alias in `index.php` so `/staff/login.php` returns login page instead of 404.
+- **Bug Fixes — Profile Picture Rendering** (`staff_profile.php`):
+  - Added post-upload redirect to clean GET request (prevents form re-submit on refresh, ensures fresh DB read).
+  - Session-based success message survives the redirect.
+  - Profile preview image now has explicit `width:150px;height:150px;border-radius:50%;object-fit:cover` inline style + `onerror="this.src='../images/aamusted.jpg'"` fallback.
+  - DB save now tries Supabase client `update()` first, falls back to PDO bridge `UPDATE` if Supabase direct fails (column name mismatch etc.).
+  - Always saves `$_SESSION['profile_picture']` regardless of DB outcome for same-session display.
+- **Bug Fixes — Sidebar Logo Aspect Ratio** (15 files):
+  - All sidebar CSS rules changed from generic `.sidebar-header img` → class-based `.sidebar-profile-img` (circular) and `.sidebar-logo-img` (aspect-ratio-preserved).
+  - Logo styling: `max-width: 120px; max-height: 56px; object-fit: contain; border-radius: 6px; display: inline-block;` — no forced circle crop.
+  - Updated `renderStaffSidebar()` and `renderParentSidebar()` to emit `class="sidebar-profile-img"` and `class="sidebar-logo-img"`.
+  - Updated all 6 staff pages + 7 parent pages + `functions.php` (both sidebar renderers).
+- Committed and pushed all changes to GitHub (commits up to `c6a7e70`).
+
+### In Progress
+- None.
+
+### Blocked
+- Email/SMS delivery remains non-functional until SMTP env vars (`SMTP_USERNAME`, `SMTP_PASSWORD`) and SMS API credentials are configured in Vercel environment variables.
+
+## Key Decisions
+- Relative URLs in `/admin/` pages must use bare filenames (`payroll.php`, `pay_slip.php`) — browser resolves from `/admin/` directory.
+- Added `IN (...)` parsing to PDO bridge DELETE handler rather than converting `admin_payroll.php` to single-record deletes.
+- Staff sidebar "My Children / Wards" link only shown for users with `has_children === true`.
+- Children cards linked directly to `parent/student.php?id=X` since `parent_student.php` uses `isParentOrDual()` which passes for staff with children.
+- School logo uploaded to Supabase `logos` bucket, stored as URL in `system_settings` — not as a local file.
+- Added `getCachedSchoolLogoUrl()` with static + session caching for sidebars, avoiding global `$settings` parameter changes across 40+ call sites.
+- For file paths (PDF generators), `getSchoolLogoFilePath()` checks local `school-logo.png` first, then `aamusted.jpg`, then `infotess.png` — backward compatible with existing fallback logic.
+- Staff self-registration: create user as `status='inactive'` → staff completes registration (password + docs upload) → status stays `inactive` → admin manually activates → `isLoggedIn()` checks `status=active` at login to block unactivated accounts.
+- Add Staff modal simplified: bank details removed from admin form (staff fills on self-registration); "Send Invite" checkbox defaults to checked.
+- `if (empty($error))` used instead of `if (!isset($error))` because `$error = ''` makes `isset()` always `true`, blocking creation.
+- SMSHelper loaded via `require_once` + `new SMSHelper()` (global namespace) — no namespace declarations in the file.
+- Staff register page uses two sequential queries instead of JOIN because the PDO bridge cannot execute JOINs — only the `FROM` table is sent to Supabase REST API.
+- Invite link default domain changed from `nexcec.vercel.app` (no hyphen) to `nex-cec.vercel.app` (with hyphen) to match actual Vercel project URL.
+- Form submission detection uses `!empty($_POST['password'])` instead of `isset($_POST['register'])` because JavaScript disables the submit button before the request completes, causing browsers to omit the disabled button's name/value from POST data.
+- SQL function literals like `NOW()` must be replaced with PHP-computed values (`date('c')`) passed as `?` parameters — the Supabase bridge sends all non-`?` SET values as JSON strings.
+- Login links from `/staff/register.php` use absolute path `/login.php` — relative `login.php` resolves to `/staff/login.php` which has no route and returns 404.
+- **New:** Sidebar images for profile pics use class `sidebar-profile-img` (circular with `border-radius: 50%`), while the school logo uses `sidebar-logo-img` (aspect-ratio-aware, no circle crop) — both co-existing under the parent `.sidebar-header`.
+- **New:** Profile picture DB save uses a dual-path strategy: Supabase client direct `update()` first → if that fails (column not found, PGRST204), retry through the PDO bridge `UPDATE`. Session cache always set as safety net.
+
+## Next Steps
+- Configure SMTP env vars on Vercel (`SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_HOST`, `SMTP_PORT` with Gmail App Password) so invite emails are actually delivered.
+- Deploy latest code and verify end-to-end invite → register → login flow + profile picture upload.
+- Trigger manual redeploy from Vercel dashboard after each push (GitHub auto-deploy not confirmed working).
+
+## Critical Context
+- `api/` directory has NO `payroll.php` file — the actual file is `admin_payroll.php`. The route `admin/payroll.php` → `admin_payroll.php`.
+- File `images/school-logo.png` does NOT exist on the filesystem — only `aamusted.jpg` and old profile JPGs are present. All logo references now use dynamic URL from `school_logo_url` setting with `aamusted.jpg` as fallback.
+- Vercel routes all requests through `api/index.php`. Static assets in `/images/` are served directly by rewrite rule.
+- `message_reads` table uses `ON CONFLICT (message_id, user_id)` (PostgreSQL) with MySQL fallback.
+- `isAdmin()` checks `['admin', 'super_admin', 'bursar']` roles; `isTeacher()` checks `'teacher'` role.
+- Login flow at `login.php:64` checks `$user['status'] !== 'active'` — inactive accounts cannot log in.
+- Staff invite link format: `staff/register.php?token=<64-char-hex>` — route mapped in `index.php`.
+- Email sending uses `Mailer::sendHTML()` (PHPMailer SMTP via env vars `SMTP_HOST`, `SMTP_USERNAME`, `SMTP_PASSWORD`). SMS sending uses `SMSHelper::send()` (env vars `SMS_API_KEY`, `SMS_USERNAME`, `SENDER_ID`, `SMS_ENDPOINT`). Both silently fail when env vars are missing.
+- `sendStaffInvite()` logs delivery result to error_log as `"sendStaffInvite result — staff_id=X email_sent=0|1 sms_sent=0|1 token=..."` for debugging.
+- `isset('')` returns `true` in PHP; always use `empty()` for error string checks.
+- The Supabase PDO bridge (`db.php`) does NOT support JOINs; only the `FROM` table is queried. All multi-table queries must use separate sequential queries.
+- `Mailer::sendHTML()` previously returned `null` (falsy) on Vercel read-only filesystem when email sent successfully — now returns `true` when `emails/` dir is unwritable.
+- Staff register page CSS was broken at `css/style.css` (relative → `/staff/css/style.css` 404) — fixed to absolute `/css/style.css`.
+- Vercel deployment requires manual redeploy after each push (GitHub auto-deploy not confirmed working — user may need to trigger from Vercel dashboard).
+- `uploadStaffFile()` calls `createBucket($bucket, true)` (corrected from `['public' => true]`). `createBucket()` signature is `createBucket(string $bucket, bool $public = true): array`.
+- Staff register page POST handler now uses `!empty($_POST['password'])` instead of `isset($_POST['register'])` because JavaScript disables the submit button, causing browsers to drop its name/value.
+- The Supabase bridge treats all non-`?`/non-`:param` values in UPDATE SET clauses as literal JSON strings — SQL functions like `NOW()` become the string `"NOW()"` instead of timestamps.
+- Profile picture URL is saved via dual path: Supabase client → PDO bridge fallback → always cached in `$_SESSION['profile_picture']`.
+- **New:** All 14 sidebar instances (6 staff + 7 parent + functions.php renderers) use class-based selectors `.sidebar-profile-img` (circular 64×64) and `.sidebar-logo-img` (rectangular max 120×56, object-fit contain, 6px border-radius).
+- **New:** Profile picture upload now redirects to clean GET `profile.php` with session-based success message to prevent form re-submission and ensure fresh DB read.
+
+## Relevant Files
+- `api/includes/functions.php`: `getSchoolLogoUrl()`, `getSchoolLogoFilePath()`, `getCachedSchoolLogoUrl()` helpers; sidebar functions use `getCachedSchoolLogoUrl()`; `getAccessControl()` role-based ACL; helpers `generateStaffInviteToken()`, `sendStaffInvite()`, `getStaffInviteStatus()`, `uploadStaffFile()`, `formatStaffDocuments()`; `getStaffProfilePictureUrl()` profile pic resolution; `renderStaffSidebar()` and `renderParentSidebar()` now emit class names on sidebar images.
+- `api/includes/db.php`: `LegacyStatement::execute()` DELETE handler with `IN (...)` support; does NOT support JOINs — only single-table queries.
+- `api/admin_settings.php`: logo upload/remove handlers (POST `upload_logo`, `remove_logo`), logo preview card in HTML.
+- `api/admin_staff.php`: staff creation form with invite checkbox; staff list with Invite Status column and Activate/Send Invite/Resend/Edit/Delete actions; GET handlers for `resend_invite`, `activate`; now shows actual delivery result message from `sendStaffInvite()`.
+- `api/staff_register.php`: token-validated registration form (CV, documents, profile picture, password) — uses two queries instead of JOIN; fixed CSS path `/css/style.css`; fixed session_start; added `$school_name` fetch; `NOW()` replaced with `date('c')` param; POST check uses `!empty($_POST['password'])`; hidden token field added; login links use absolute `/login.php`.
+- `api/staff_profile.php`: profile picture upload handler — dual-path DB save (Supabase → PDO fallback) + `$_SESSION['profile_picture']` cache + post-upload redirect to clean GET; profile preview with explicit style + onerror fallback; sidebar now uses class-based selectors.
+- `api/index.php`: route mapping includes `'staff/register.php' => 'staff_register.php'` and `'staff/login.php' => 'login.php'`.
+- `api/includes/Mailer.php`: email sending (`sendHTML()`) — fixed to return `true` when email sends but filesystem is unwritable.
+- `api/includes/SMSHelper.php`: SMS sending (`send()`).
+- `api/lib/Supabase.php`: `uploadFile()`, `createBucket()`, `getPublicUrl()`, `delete()`, `in()` filter, `table()`, `where()`, `update()`, `request()`.
+- `api/login.php:64`: status check `if ($user['status'] !== 'active')` blocking inactive accounts.
+- `migrate-all.sql`: contains `staff_invites` table + `profile_picture`, `cv_path`, `documents` columns on `staff`.
+- `.env`: added `APP_URL=https://nex-cec.vercel.app`.
+</template>

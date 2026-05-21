@@ -574,22 +574,22 @@ function levelIcon($level) {
                                         ?>
                                         <div class="status-toggle-wrap">
                                             <?php if ($canToggle): ?>
-                                                <?php /* Fully interactive toggle — user has registered */ ?>
+                                                <?php /* Click the status text to toggle */ ?>
                                                 <form method="POST" style="margin:0;">
                                                     <input type="hidden" name="action" value="toggle_account_status">
                                                     <input type="hidden" name="staff_id" value="<?php echo $staff['id']; ?>">
                                                     <input type="hidden" name="new_status" value="<?php echo $isActive ? 'inactive' : 'active'; ?>">
                                                     <input type="hidden" name="page" value="<?php echo $staff_page; ?>">
                                                     <?php csrf_field(); ?>
-                                                    <label class="toggle-switch" title="Click to <?php echo $isActive ? 'suspend' : 'approve'; ?>">
-                                                        <input type="checkbox" <?php echo $isActive ? 'checked' : ''; ?>
-                                                            onchange="if(confirm('<?php echo $isActive ? 'Suspend' : 'Approve'; ?> this staff account?')){this.closest('form').submit();}else{this.checked=<?php echo $isActive ? 'true' : 'false'; ?>};">
+                                                    <span class="toggle-switch" style="display:inline-block;">
                                                         <span class="toggle-slider <?php echo $isActive ? 'enabled' : 'disabled'; ?>"></span>
-                                                    </label>
+                                                    </span>
+                                                    <button type="submit" class="toggle-status-label <?php echo $isActive ? 'enabled' : 'disabled'; ?>"
+                                                            style="border:none; cursor:pointer; font:inherit;"
+                                                            onclick="return confirm('<?php echo $isActive ? 'Suspend' : 'Approve'; ?> this staff account?');">
+                                                        <?php echo $isActive ? 'Active' : 'Suspended'; ?>
+                                                    </button>
                                                 </form>
-                                                <span class="toggle-status-label <?php echo $isActive ? 'enabled' : 'disabled'; ?>">
-                                                    <?php echo $isActive ? 'Active' : 'Suspended'; ?>
-                                                </span>
                                             <?php elseif ($hasUser && !$canToggle): ?>
                                                 <?php /* Has a user account but hasn't accepted invite yet */ ?>
                                                 <span class="toggle-switch" style="display:inline-block;">

@@ -185,18 +185,25 @@ if ($selected_class) {
             background: #1a5276; color: white; border: none; width: 40px; height: 40px;
             border-radius: 8px; font-size: 18px; cursor: pointer;
         }
+        .staff-main { flex: 1; padding: 30px; background: #f4f6f9; margin-left: 250px; }
+        .staff-main .top-bar {
+            background: white; padding: 20px 30px; border-radius: 10px; margin-bottom: 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06); display: flex; align-items: center;
+        }
+        .staff-main .top-bar h2 { font-size: 20px; margin: 0; color: #1a5276; }
         @media (max-width: 768px) {
             .staff-sidebar { left: -250px; transition: left 0.3s; }
             .staff-sidebar.open { left: 0; }
             .hamburger-menu { display: block; }
-            .main-content { margin-left: 0 !important; padding-top: 60px; }
+            .staff-main { margin-left: 0; padding: 20px; }
+            .staff-main .top-bar { flex-direction: column; text-align: center; margin-top: 50px; gap: 10px; }
         }
         <?php endif; ?>
         
         /* Mobile responsiveness */
         @media (max-width: 768px) {
             .main-content { margin-left: 0 !important; padding: 60px 12px 20px; }
-            .top-bar { margin-top: 0; }
+            .main-content .top-bar { margin-top: 0; }
             /* Filter form — override hardcoded inline widths */
             .card-content form[action="/admin/attendance.php"] select,
             .card-content form[action="/admin/attendance.php"] input[type="date"] {
@@ -227,13 +234,12 @@ if ($selected_class) {
 <body>
     <?php if (isTeacher()): ?>
         <?php echo renderStaffSidebar('student_attendance', $school_name, 0, $staff_pp, $staff_name); ?>
-        <style>.main-content { margin-left: 250px; }</style>
     <?php else: ?>
     <div class="dashboard-container">
         <?php echo renderSidebar('attendance', $school_name); ?>
     <?php endif; ?>
 
-        <main class="main-content">
+        <main class="<?php echo isTeacher() ? 'staff-main' : 'main-content'; ?>">
             <div class="top-bar">
                 <h2>Student Attendance</h2>
             </div>

@@ -315,7 +315,7 @@ $total_pages = $total_rows > 0 ? (int)ceil($total_rows / $limit) : 1;
         /* === MOBILE-FIRST RESPONSIVE — admin_staff.php === */
 
         /* --- Modal --- */
-        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); }
+        .modal { display: none; position: fixed; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); }
         .modal-content { background-color: #fefefe; margin: 5% auto; padding: 20px; border: 1px solid #888; width: 90%; max-width: 700px; border-radius: 8px; position: relative; max-height: 90vh; overflow-y: auto; }
         .close-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
         .close-btn:hover { color: black; }
@@ -393,6 +393,114 @@ $total_pages = $total_rows > 0 ? (int)ceil($total_rows / $limit) : 1;
             form[action="staff.php"]:not(#staffBulkForm) select { font-size: 16px !important; padding: 10px !important; } /* prevent iOS zoom */
             .section-divider { grid-column: span 1; }
             form[action="staff.php"]:not(#staffBulkForm) > div[style*="grid-column: span 2"] { grid-column: span 1; }
+        }
+
+        /* === Bulk action toolbar: wrap on small screens === */
+        #staffBulkActions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+        .btn-bulk-delete {
+            background: #e74c3c !important;
+            color: #fff !important;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: background 0.2s;
+        }
+        .btn-bulk-delete:hover {
+            background: #c0392b !important;
+        }
+        @media (max-width: 480px) {
+            #staffBulkActions {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .btn-bulk-delete {
+                width: 100%;
+                justify-content: center;
+                text-align: center;
+            }
+            #staffSelectedCount {
+                text-align: center;
+                display: block;
+            }
+        }
+
+        /* === Pagination: compact on mobile === */
+        @media (max-width: 480px) {
+            .pagination-links a {
+                padding: 6px 10px !important;
+                min-width: 32px !important;
+                font-size: 0.8rem !important;
+            }
+        }
+
+        /* === Alert messages: responsive === */
+        .alert {
+            padding: 14px 18px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.92rem;
+            line-height: 1.5;
+        }
+        @media (max-width: 480px) {
+            .alert {
+                padding: 10px 14px;
+                font-size: 0.85rem;
+                margin-bottom: 15px;
+            }
+        }
+
+        /* === Empty state: card-style when no staff found === */
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: #888;
+        }
+        .empty-state .empty-icon {
+            font-size: 3rem;
+            color: #ddd;
+            margin-bottom: 12px;
+        }
+        .empty-state p {
+            font-size: 1rem;
+            margin: 0 0 6px 0;
+        }
+        .empty-state .empty-sub {
+            font-size: 0.85rem;
+            color: #aaa;
+        }
+        @media (max-width: 640px) {
+            .empty-state {
+                padding: 24px 16px;
+            }
+            .empty-state .empty-icon {
+                font-size: 2.5rem;
+            }
+        }
+
+        /* === Modal: extra-tight on very small screens === */
+        @media (max-width: 360px) {
+            .modal-content {
+                padding: 12px 10px !important;
+                margin: 1% auto !important;
+            }
+            .modal-content h3 { font-size: 1.05rem; }
+            .modal-content label { font-size: 0.82rem; }
+            form[action="staff.php"]:not(#staffBulkForm) input,
+            form[action="staff.php"]:not(#staffBulkForm) select {
+                padding: 8px !important;
+            }
         }
     </style>
 </head>
@@ -578,8 +686,8 @@ $total_pages = $total_rows > 0 ? (int)ceil($total_rows / $limit) : 1;
                 <form method="POST" action="staff.php" id="staffBulkForm">
                     <input type="hidden" name="action" value="bulk_delete_staff">
                     <?php csrf_field(); ?>
-                    <div style="margin-bottom:15px; display:flex; align-items:center; gap:10px;">
-                        <button type="button" onclick="confirmStaffBulkDelete()" class="btn-login" style="background:#e74c3c; color:#fff; border:none; padding:8px 16px; border-radius:4px; cursor:pointer; font-size:0.9rem;">
+                    <div id="staffBulkActions">
+                        <button type="button" onclick="confirmStaffBulkDelete()" class="btn-login btn-bulk-delete">
                             <i class="fas fa-trash"></i> Delete Selected
                         </button>
                         <span id="staffSelectedCount" style="color:#666; font-size:0.85rem;">0 selected</span>
@@ -603,7 +711,13 @@ $total_pages = $total_rows > 0 ? (int)ceil($total_rows / $limit) : 1;
                             </thead>
                             <tbody>
                                 <?php if (empty($staff_list)): ?>
-                                    <tr><td colspan="9" style="text-align:center;">No staff members found. Add your first staff member above.</td></tr>
+                                    <tr><td colspan="9" style="padding:0;">
+                                        <div class="empty-state">
+                                            <div class="empty-icon"><i class="fas fa-users-slash"></i></div>
+                                            <p>No staff members found</p>
+                                            <p class="empty-sub">Click <strong>Add Staff Member</strong> above to add your first staff record.</p>
+                                        </div>
+                                    </td></tr>
                                 <?php else: ?>
                                     <?php foreach ($staff_list as $staff):
                                         $inviteStatus = getStaffInviteStatus((int)$staff['id']);
@@ -681,7 +795,7 @@ $total_pages = $total_rows > 0 ? (int)ceil($total_rows / $limit) : 1;
 
                 <!-- Pagination -->
                 <?php if ($total_pages > 1): ?>
-                <div style="display:flex; justify-content:center; gap:5px; margin-top:20px; flex-wrap:wrap;">
+                <div class="pagination-links" style="display:flex; justify-content:center; gap:5px; margin-top:20px; flex-wrap:wrap;">
                     <?php if ($page > 1): ?>
                         <a href="?page=<?php echo $page - 1; ?><?php echo $search ? '&search='.urlencode($search) : ''; ?>" style="display:inline-flex; align-items:center; gap:5px; padding:8px 16px; background:#f8f9fa; color:#000; border:1px solid #ddd; border-radius:6px; text-decoration:none; font-size:14px;">&laquo; Prev</a>
                     <?php endif; ?>

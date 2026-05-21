@@ -297,6 +297,57 @@ function levelIcon($level) {
             border-radius: 50%;
         }
 
+        .status-toggle-wrap {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .toggle-switch {
+            position: relative;
+            width: 44px;
+            height: 22px;
+            flex-shrink: 0;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            border-radius: 22px;
+            transition: 0.3s;
+        }
+        .toggle-slider.active {
+            background: #27ae60;
+        }
+        .toggle-slider.inactive {
+            background: #b0b0b0;
+        }
+        .toggle-slider::before {
+            content: "";
+            position: absolute;
+            left: 2px;
+            bottom: 2px;
+            width: 18px;
+            height: 18px;
+            background: white;
+            border-radius: 50%;
+            transition: 0.3s;
+        }
+        .toggle-switch input:checked + .toggle-slider::before {
+            transform: translateX(22px);
+        }
+        .toggle-status-label {
+            font-weight: 600;
+            font-size: 0.8rem;
+            white-space: nowrap;
+        }
+        .toggle-status-label.active { color: #27ae60; }
+        .toggle-status-label.inactive { color: #b0b0b0; }
+
         @media (max-width: 768px) {
             .table-wrap { overflow-x: auto; }
             .legend-box { flex-direction: column; gap: 6px; }
@@ -443,24 +494,29 @@ function levelIcon($level) {
                                         $userStatus = $staff['user_status'] ?? 'inactive';
                                         $isActive = $userStatus === 'active';
                                         ?>
-                                        <span style="color:<?php echo $isActive ? 'green' : '#e74c3c'; ?>; font-weight:bold; font-size:0.85rem;">
-                                            <i class="fas fa-<?php echo $isActive ? 'check-circle' : 'ban'; ?>"></i>
-                                            <?php echo $isActive ? 'Approved' : 'Suspended'; ?>
-                                        </span>
-                                        <?php if ($hasUser): ?>
-                                            <form method="POST" style="display:inline; margin-left:6px;">
-                                                <input type="hidden" name="action" value="toggle_account_status">
-                                                <input type="hidden" name="staff_id" value="<?php echo $staff['id']; ?>">
-                                                <input type="hidden" name="new_status" value="<?php echo $isActive ? 'inactive' : 'active'; ?>">
-                                                <input type="hidden" name="page" value="<?php echo $staff_page; ?>">
-                                                <?php csrf_field(); ?>
-                                                <button type="submit" class="update-btn" style="background:<?php echo $isActive ? '#e74c3c' : '#27ae60'; ?>;"
-                                                    onclick="return confirm('<?php echo $isActive ? 'Suspend' : 'Approve'; ?> this staff account?');">
-                                                    <i class="fas fa-<?php echo $isActive ? 'ban' : 'check'; ?>"></i>
-                                                    <?php echo $isActive ? 'Suspend' : 'Approve'; ?>
-                                                </button>
-                                            </form>
-                                        <?php endif; ?>
+                                        <div class="status-toggle-wrap">
+                                            <?php if ($hasUser): ?>
+                                                <form method="POST" style="margin:0;">
+                                                    <input type="hidden" name="action" value="toggle_account_status">
+                                                    <input type="hidden" name="staff_id" value="<?php echo $staff['id']; ?>">
+                                                    <input type="hidden" name="new_status" value="<?php echo $isActive ? 'inactive' : 'active'; ?>">
+                                                    <input type="hidden" name="page" value="<?php echo $staff_page; ?>">
+                                                    <?php csrf_field(); ?>
+                                                    <label class="toggle-switch" title="Click to <?php echo $isActive ? 'suspend' : 'approve'; ?>">
+                                                        <input type="checkbox" <?php echo $isActive ? 'checked' : ''; ?>
+                                                            onchange="if(confirm('<?php echo $isActive ? 'Suspend' : 'Approve'; ?> this staff account?')){this.closest('form').submit();}else{this.checked=<?php echo $isActive ? 'true' : 'false'; ?>};">
+                                                        <span class="toggle-slider <?php echo $isActive ? 'active' : 'inactive'; ?>"></span>
+                                                    </label>
+                                                </form>
+                                            <?php else: ?>
+                                                <span class="toggle-slider inactive" style="display:inline-block; width:44px; height:22px; border-radius:22px; background:#ddd; position:relative;">
+                                                    <span style="position:absolute; left:2px; bottom:2px; width:18px; height:18px; background:white; border-radius:50%;"></span>
+                                                </span>
+                                            <?php endif; ?>
+                                            <span class="toggle-status-label <?php echo $isActive ? 'active' : 'inactive'; ?>">
+                                                <?php echo $isActive ? 'Active' : 'Suspended'; ?>
+                                            </span>
+                                        </div>
                                     </td>
                                     <td>
                                         <?php if ($hasUser): ?>

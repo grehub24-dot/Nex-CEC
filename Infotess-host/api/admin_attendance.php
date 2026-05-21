@@ -192,6 +192,36 @@ if ($selected_class) {
             .main-content { margin-left: 0 !important; padding-top: 60px; }
         }
         <?php endif; ?>
+        
+        /* Mobile responsiveness */
+        @media (max-width: 768px) {
+            .main-content { margin-left: 0 !important; padding: 60px 12px 20px; }
+            .top-bar { margin-top: 0; }
+            /* Filter form — override hardcoded inline widths */
+            .card-content form[action="/admin/attendance.php"] select,
+            .card-content form[action="/admin/attendance.php"] input[type="date"] {
+                width: 100% !important; max-width: 100%;
+            }
+            .card-content form[action="/admin/attendance.php"] { flex-direction: column; }
+            .card-content form[action="/admin/attendance.php"] button[type="submit"] { width: 100%; }
+            /* Quick actions — stack vertically */
+            .quick-actions { flex-direction: column; }
+            .quick-actions .btn-login { width: 100%; text-align: center; }
+            /* Stat cards — tighten */
+            .stat-cards { grid-template-columns: 1fr 1fr; gap: 10px; }
+            /* Status buttons — compact */
+            .status-btn { padding: 5px 8px; font-size: 0.75rem; min-width: 0; }
+            td > div[style*="display: flex"] { gap: 3px !important; }
+            /* Reason input — full width */
+            td input[type="text"] { max-width: 120px; font-size: 0.8rem; }
+            /* Table font size */
+            .table th, .table td { font-size: 0.8rem; padding: 6px 4px; }
+            .table th:nth-child(1), .table td:nth-child(1) { display: none; } /* hide Index Number on tiny screens */
+        }
+        @media (max-width: 480px) {
+            .stat-cards { grid-template-columns: 1fr; }
+            .table th:nth-child(4), .table td:nth-child(4) { display: none; } /* hide Reason column */
+        }
     </style>
 </head>
 <body>

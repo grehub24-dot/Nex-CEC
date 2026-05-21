@@ -332,24 +332,48 @@ $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 if ($page < 1) $page = 1;
 $offset = ($page - 1) * $limit;
 
+// Sort parameters
+$sort = $_GET['sort'] ?? 'created_at';
+$dir  = $_GET['dir'] ?? 'desc';
+$allowedSortCols = ['admission_number', 'full_name', 'class_name', 'gender', 'guardian_name', 'guardian_phone_primary', 'academic_year', 'created_at'];
+if (!in_array($sort, $allowedSortCols)) $sort = 'created_at';
+if (!in_array($dir, ['asc', 'desc'])) $dir = 'desc';
+$oppDir = ($dir === 'asc') ? 'desc' : 'asc';
+
 // Fetch all students (narrow columns to prevent 413 PAYLOAD_TOO_LARGE)
 // Complex search/sort filtering is done in PHP.
 $all_students = $pdo->query("SELECT id, profile_picture, admission_number, full_name, class_name, gender, guardian_name, guardian_relationship, guardian_phone_primary, guardian_phone_emergency, academic_year, created_at, status FROM students")->fetchAll();
 
-// Apply search filter in PHP (matches both full_name and admission_number)
+// Apply search filter in PHP (matches all visible columns)
 $search = $_GET['search'] ?? '';
 if ($search !== '') {
     $students = array_filter($all_students, function($s) use ($search) {
-        $term = strtolower($search);
-        return stripos($s['full_name'] ?? '', $search) !== false
-            || stripos($s['admission_number'] ?? '', $search) !== false;
+        $fields = [
+            $s['full_name'] ?? '',
+            $s['admission_number'] ?? '',
+            $s['class_name'] ?? '',
+            $s['gender'] ?? '',
+            $s['guardian_name'] ?? '',
+            $s['guardian_phone_primary'] ?? '',
+            $s['guardian_phone_emergency'] ?? '',
+            $s['academic_year'] ?? '',
+        ];
+        foreach ($fields as $f) {
+            if (stripos($f, $search) !== false) return true;
+        }
+        return false;
     });
 } else {
     $students = $all_students;
 }
 
-// Sort by created_at DESC and apply pagination in PHP
-usort($students, fn($a, $b) => strcmp($b['created_at'] ?? '', $a['created_at'] ?? ''));
+// Sort in PHP using selected column and direction
+usort($students, function($a, $b) use ($sort, $dir) {
+    $va = $a[$sort] ?? '';
+    $vb = $b[$sort] ?? '';
+    $cmp = strcmp((string)$va, (string)$vb);
+    return ($dir === 'desc') ? -$cmp : $cmp;
+});
 $total_rows = count($students);
 $students = array_slice($students, $offset, $limit);
 $total_pages = $total_rows > 0 ? (int)ceil($total_rows / $limit) : 1;
@@ -674,7 +698,9 @@ $total_pages = $total_rows > 0 ? (int)ceil($total_rows / $limit) : 1;
                     <h3>Registered Students</h3>
                     <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
                         <form action="students.php" method="GET" style="display:flex; gap:10px;">
-                            <input type="text" name="search" placeholder="Search name or admission number..." class="form-control" value="<?php echo htmlspecialchars($search); ?>">
+                            <input type="hidden" name="sort" value="<?php echo htmlspecialchars($sort); ?>">
+                            <input type="hidden" name="dir" value="<?php echo htmlspecialchars($dir); ?>">
+                            <input type="text" name="search" placeholder="Search name, class, guardian, phone..." class="form-control" value="<?php echo htmlspecialchars($search); ?>">
                             <button type="submit" class="btn-login"><i class="fas fa-search"></i></button>
                         </form>
                     </div>
@@ -692,18 +718,18 @@ $total_pages = $total_rows > 0 ? (int)ceil($total_rows / $limit) : 1;
                     </div>
                     
                     <div class="table-responsive">
-                        <table class="table" id="studentTable">
+                            <table class="table" id="studentTable">
                             <thead>
                                 <tr>
                                     <th style="width:40px;"><input type="checkbox" id="studentSelectAll" onchange="toggleStudentAll(this)"></th>
                                     <th>Photo</th>
-                                    <th>Adm. No.</th>
-                                    <th>Name</th>
-                                    <th>Class</th>
-                                    <th>Gender</th>
-                                    <th>Guardian</th>
-                                    <th>Primary Phone</th>
-                                    <th>Academic Year</th>
+                                    <th><a href="?sort=admission_number&dir=<?php echo $sort === 'admission_number' ? $oppDir : 'asc'; ?><?php echo $search ? '&search='.urlencode($search) : ''; ?>" style="color:inherit;text-decoration:none;white-space:nowrap;">Adm. No. <?php if ($sort === 'admission_number'): ?><i class="fas fa-sort-<?php echo $dir === 'asc' ? 'up' : 'down'; ?>" style="font-size:11px;"></i><?php endif; ?></a></th>
+                                    <th><a href="?sort=full_name&dir=<?php echo $sort === 'full_name' ? $oppDir : 'asc'; ?><?php echo $search ? '&search='.urlencode($search) : ''; ?>" style="color:inherit;text-decoration:none;white-space:nowrap;">Name <?php if ($sort === 'full_name'): ?><i class="fas fa-sort-<?php echo $dir === 'asc' ? 'up' : 'down'; ?>" style="font-size:11px;"></i><?php endif; ?></a></th>
+                                    <th><a href="?sort=class_name&dir=<?php echo $sort === 'class_name' ? $oppDir : 'asc'; ?><?php echo $search ? '&search='.urlencode($search) : ''; ?>" style="color:inherit;text-decoration:none;white-space:nowrap;">Class <?php if ($sort === 'class_name'): ?><i class="fas fa-sort-<?php echo $dir === 'asc' ? 'up' : 'down'; ?>" style="font-size:11px;"></i><?php endif; ?></a></th>
+                                    <th><a href="?sort=gender&dir=<?php echo $sort === 'gender' ? $oppDir : 'asc'; ?><?php echo $search ? '&search='.urlencode($search) : ''; ?>" style="color:inherit;text-decoration:none;white-space:nowrap;">Gender <?php if ($sort === 'gender'): ?><i class="fas fa-sort-<?php echo $dir === 'asc' ? 'up' : 'down'; ?>" style="font-size:11px;"></i><?php endif; ?></a></th>
+                                    <th><a href="?sort=guardian_name&dir=<?php echo $sort === 'guardian_name' ? $oppDir : 'asc'; ?><?php echo $search ? '&search='.urlencode($search) : ''; ?>" style="color:inherit;text-decoration:none;white-space:nowrap;">Guardian <?php if ($sort === 'guardian_name'): ?><i class="fas fa-sort-<?php echo $dir === 'asc' ? 'up' : 'down'; ?>" style="font-size:11px;"></i><?php endif; ?></a></th>
+                                    <th><a href="?sort=guardian_phone_primary&dir=<?php echo $sort === 'guardian_phone_primary' ? $oppDir : 'asc'; ?><?php echo $search ? '&search='.urlencode($search) : ''; ?>" style="color:inherit;text-decoration:none;white-space:nowrap;">Primary Phone <?php if ($sort === 'guardian_phone_primary'): ?><i class="fas fa-sort-<?php echo $dir === 'asc' ? 'up' : 'down'; ?>" style="font-size:11px;"></i><?php endif; ?></a></th>
+                                    <th><a href="?sort=academic_year&dir=<?php echo $sort === 'academic_year' ? $oppDir : 'asc'; ?><?php echo $search ? '&search='.urlencode($search) : ''; ?>" style="color:inherit;text-decoration:none;white-space:nowrap;">Academic Year <?php if ($sort === 'academic_year'): ?><i class="fas fa-sort-<?php echo $dir === 'asc' ? 'up' : 'down'; ?>" style="font-size:11px;"></i><?php endif; ?></a></th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -746,13 +772,13 @@ $total_pages = $total_rows > 0 ? (int)ceil($total_rows / $limit) : 1;
                 <?php if ($total_pages > 1): ?>
                 <div style="display:flex; justify-content:center; gap:5px; margin-top:20px; flex-wrap:wrap;">
                     <?php if ($page > 1): ?>
-                        <a href="?page=<?php echo $page - 1; ?><?php echo $search ? '&search='.urlencode($search) : ''; ?>" style="display:inline-flex; align-items:center; gap:5px; padding:8px 16px; background:#f8f9fa; color:#000; border:1px solid #ddd; border-radius:6px; text-decoration:none; font-size:14px;">&laquo; Prev</a>
+                        <a href="?page=<?php echo $page - 1; ?>&sort=<?php echo urlencode($sort); ?>&dir=<?php echo urlencode($dir); ?><?php echo $search ? '&search='.urlencode($search) : ''; ?>" style="display:inline-flex; align-items:center; gap:5px; padding:8px 16px; background:#f8f9fa; color:#000; border:1px solid #ddd; border-radius:6px; text-decoration:none; font-size:14px;">&laquo; Prev</a>
                     <?php endif; ?>
                     <?php for ($i = 1; $i <= $total_pages; $i++): ?>
-                        <a href="?page=<?php echo $i; ?><?php echo $search ? '&search='.urlencode($search) : ''; ?>" style="display:inline-flex; align-items:center; justify-content:center; min-width:38px; padding:8px 12px; background:<?php echo $i == $page ? '#1a5276' : '#f8f9fa'; ?>; color:<?php echo $i == $page ? '#fff' : '#000'; ?>; border:1px solid <?php echo $i == $page ? '#1a5276' : '#ddd'; ?>; border-radius:6px; text-decoration:none; font-size:14px; font-weight:<?php echo $i == $page ? '700' : '400'; ?>;"><?php echo $i; ?></a>
+                        <a href="?page=<?php echo $i; ?>&sort=<?php echo urlencode($sort); ?>&dir=<?php echo urlencode($dir); ?><?php echo $search ? '&search='.urlencode($search) : ''; ?>" style="display:inline-flex; align-items:center; justify-content:center; min-width:38px; padding:8px 12px; background:<?php echo $i == $page ? '#1a5276' : '#f8f9fa'; ?>; color:<?php echo $i == $page ? '#fff' : '#000'; ?>; border:1px solid <?php echo $i == $page ? '#1a5276' : '#ddd'; ?>; border-radius:6px; text-decoration:none; font-size:14px; font-weight:<?php echo $i == $page ? '700' : '400'; ?>;"><?php echo $i; ?></a>
                     <?php endfor; ?>
                     <?php if ($page < $total_pages): ?>
-                        <a href="?page=<?php echo $page + 1; ?><?php echo $search ? '&search='.urlencode($search) : ''; ?>" style="display:inline-flex; align-items:center; gap:5px; padding:8px 16px; background:#f8f9fa; color:#000; border:1px solid #ddd; border-radius:6px; text-decoration:none; font-size:14px;">Next &raquo;</a>
+                        <a href="?page=<?php echo $page + 1; ?>&sort=<?php echo urlencode($sort); ?>&dir=<?php echo urlencode($dir); ?><?php echo $search ? '&search='.urlencode($search) : ''; ?>" style="display:inline-flex; align-items:center; gap:5px; padding:8px 16px; background:#f8f9fa; color:#000; border:1px solid #ddd; border-radius:6px; text-decoration:none; font-size:14px;">Next &raquo;</a>
                     <?php endif; ?>
                 </div>
                 <?php endif; ?>

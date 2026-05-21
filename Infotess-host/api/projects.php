@@ -4,7 +4,7 @@ require_once 'includes/header.php';
 // Fetch projects
 $projects = [];
 try {
-    $result = $pdo->query("SELECT id, title, description, image_url, status, start_date, end_date FROM projects ORDER BY start_date DESC");
+    $result = $pdo->query("SELECT id, title, description, image_url, status, project_date FROM projects ORDER BY project_date DESC");
     if ($result && $result->rowCount() > 0) {
         $projects = $result->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -47,11 +47,8 @@ function getStatusBadge($status) {
                     <h3 class="card-title"><?php echo htmlspecialchars($proj['title']); ?></h3>
                     <p class="card-text"><?php echo nl2br(htmlspecialchars($proj['description'])); ?></p>
                     <div style="margin-top:16px;padding-top:16px;border-top:1px solid #f0f0f0;display:flex;gap:16px;font-size:0.82rem;color:#888;">
-                        <?php if (!empty($proj['start_date'])): ?>
-                        <span>📅 Started: <?php echo date('M Y', strtotime($proj['start_date'])); ?></span>
-                        <?php endif; ?>
-                        <?php if (!empty($proj['end_date'])): ?>
-                        <span>🏁 Ends: <?php echo date('M Y', strtotime($proj['end_date'])); ?></span>
+                        <?php if (!empty($proj['project_date'])): ?>
+                        <span>📅 Year: <?php echo htmlspecialchars(substr($proj['project_date'], 0, 4)); ?></span>
                         <?php endif; ?>
                     </div>
                 </div>

@@ -470,7 +470,7 @@ $submissions_paginated = array_slice($submissions, $sub_offset, $sub_limit);
             <!-- Contact Submissions -->
             <div class="section">
                 <div class="card">
-                    <h3>Contact Us Submissions</h3>
+                    <h3>Contact Us Submissions <a href="contact.php" target="_blank" style="font-size:0.75rem;font-weight:400;color:#003366;text-decoration:none;background:#f0f0f0;padding:2px 8px;border-radius:4px;margin-left:8px;"><i class="fas fa-external-link-alt"></i> View Public Page</a></h3>
                     <table class="table">
                         <thead>
                             <tr>
@@ -570,7 +570,7 @@ $submissions_paginated = array_slice($submissions, $sub_offset, $sub_limit);
 
             <div class="section" style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
                 <div class="card">
-                    <h3>School Leadership</h3>
+                    <h3>School Leadership <a href="executives.php" target="_blank" style="font-size:0.75rem;font-weight:400;color:#003366;text-decoration:none;background:#f0f0f0;padding:2px 8px;border-radius:4px;margin-left:8px;"><i class="fas fa-external-link-alt"></i> View Public Page</a></h3>
                     <table class="table">
                         <thead>
                             <tr>
@@ -627,7 +627,7 @@ $submissions_paginated = array_slice($submissions, $sub_offset, $sub_limit);
                     </table>
                 </div>
                 <div class="card">
-                    <h3>Past Students</h3>
+                    <h3>Past Students <a href="alumni.php" target="_blank" style="font-size:0.75rem;font-weight:400;color:#003366;text-decoration:none;background:#f0f0f0;padding:2px 8px;border-radius:4px;margin-left:8px;"><i class="fas fa-external-link-alt"></i> View Public Page</a></h3>
                     <table class="table">
                         <thead>
                             <tr>
@@ -687,7 +687,7 @@ $submissions_paginated = array_slice($submissions, $sub_offset, $sub_limit);
 
             <div class="section" style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-top: 30px;">
                 <div class="card">
-                    <h3>Current Gallery Items</h3>
+                    <h3>Current Gallery Items <a href="gallery.php" target="_blank" style="font-size:0.75rem;font-weight:400;color:#003366;text-decoration:none;background:#f0f0f0;padding:2px 8px;border-radius:4px;margin-left:8px;"><i class="fas fa-external-link-alt"></i> View Public Page</a></h3>
                     <table class="table">
                         <thead>
                             <tr>
@@ -751,7 +751,7 @@ $submissions_paginated = array_slice($submissions, $sub_offset, $sub_limit);
                     </table>
                 </div>
                 <div class="card">
-                    <h3>Current Projects</h3>
+                    <h3>Current Projects <a href="projects.php" target="_blank" style="font-size:0.75rem;font-weight:400;color:#003366;text-decoration:none;background:#f0f0f0;padding:2px 8px;border-radius:4px;margin-left:8px;"><i class="fas fa-external-link-alt"></i> View Public Page</a></h3>
                     <table class="table">
                         <thead>
                             <tr>
@@ -764,7 +764,7 @@ $submissions_paginated = array_slice($submissions, $sub_offset, $sub_limit);
                             <?php if (count($projects) > 0): ?>
                                 <?php foreach ($projects as $proj): ?>
                                     <tr>
-                                        <td><?php echo htmlspecialchars($proj['year'] ?? ''); ?></td>
+                                        <td><?php echo htmlspecialchars(!empty($proj['project_date']) ? substr($proj['project_date'], 0, 4) : ''); ?></td>
                                         <td><?php echo htmlspecialchars($proj['title']); ?></td>
                                         <td>
                                             <button type="button" onclick="document.getElementById('edit-proj-<?php echo $proj['id']; ?>').style.display='block'" class="btn-admin-action btn-admin-secondary btn-admin-sm"><i class="fas fa-pen"></i> Edit</button>

@@ -4,7 +4,7 @@ require_once 'includes/header.php';
 // Fetch gallery items
 $gallery_items = [];
 try {
-    $result = $pdo->query("SELECT id, title, image_url, category, created_at FROM gallery ORDER BY created_at DESC");
+    $result = $pdo->query("SELECT id, caption, image_url, category, created_at FROM gallery ORDER BY created_at DESC");
     if ($result && $result->rowCount() > 0) {
         $gallery_items = $result->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -51,13 +51,13 @@ foreach ($gallery_items as $item) {
             ?>
             <figure class="gallery-figure" data-category="<?php echo $cat_class; ?>">
                 <img src="<?php echo htmlspecialchars($item['image_url']); ?>" 
-                     alt="<?php echo htmlspecialchars($item['title'] ?? 'Gallery image'); ?>"
+                     alt="<?php echo htmlspecialchars($item['caption'] ?? 'Gallery image'); ?>"
                      loading="lazy"
-                     onclick="openLightbox(this.src, '<?php echo htmlspecialchars($item['title'] ?? ''); ?>')"
+                     onclick="openLightbox(this.src, '<?php echo htmlspecialchars($item['caption'] ?? ''); ?>')"
                      onerror="this.onerror=null; this.parentElement.innerHTML='<div style=\"background:#f0f0f0;height:200px;display:flex;align-items:center;justify-content:center;border-radius:16px;color:#999;font-size:0.9rem;\">📷 Image</div>'">
-                <?php if (!empty($item['title'])): ?>
-                <div class="gallery-overlay" onclick="openLightbox('<?php echo htmlspecialchars($item['image_url']); ?>', '<?php echo htmlspecialchars($item['title']); ?>')">
-                    <span><?php echo htmlspecialchars($item['title']); ?></span>
+                <?php if (!empty($item['caption'])): ?>
+                <div class="gallery-overlay" onclick="openLightbox('<?php echo htmlspecialchars($item['image_url']); ?>', '<?php echo htmlspecialchars($item['caption']); ?>')">
+                    <span><?php echo htmlspecialchars($item['caption']); ?></span>
                 </div>
                 <?php endif; ?>
             </figure>

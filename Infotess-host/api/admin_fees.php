@@ -294,12 +294,19 @@ foreach ($fees as &$fee) {
     }
 }
 
-// Calculate totals
+// Calculate totals and counts
 $total_expected = 0;
 $total_mandatory = 0;
+$count_mandatory = 0;
+$count_optional = 0;
 foreach ($fees as $f) {
     $total_expected += $f['amount'];
-    if ($f['is_mandatory']) $total_mandatory += $f['amount'];
+    if ($f['is_mandatory']) {
+        $total_mandatory += $f['amount'];
+        $count_mandatory++;
+    } else {
+        $count_optional++;
+    }
 }
 ?>
 
@@ -372,17 +379,14 @@ foreach ($fees as $f) {
                     <div class="stat-icon"><i class="fas fa-list"></i></div>
                     <div class="stat-details"><h3><?php echo count($fees); ?></h3><p>Total Fee Items</p></div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-icon"><i class="fas fa-money-bill"></i></div>
-                    <div class="stat-details"><h3>GHS <?php echo number_format($total_expected, 2); ?></h3><p>Total Expected</p></div>
-                </div>
+
                 <div class="stat-card">
                     <div class="stat-icon"><i class="fas fa-exclamation-circle" style="color: #e74c3c;"></i></div>
-                    <div class="stat-details"><h3>GHS <?php echo number_format($total_mandatory, 2); ?></h3><p>Mandatory Fees</p></div>
+                    <div class="stat-details"><h3><?php echo $count_mandatory; ?></h3><p>Mandatory Fees</p></div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon"><i class="fas fa-tag" style="color: #f39c12;"></i></div>
-                    <div class="stat-details"><h3>GHS <?php echo number_format($total_expected - $total_mandatory, 2); ?></h3><p>Optional Fees</p></div>
+                    <div class="stat-details"><h3><?php echo $count_optional; ?></h3><p>Optional Fees</p></div>
                 </div>
             </div>
 

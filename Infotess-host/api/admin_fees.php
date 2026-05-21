@@ -293,6 +293,7 @@ foreach ($fees as &$fee) {
         $fee['class_name'] = 'All Classes';
     }
 }
+unset($fee);
 
 // Calculate totals and counts
 $total_expected = 0;

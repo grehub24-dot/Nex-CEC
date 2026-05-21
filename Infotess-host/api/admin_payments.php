@@ -73,7 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $receipt_number = strtoupper(substr(preg_replace('/[^A-Z]/', '', $school_name), 0, 4)) . "-" . date('ym') . "-" . rand(1000, 9999);
 
             // Insert Payment
-            $stmt = $pdo->prepare("INSERT INTO payments (student_id, amount, academic_year, semester, payment_method, payment_date, receipt_number, recorded_by, fee_type, transaction_reference) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt = $pdo->prepare("INSERT INTO payments (student_id, amount, academic_year, term, payment_method, payment_date, receipt_number, recorded_by, fee_type, transaction_reference) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
             $stmt->execute([$student['id'], $amount, $year, $term, $method, $date, $receipt_number, $_SESSION['user_id'], $fee_type, $transaction_reference]);
             $payment_id = $pdo->lastInsertId();
 
@@ -99,7 +99,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $stmt->execute([$payment_id, $receipt_path, $hash]);
 
             $pdo->commit();
-            $message = "Payment recorded and receipt generated successfully. Receipt #: $receipt_number";
             
             // Send SMS to guardian (basic school schema)
             $guardianPhone = $student['guardian_phone_primary'] ?? '';
@@ -226,6 +225,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $mailer->sendHTML($student['email'], "Payment Receipt - " . $receipt_number, $email_html);
             }
 
+            // PRG: redirect after successful POST to prevent form resubmission
+            $msg = "Payment recorded and receipt generated successfully. Receipt #: $receipt_number";
+            header("Location: payments.php?msg=" . urlencode($msg));
+            exit;
+
         } catch (Exception $e) {
             $pdo->rollBack();
             $error = "Error: " . $e->getMessage();
@@ -260,11 +264,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 <button id="openModalBtn" class="btn-primary" style="padding: 10px 20px;"><i class="fas fa-plus"></i> Record New Payment</button>
             </div>
 
-            <?php if ($message): ?>
-                <div class="alert alert-success"><?php echo $message; ?></div>
+            <?php
+            // Support both direct $message/$error and redirected msg/err query params
+            $displayMsg = $message ?: (isset($_GET['msg']) ? $_GET['msg'] : '');
+            $displayErr = $error ?: (isset($_GET['err']) ? $_GET['err'] : '');
+            ?>
+            <?php if ($displayMsg): ?>
+                <div class="alert alert-success"><?php echo htmlspecialchars($displayMsg); ?></div>
             <?php endif; ?>
-            <?php if ($error): ?>
-                <div class="alert alert-danger"><?php echo $error; ?></div>
+            <?php if ($displayErr): ?>
+                <div class="alert alert-danger"><?php echo htmlspecialchars($displayErr); ?></div>
             <?php endif; ?>
 
             <!-- Payment Records List -->
@@ -281,6 +290,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 // Bridge doesn't support COUNT(*) or SUM() — fetch all, count & sum in PHP (narrow columns to prevent 413)
                 $allPayments = $pdo->query("SELECT id, student_id, amount, payment_date, created_at, receipt_number, fee_type, payment_method, academic_year, transaction_reference FROM payments ORDER BY created_at DESC");
                 $allPayments = $allPayments ? $allPayments->fetchAll() : [];
+                // Deduplicate by receipt_number in PHP (pg-bridge doesn't support MIN()/subqueries for SQL-side dedup)
+                $seen = [];
+                $deduped = [];
+                foreach ($allPayments as $p) {
+                    $rn = $p['receipt_number'] ?? '';
+                    if ($rn !== '' && isset($seen[$rn])) continue;
+                    $seen[$rn] = true;
+                    $deduped[] = $p;
+                }
+                $allPayments = $deduped;
+                unset($seen, $deduped);
                 $total_rows = count($allPayments);
                 $total_pages = ceil($total_rows / $limit);
                 $recent_payments = array_slice($allPayments, $offset, $limit);

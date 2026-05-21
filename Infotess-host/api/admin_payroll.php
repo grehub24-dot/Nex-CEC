@@ -388,8 +388,6 @@ $salary_end_row = min($salary_offset + $salary_per_page, $salary_total);
                 </div>
                 <?php endif; ?>
             </div>
-        </div>
-    </div>
 
     <!-- Payroll Table -->
             <div class="section">

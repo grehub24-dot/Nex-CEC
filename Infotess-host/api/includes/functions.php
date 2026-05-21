@@ -375,10 +375,11 @@ function renderStaffSidebar($currentPage = '', $schoolName = 'Nex CEC', $unreadC
     
     $html = '';
     
-    // Hamburger button (visible on mobile)
-    $html .= '<button class="hamburger-menu" id="hamburgerBtn" onclick="document.getElementById(\'sidebar\').classList.toggle(\'open\')">';
-    $html .= '<i class="fas fa-bars"></i>';
-    $html .= '</button>';
+    // Hamburger button (visible on mobile) — NO inline onclick, handled by JS below to avoid double-toggle
+    $html .= '<button class="hamburger-menu" id="hamburgerBtn"><i class="fas fa-bars"></i></button>';
+    
+    // Sidebar overlay (tapping it closes sidebar)
+    $html .= '<div class="sidebar-overlay" id="sidebarOverlay" style="z-index:90;"></div>';
     
     // Sidebar
     $html .= '<aside class="staff-sidebar" id="sidebar">';
@@ -427,29 +428,43 @@ function renderStaffSidebar($currentPage = '', $schoolName = 'Nex CEC', $unreadC
     
     $html .= '</ul></aside>';
     
-    // Mobile sidebar toggle script
+    // Mobile sidebar toggle script — removes inline onclick conflict, adds overlay support
     $html .= '<script>
     (function() {
         var hamburger = document.getElementById("hamburgerBtn");
         var sidebar = document.getElementById("sidebar");
+        var overlay = document.getElementById("sidebarOverlay");
         if (!hamburger || !sidebar) return;
+        function openSidebar() {
+            sidebar.classList.add("open");
+            if (overlay) overlay.classList.add("active");
+            document.body.style.overflow = "hidden";
+        }
+        function closeSidebar() {
+            sidebar.classList.remove("open");
+            if (overlay) overlay.classList.remove("active");
+            document.body.style.overflow = "";
+        }
         hamburger.addEventListener("click", function(e) {
             e.stopPropagation();
-            sidebar.classList.toggle("open");
-        });
-        document.addEventListener("click", function(e) {
-            if (window.innerWidth <= 768 && !sidebar.contains(e.target) && !hamburger.contains(e.target)) {
-                sidebar.classList.remove("open");
+            if (sidebar.classList.contains("open")) {
+                closeSidebar();
+            } else {
+                openSidebar();
             }
         });
+        if (overlay) overlay.addEventListener("click", closeSidebar);
         var links = sidebar.querySelectorAll("a");
         for (var i = 0; i < links.length; i++) {
             links[i].addEventListener("click", function() {
-                if (window.innerWidth <= 768) sidebar.classList.remove("open");
+                if (window.innerWidth <= 768) closeSidebar();
             });
         }
         document.addEventListener("keydown", function(e) {
-            if (e.key === "Escape") sidebar.classList.remove("open");
+            if (e.key === "Escape") closeSidebar();
+        });
+        window.addEventListener("resize", function() {
+            if (window.innerWidth > 768) closeSidebar();
         });
     })();
     </script>';
@@ -470,10 +485,11 @@ function renderStaffSidebar($currentPage = '', $schoolName = 'Nex CEC', $unreadC
 function renderParentSidebar($currentPage = '', $schoolName = 'Nex CEC', $unreadCount = 0, $profilePic = '', $hasChildren = false) {
     $html = '';
     
-    // Hamburger button (visible on mobile)
-    $html .= '<button class="hamburger-menu" id="hamburgerBtn" onclick="document.getElementById(\'sidebar\').classList.toggle(\'open\')">';
-    $html .= '<i class="fas fa-bars"></i>';
-    $html .= '</button>';
+    // Hamburger button (visible on mobile) — NO inline onclick, handled by JS below
+    $html .= '<button class="hamburger-menu" id="hamburgerBtn"><i class="fas fa-bars"></i></button>';
+    
+    // Sidebar overlay (tapping it closes sidebar) — z-index:90 keeps it between hamburger(200) and before page content
+    $html .= '<div class="sidebar-overlay" id="sidebarOverlay" style="z-index:90;"></div>';
     
     // Sidebar
     $html .= '<aside class="parent-sidebar" id="sidebar">';
@@ -516,29 +532,43 @@ function renderParentSidebar($currentPage = '', $schoolName = 'Nex CEC', $unread
     
     $html .= '</ul></aside>';
     
-    // Mobile sidebar toggle script
+    // Mobile sidebar toggle script — no inline onclick conflict, overlay support, body scroll lock
     $html .= '<script>
     (function() {
         var hamburger = document.getElementById("hamburgerBtn");
         var sidebar = document.getElementById("sidebar");
+        var overlay = document.getElementById("sidebarOverlay");
         if (!hamburger || !sidebar) return;
+        function openSidebar() {
+            sidebar.classList.add("open");
+            if (overlay) overlay.classList.add("active");
+            document.body.style.overflow = "hidden";
+        }
+        function closeSidebar() {
+            sidebar.classList.remove("open");
+            if (overlay) overlay.classList.remove("active");
+            document.body.style.overflow = "";
+        }
         hamburger.addEventListener("click", function(e) {
             e.stopPropagation();
-            sidebar.classList.toggle("open");
-        });
-        document.addEventListener("click", function(e) {
-            if (window.innerWidth <= 768 && !sidebar.contains(e.target) && !hamburger.contains(e.target)) {
-                sidebar.classList.remove("open");
+            if (sidebar.classList.contains("open")) {
+                closeSidebar();
+            } else {
+                openSidebar();
             }
         });
+        if (overlay) overlay.addEventListener("click", closeSidebar);
         var links = sidebar.querySelectorAll("a");
         for (var i = 0; i < links.length; i++) {
             links[i].addEventListener("click", function() {
-                if (window.innerWidth <= 768) sidebar.classList.remove("open");
+                if (window.innerWidth <= 768) closeSidebar();
             });
         }
         document.addEventListener("keydown", function(e) {
-            if (e.key === "Escape") sidebar.classList.remove("open");
+            if (e.key === "Escape") closeSidebar();
+        });
+        window.addEventListener("resize", function() {
+            if (window.innerWidth > 768) closeSidebar();
         });
     })();
     </script>';

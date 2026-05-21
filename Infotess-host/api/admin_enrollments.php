@@ -180,7 +180,7 @@ if (isset($_GET['action']) && isset($_GET['id'])) {
     if ($action === 'approve') {
         // Assign admission number
         $today = date('ymd');
-        $allStudentsForCount = $pdo->query("SELECT * FROM students")->fetchAll();
+        $allStudentsForCount = $pdo->query("SELECT admission_number FROM students")->fetchAll();
         $counter = 0;
         foreach ($allStudentsForCount as $s) {
             $adm = $s['admission_number'] ?? '';
@@ -263,7 +263,7 @@ if (isset($_GET['action']) && isset($_GET['id'])) {
         } else {
             // Assign admission number
             $today = date('ymd');
-            $allStudentsForCount = $pdo->query("SELECT * FROM students")->fetchAll();
+            $allStudentsForCount = $pdo->query("SELECT admission_number FROM students")->fetchAll();
             $counter = 0;
             foreach ($allStudentsForCount as $s) {
                 $adm = $s['admission_number'] ?? '';

@@ -21,32 +21,31 @@ $display_name = $_SESSION['full_name'] ?? $_SESSION['username'] ?? 'User';
 // Workaround: fetch all rows, count/filter in PHP.
 // ==========================================
 try {
-    // --- Students ---
-    $all_students = $pdo->query("SELECT * FROM students")->fetchAll();
+    // --- Students: only columns needed (prevent 413 PAYLOAD_TOO_LARGE via SELECT *) ---
+    $all_students = $pdo->query("SELECT id, admission_number, full_name, status FROM students")->fetchAll();
     $total_students = count(array_filter($all_students, fn($s) => !empty($s['admission_number']) && ($s['status'] ?? '') !== 'rejected'));
     $pending_students = count(array_filter($all_students, fn($s) => empty($s['admission_number']) && ($s['status'] ?? '') !== 'rejected'));
 
-    // --- Staff ---
-    $all_staff = $pdo->query("SELECT * FROM staff")->fetchAll();
+    // --- Staff: only columns needed ---
+    $all_staff = $pdo->query("SELECT id, status FROM staff")->fetchAll();
     $total_staff = count(array_filter($all_staff, fn($s) => ($s['status'] ?? '') === 'active'));
 
-    // --- Payments ---
-    $all_payments = $pdo->query("SELECT * FROM payments ORDER BY payment_date DESC")->fetchAll();
+    // --- Payments: only columns needed ---
+    $all_payments = $pdo->query("SELECT id, student_id, amount, payment_date, created_at, receipt_number, payment_method FROM payments ORDER BY payment_date DESC")->fetchAll();
     $today = date('Y-m-d');
     $today_payments = array_filter($all_payments, fn($p) => substr($p['payment_date'] ?? '', 0, 10) === $today);
     $payments_today = count($today_payments);
     $total_payments = count($all_payments);
     $total_revenue = 0;
     foreach ($all_payments as $p) { $total_revenue += (float)($p['amount'] ?? 0); }
-    $students_paid = count(array_filter($all_payments, fn($p) => !empty($p['student_id'])));
     $students_paid = count(array_unique(array_filter(array_column($all_payments, 'student_id'), fn($id) => !empty($id))));
 
-    // --- Messages ---
-    $all_messages = $pdo->query("SELECT * FROM messages")->fetchAll();
+    // --- Messages: only columns needed ---
+    $all_messages = $pdo->query("SELECT id, is_read FROM messages")->fetchAll();
     $pending_messages = count(array_filter($all_messages, fn($m) => empty($m['is_read'])));
 
-    // --- Attendance (today) ---
-    $all_attendance = $pdo->query("SELECT * FROM student_attendance")->fetchAll();
+    // --- Attendance (today): only columns needed ---
+    $all_attendance = $pdo->query("SELECT id, attendance_date, status FROM student_attendance")->fetchAll();
     $absent_today = count(array_filter($all_attendance, fn($a) => substr($a['attendance_date'] ?? '', 0, 10) === $today && ($a['status'] ?? '') === 'absent'));
 
     // --- Stats ---

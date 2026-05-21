@@ -282,7 +282,9 @@ $offset = ($page - 1) * $limit;
 $search = $_GET['search'] ?? '';
 // Fetch all staff (bridge only handles simple WHERE col = ?)
 // Complex search filtering is done in PHP.
-$all_staff = $pdo->query("SELECT * FROM staff")->fetchAll();
+// Select ONLY columns needed for the listing — avoids pulling large fields (cv_path, documents)
+// that bloat the Vercel serverless response beyond the 4.5MB limit (413 PAYLOAD_TOO_LARGE).
+$all_staff = $pdo->query("SELECT id, staff_id, full_name, position, department, phone, status, cv_path, documents, created_at FROM staff")->fetchAll();
 
 // Apply search filter in PHP (matches full_name, staff_id, and position)
 if ($search !== '') {
@@ -310,12 +312,88 @@ $total_pages = $total_rows > 0 ? (int)ceil($total_rows / $limit) : 1;
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        /* === MOBILE-FIRST RESPONSIVE — admin_staff.php === */
+
+        /* --- Modal --- */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); }
         .modal-content { background-color: #fefefe; margin: 5% auto; padding: 20px; border: 1px solid #888; width: 90%; max-width: 700px; border-radius: 8px; position: relative; max-height: 90vh; overflow-y: auto; }
         .close-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
         .close-btn:hover { color: black; }
         .section-divider { grid-column: span 2; border-top: 1px solid #eee; padding-top: 15px; margin-top: 10px; }
         .section-divider h4 { font-size: 15px; color: #1a5276; margin: 0 0 10px 0; }
+
+        /* --- Top bar: heading + button stack on mobile --- */
+        .top-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 20px; }
+        .top-bar h2 { margin: 0; font-size: clamp(1.1rem, 4vw, 1.5rem); }
+
+        /* --- Stat cards: 2-column grid on mobile --- */
+        .stat-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+        .stat-card { display: flex; align-items: center; gap: 12px; padding: 15px; background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+
+        /* --- Add-staff form: single column on mobile --- */
+        form[action="staff.php"]:not(#staffBulkForm) { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 15px; }
+        @media (min-width: 641px) {
+            form[action="staff.php"]:not(#staffBulkForm) { grid-template-columns: 1fr 1fr; }
+            .section-divider, form[action="staff.php"]:not(#staffBulkForm) > div[style*="grid-column: span 2"] { grid-column: span 2; }
+        }
+
+        /* --- Staff table: card layout on tiny screens --- */
+        .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .table { width: 100%; border-collapse: collapse; min-width: 700px; }
+        .table th, .table td { padding: 10px 8px; font-size: clamp(0.75rem, 2.5vw, 0.9rem); white-space: nowrap; }
+
+        @media (max-width: 640px) {
+            /* Convert table rows to card-like layout */
+            .table { min-width: unset; }
+            .table thead { display: none; }
+            .table tbody tr {
+                display: block;
+                margin-bottom: 12px;
+                border: 1px solid #e0e0e0;
+                border-radius: 8px;
+                padding: 12px;
+                background: #fff;
+                box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+            }
+            .table tbody tr td {
+                display: block;
+                padding: 6px 0 !important;
+                border: none !important;
+                white-space: normal;
+                font-size: 0.85rem;
+                text-align: left !important;
+            }
+            .table tbody tr td::before {
+                content: attr(data-label);
+                display: inline-block;
+                font-weight: 700;
+                color: #555;
+                min-width: 90px;
+                font-size: 0.75rem;
+                text-transform: uppercase;
+                letter-spacing: 0.3px;
+            }
+            .table tbody tr td:first-child::before,
+            .table tbody tr td[colspan]::before { content: none; }
+            /* Bulky inline buttons stack vertically */
+            .table tbody tr td:last-child { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 8px !important; }
+            .table tbody tr td:last-child::before { display: none; }
+        }
+
+        /* --- Pagination compact on mobile --- */
+        @media (max-width: 480px) {
+            .top-bar { flex-direction: column; align-items: stretch; }
+            .top-bar button { width: 100%; }
+            .stat-cards { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+            .stat-card { padding: 10px; gap: 8px; }
+            .stat-card h3 { font-size: 1rem; }
+            .modal-content { margin: 2% auto; padding: 14px; width: 95%; }
+            form[action="staff.php"]:not(#staffBulkForm) label { font-size: 0.85rem; }
+            form[action="staff.php"]:not(#staffBulkForm) input,
+            form[action="staff.php"]:not(#staffBulkForm) select { font-size: 16px !important; padding: 10px !important; } /* prevent iOS zoom */
+            .section-divider { grid-column: span 1; }
+            form[action="staff.php"]:not(#staffBulkForm) > div[style*="grid-column: span 2"] { grid-column: span 1; }
+        }
     </style>
 </head>
 <body>
@@ -363,12 +441,10 @@ $total_pages = $total_rows > 0 ? (int)ceil($total_rows / $limit) : 1;
                 } catch (Exception $e) {
                     // ignore cleanup errors
                 }
-                // Bridge doesn't support COUNT(*) — fetch all rows, count in PHP
-                $allStaffStats = $pdo->query("SELECT * FROM staff")->fetchAll();
-                if (!is_array($allStaffStats)) $allStaffStats = [];
-                $total_staff = count($allStaffStats);
-                $active_staff = count(array_filter($allStaffStats, fn($s) => ($s['status'] ?? '') === 'active'));
-                $non_teachers = count(array_filter($allStaffStats, function($s) {
+                // Reuse the already-fetched $all_staff for stats (avoids duplicating the entire query)
+                $total_staff = count($all_staff);
+                $active_staff = count(array_filter($all_staff, fn($s) => ($s['status'] ?? '') === 'active'));
+                $non_teachers = count(array_filter($all_staff, function($s) {
                     $pos = strtolower($s['position'] ?? '');
                     return strpos($pos, 'teacher') === false && strpos($pos, 'instructor') === false && strpos($pos, 'head') === false;
                 }));
@@ -535,17 +611,17 @@ $total_pages = $total_rows > 0 ? (int)ceil($total_rows / $limit) : 1;
                                     ?>
                                     <tr>
                                         <td style="text-align:center;"><input type="checkbox" name="staff_ids[]" value="<?php echo $staff['id']; ?>" class="staff-checkbox" onchange="updateStaffSelectedCount()"></td>
-                                        <td><strong><?php echo htmlspecialchars($staff['staff_id']); ?></strong></td>
-                                        <td><?php echo htmlspecialchars($staff['full_name']); ?></td>
-                                        <td><?php echo htmlspecialchars($staff['position']); ?></td>
-                                        <td><?php echo htmlspecialchars($staff['department'] ?? '-'); ?></td>
-                                        <td><?php echo htmlspecialchars($staff['phone'] ?? '-'); ?></td>
-                                        <td>
+                                        <td data-label="Staff ID"><strong><?php echo htmlspecialchars($staff['staff_id']); ?></strong></td>
+                                        <td data-label="Name"><?php echo htmlspecialchars($staff['full_name']); ?></td>
+                                        <td data-label="Position"><?php echo htmlspecialchars($staff['position']); ?></td>
+                                        <td data-label="Department"><?php echo htmlspecialchars($staff['department'] ?? '-'); ?></td>
+                                        <td data-label="Phone"><?php echo htmlspecialchars($staff['phone'] ?? '-'); ?></td>
+                                        <td data-label="Status">
                                             <span style="color: <?php echo ($staff['status'] ?? 'active') === 'active' ? 'green' : '#e74c3c'; ?>; font-weight: bold;">
                                                 <?php echo ucfirst($staff['status'] ?? 'active'); ?>
                                             </span>
                                         </td>
-                                        <td>
+                                        <td data-label="Invite">
                                             <?php if ($inviteStatus === 'accepted'): ?>
                                                 <span style="color: #27ae60; font-weight: bold; font-size: 0.85rem;">
                                                     <i class="fas fa-check-circle"></i> Registered
@@ -564,7 +640,7 @@ $total_pages = $total_rows > 0 ? (int)ceil($total_rows / $limit) : 1;
                                                 </span>
                                             <?php endif; ?>
                                         </td>
-                                        <td style="text-align:center;">
+                                        <td data-label="Docs" style="text-align:center;">
                                             <?php
                                             $hasCv = !empty($staff['cv_path']);
                                             $hasDocs = !empty($staff['documents']) && json_decode($staff['documents'], true);
@@ -582,7 +658,7 @@ $total_pages = $total_rows > 0 ? (int)ceil($total_rows / $limit) : 1;
                                                 <span style="color:#ccc;font-size:12px;">—</span>
                                             <?php endif; ?>
                                         </td>
-                                        <td style="white-space: nowrap;">
+                                        <td data-label="Actions" style="white-space: nowrap;">
                                             <a href="edit_staff.php?id=<?php echo $staff['id']; ?>" class="btn-login" style="background:#f0ad4e; padding: 5px 10px; font-size: 0.8rem; text-decoration:none; display:inline-block; margin-bottom:2px;" title="Edit staff details">Edit</a>
                                             <?php if (($staff['status'] ?? 'active') !== 'active' && $inviteStatus === 'accepted'): ?>
                                                 <a href="staff.php?activate=<?php echo $staff['id']; ?>&<?php echo $csrfAttr; ?>" class="btn-login" style="background:#27ae60; padding: 5px 10px; font-size: 0.8rem; text-decoration:none; display:inline-block; margin-bottom:2px;" onclick="return confirm('Activate this staff account? They will be able to log in immediately.');">Activate</a>

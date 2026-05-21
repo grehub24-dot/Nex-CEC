@@ -21,10 +21,10 @@ $payment_modes = explode(',', $settings['payment_modes'] ?? 'Cash,Mobile Money,B
 // Basic School fee types (fallback)
 $fee_types = explode(',', $settings['fee_types'] ?? 'Tuition,PTA Levy,Sports & Culture,ICT,Examination,Development,Feeding,Transport,Uniform,Books & Materials');
 
-// Fetch classes, students, and fee structures for dynamic dropdowns
-$all_classes = $pdo->query("SELECT * FROM classes")->fetchAll();
-$all_students = $pdo->query("SELECT * FROM students")->fetchAll();
-$all_fee_structures = $pdo->query("SELECT * FROM fee_structures")->fetchAll();
+// Fetch classes, students, and fee structures for dynamic dropdowns (narrow columns to prevent 413)
+$all_classes = $pdo->query("SELECT id, name FROM classes")->fetchAll();
+$all_students = $pdo->query("SELECT id, full_name, admission_number, class_name FROM students")->fetchAll();
+$all_fee_structures = $pdo->query("SELECT id, fee_type, title, amount, class_id, academic_year, term FROM fee_structures")->fetchAll();
 
 $message = '';
 $error = '';
@@ -276,8 +276,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 if ($page < 1) $page = 1;
                 $offset = ($page - 1) * $limit;
 
-                // Bridge doesn't support COUNT(*) or SUM() — fetch all, count & sum in PHP
-                $allPayments = $pdo->query("SELECT * FROM payments ORDER BY created_at DESC");
+                // Bridge doesn't support COUNT(*) or SUM() — fetch all, count & sum in PHP (narrow columns to prevent 413)
+                $allPayments = $pdo->query("SELECT id, student_id, amount, payment_date, created_at, receipt_number, fee_type, payment_method, academic_year FROM payments ORDER BY created_at DESC");
                 $allPayments = $allPayments ? $allPayments->fetchAll() : [];
                 $total_rows = count($allPayments);
                 $total_pages = ceil($total_rows / $limit);

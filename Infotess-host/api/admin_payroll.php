@@ -21,8 +21,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     try {
         $pdo->beginTransaction();
         
-        // Get all active staff (filter in PHP — bridge drops WHERE status = 'active')
-        $all_staff = $pdo->query("SELECT * FROM staff")->fetchAll();
+        // Get all active staff (narrow columns to prevent 413)
+        $all_staff = $pdo->query("SELECT id, status FROM staff")->fetchAll();
         $active_staff = array_filter($all_staff, fn($s) => ($s['status'] ?? '') === 'active');
         
         $generated_count = 0;

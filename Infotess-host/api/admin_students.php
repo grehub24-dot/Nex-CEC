@@ -188,7 +188,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     // Generate admission number after payment
     // Bridge can't handle LIKE with param — find next counter in PHP instead
     $today = date('ymd');
-    $allForCount = $pdo->query("SELECT * FROM students")->fetchAll();
+    $allForCount = $pdo->query("SELECT admission_number FROM students")->fetchAll();
     $counter = 0;
     foreach ($allForCount as $s) {
         $adm = $s['admission_number'] ?? '';
@@ -332,9 +332,9 @@ $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 if ($page < 1) $page = 1;
 $offset = ($page - 1) * $limit;
 
-// Fetch all students (bridge only handles simple WHERE col = ?)
-// Complex search filtering is done in PHP.
-$all_students = $pdo->query("SELECT * FROM students")->fetchAll();
+// Fetch all students (narrow columns to prevent 413 PAYLOAD_TOO_LARGE)
+// Complex search/sort filtering is done in PHP.
+$all_students = $pdo->query("SELECT id, profile_picture, admission_number, full_name, class_name, gender, guardian_name, guardian_relationship, guardian_phone_primary, guardian_phone_emergency, academic_year, created_at, status FROM students")->fetchAll();
 
 // Apply search filter in PHP (matches both full_name and admission_number)
 $search = $_GET['search'] ?? '';

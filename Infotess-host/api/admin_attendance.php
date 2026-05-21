@@ -12,8 +12,8 @@ $school_name = $settings['school_name'] ?? 'Nex CEC';
 $message = '';
 $error = '';
 
-// Get classes — bridge ignores ORDER BY, so sort in PHP
-$all_classes = $pdo->query("SELECT * FROM classes")->fetchAll();
+// Get classes — bridge ignores ORDER BY, so sort in PHP (narrow columns to prevent 413)
+$all_classes = $pdo->query("SELECT id, name, sort_order FROM classes")->fetchAll();
 usort($all_classes, fn($a, $b) => ((int)($a['sort_order'] ?? 0)) - ((int)($b['sort_order'] ?? 0)));
 
 // Teacher scope: if logged in as teacher, only show assigned classes
@@ -127,7 +127,7 @@ if ($selected_class && $selected_date && !empty($students)) {
 // Attendance statistics (bridge drops complex aggregation — compute in PHP)
 $stats = [];
 if ($selected_class) {
-    $all_att = $pdo->query("SELECT * FROM student_attendance")->fetchAll();
+    $all_att = $pdo->query("SELECT id, class_id, attendance_date, status FROM student_attendance")->fetchAll();
     $dateStr = substr($selected_date, 0, 10);
     $classRecs = array_filter($all_att, fn($r) => (int)($r['class_id'] ?? 0) === (int)$selected_class && substr($r['attendance_date'], 0, 10) === $dateStr);
     $stats = [

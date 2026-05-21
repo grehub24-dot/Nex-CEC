@@ -92,7 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($userId === (int)$_SESSION['user_id']) continue;
                 try {
                     // Check if user is super_admin
-                    $stmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
+                    $stmt = $pdo->prepare("SELECT id, role FROM users WHERE id = ?");
                     $stmt->execute([$userId]);
                     $user = $stmt->fetch();
                     if (!$user) continue;
@@ -144,8 +144,8 @@ $limit = 10;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 if ($page < 1) $page = 1;
 
-// Fetch ALL users (bridge does not support COUNT(*)) then paginate in PHP
-$allUsers = $pdo->query("SELECT * FROM users ORDER BY created_at DESC");
+// Fetch ALL users (narrow columns to prevent 413 PAYLOAD_TOO_LARGE)
+$allUsers = $pdo->query("SELECT id, email, role, created_at FROM users ORDER BY created_at DESC");
 $allUsers = $allUsers ? $allUsers->fetchAll() : [];
 $total_rows = count($allUsers);
 $total_pages = ceil($total_rows / $limit);

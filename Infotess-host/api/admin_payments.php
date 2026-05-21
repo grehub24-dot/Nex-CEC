@@ -329,6 +329,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     }
                     $payment['total_paid'] = $studentTotals[(string)$payment['student_id']] ?? 0;
                 }
+                unset($payment); // break reference to prevent corruption in subsequent foreach
                 ?>
                 <div class="table-responsive">
                     <table class="table">

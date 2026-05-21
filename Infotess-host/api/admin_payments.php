@@ -405,8 +405,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         </div>
 
                         <div>
-                            <label>Student Index Number</label>
-                            <input type="text" name="admission_number" id="pay_admission_number" class="form-control" readonly placeholder="Auto-filled from selection">
+                            <label>Other/Trans. No</label>
+                            <input type="text" name="transaction_reference" id="pay_transaction_ref" class="form-control" placeholder="e.g. Momo ref, Bank teller no.">
                         </div>
 
                         <div>
@@ -471,7 +471,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         var span = document.getElementsByClassName("close-btn")[0];
         var classSelect = document.getElementById("pay_class_name");
         var studentSelect = document.getElementById("pay_student_id");
-        var admissionInput = document.getElementById("pay_admission_number");
+        var transRefInput = document.getElementById("pay_transaction_ref");
         var feeTypeSelect = document.getElementById("pay_fee_type");
         var amountInput = document.getElementById("pay_amount");
         var academicYearInput = document.getElementById("pay_academic_year");
@@ -489,7 +489,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             
             // Reset downstream fields
             studentSelect.innerHTML = '<option value="">-- Select Student --</option>';
-            admissionInput.value = '';
+            transRefInput.value = '';
             feeTypeSelect.innerHTML = '<option value="">-- Select Class & Term First --</option>';
             amountInput.value = '';
 
@@ -520,12 +520,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
             // Also refresh fee types
             refreshFeeTypes();
-        });
-
-        // ====== Auto-fill admission number when student is selected ======
-        studentSelect.addEventListener('change', function() {
-            var selectedOpt = this.options[this.selectedIndex];
-            admissionInput.value = selectedOpt ? (selectedOpt.getAttribute('data-admission') || '') : '';
         });
 
         // ====== Refresh fee types when class, year, or term changes ======

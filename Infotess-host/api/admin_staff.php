@@ -131,22 +131,26 @@ if (isset($_GET['delete']) && is_numeric($_GET['delete'])) {
         $pdo->prepare("DELETE FROM payroll WHERE staff_id = ?")->execute([$staff_id]);
         $pdo->prepare("DELETE FROM staff_attendance WHERE staff_id = ?")->execute([$staff_id]);
         $pdo->prepare("DELETE FROM staff_invites WHERE staff_id = ?")->execute([$staff_id]);
+        $pdo->prepare("UPDATE subjects SET teacher_id = NULL WHERE teacher_id = ?")->execute([$staff_id]);
         $pdo->prepare("DELETE FROM staff WHERE id = ?")->execute([$staff_id]);
         if ($staff && $staff['user_id']) {
             $uid = (int)$staff['user_id'];
-            // Reassign payments recorded by this user to first admin (avoid FK violation)
+            // Reassign payments / attendance recorded by this user to first admin
             $adminStmt = $pdo->prepare("SELECT id FROM users WHERE role IN ('admin','super_admin') AND id != ? ORDER BY id ASC LIMIT 1");
             $adminStmt->execute([$uid]);
             $fallbackAdmin = $adminStmt->fetchColumn();
             if ($fallbackAdmin) {
                 $pdo->prepare("UPDATE payments SET recorded_by = ? WHERE recorded_by = ?")->execute([(int)$fallbackAdmin, $uid]);
+                $pdo->prepare("UPDATE student_attendance SET recorded_by = ? WHERE recorded_by = ?")->execute([(int)$fallbackAdmin, $uid]);
             }
-            // Delete all related records before users table (FK safety)
+            // Clean up all records that FK-reference users.id
             $pdo->prepare("DELETE FROM messages WHERE sender_id = ?")->execute([$uid]);
             $pdo->prepare("DELETE FROM messages WHERE receiver_id = ?")->execute([$uid]);
             $pdo->prepare("DELETE FROM message_reads WHERE user_id = ?")->execute([$uid]);
             $pdo->prepare("DELETE FROM notifications WHERE user_id = ?")->execute([$uid]);
-            $pdo->prepare("DELETE FROM audit_logs WHERE user_id = ?")->execute([$uid]);
+            $pdo->prepare("DELETE FROM executives WHERE user_id = ?")->execute([$uid]);
+            $pdo->prepare("DELETE FROM parent_students WHERE parent_user_id = ?")->execute([$uid]);
+            $pdo->prepare("UPDATE staff_invites SET invited_by = NULL WHERE invited_by = ?")->execute([$uid]);
             $pdo->prepare("DELETE FROM users WHERE id = ?")->execute([$uid]);
         }
         $pdo->commit();
@@ -179,21 +183,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $pdo->prepare("DELETE FROM payroll WHERE staff_id = ?")->execute([$staffId]);
                 $pdo->prepare("DELETE FROM staff_attendance WHERE staff_id = ?")->execute([$staffId]);
                 $pdo->prepare("DELETE FROM staff_invites WHERE staff_id = ?")->execute([$staffId]);
+                $pdo->prepare("UPDATE subjects SET teacher_id = NULL WHERE teacher_id = ?")->execute([$staffId]);
                 $pdo->prepare("DELETE FROM staff WHERE id = ?")->execute([$staffId]);
                 if ($staff && $staff['user_id']) {
                     $uid = (int)$staff['user_id'];
-                    // Reassign payments to first available admin
+                    // Reassign payments / attendance to first available admin
                     $adminStmt = $pdo->prepare("SELECT id FROM users WHERE role IN ('admin','super_admin') AND id != ? ORDER BY id ASC LIMIT 1");
                     $adminStmt->execute([$uid]);
                     $fallbackAdmin = $adminStmt->fetchColumn();
                     if ($fallbackAdmin) {
                         $pdo->prepare("UPDATE payments SET recorded_by = ? WHERE recorded_by = ?")->execute([(int)$fallbackAdmin, $uid]);
+                        $pdo->prepare("UPDATE student_attendance SET recorded_by = ? WHERE recorded_by = ?")->execute([(int)$fallbackAdmin, $uid]);
                     }
                     $pdo->prepare("DELETE FROM messages WHERE sender_id = ?")->execute([$uid]);
                     $pdo->prepare("DELETE FROM messages WHERE receiver_id = ?")->execute([$uid]);
                     $pdo->prepare("DELETE FROM message_reads WHERE user_id = ?")->execute([$uid]);
                     $pdo->prepare("DELETE FROM notifications WHERE user_id = ?")->execute([$uid]);
-                    $pdo->prepare("DELETE FROM audit_logs WHERE user_id = ?")->execute([$uid]);
+                    $pdo->prepare("DELETE FROM executives WHERE user_id = ?")->execute([$uid]);
+                    $pdo->prepare("DELETE FROM parent_students WHERE parent_user_id = ?")->execute([$uid]);
+                    $pdo->prepare("UPDATE staff_invites SET invited_by = NULL WHERE invited_by = ?")->execute([$uid]);
                     $pdo->prepare("DELETE FROM users WHERE id = ?")->execute([$uid]);
                 }
                 $pdo->commit();

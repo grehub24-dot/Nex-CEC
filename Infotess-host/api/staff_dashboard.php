@@ -269,11 +269,11 @@ $unread_count = count($unread_message_ids);
                         <div style="flex:1;min-width:0;">
                             <div style="font-weight:600;font-size:15px;color:#1a5276;"><?php echo htmlspecialchars($stu['full_name'] ?? ''); ?></div>
                             <div style="font-size:13px;color:#666;margin-top:4px;">
-                                <?php if (!empty($stu['admission_no'])): ?>
-                                <span style="display:inline-block;margin-right:12px;"><i class="fas fa-id-card" style="width:14px;color:#888;"></i> <?php echo htmlspecialchars($stu['admission_no']); ?></span>
+                                <?php if (!empty($stu['admission_number'])): ?>
+                                <span style="display:inline-block;margin-right:12px;"><i class="fas fa-id-card" style="width:14px;color:#888;"></i> <?php echo htmlspecialchars($stu['admission_number']); ?></span>
                                 <?php endif; ?>
-                                <?php if (!empty($stu['class'])): ?>
-                                <span><i class="fas fa-graduation-cap" style="width:14px;color:#888;"></i> <?php echo htmlspecialchars($stu['class']); ?><?php echo !empty($stu['stream']) ? ' ' . htmlspecialchars($stu['stream']) : ''; ?></span>
+                                <?php if (!empty($stu['class_name'])): ?>
+                                <span><i class="fas fa-graduation-cap" style="width:14px;color:#888;"></i> <?php echo htmlspecialchars($stu['class_name']); ?><?php echo !empty($stu['stream']) ? ' ' . htmlspecialchars($stu['stream']) : ''; ?></span>
                                 <?php endif; ?>
                             </div>
                             <div style="font-size:12px;color:#888;margin-top:6px;">

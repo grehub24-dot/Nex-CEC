@@ -37,11 +37,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($user_id !== $_SESSION['user_id']) { // Prevent self-delete
             try {
                 $pdo->beginTransaction();
-                // Delete from referencing tables first to avoid FK violations
-                // Note: Bridge delete does NOT support OR — run separate queries
+
+                // Unlink staff and students that reference this user
+                $pdo->prepare("UPDATE staff SET user_id = NULL WHERE user_id = ?")->execute([$user_id]);
+                $pdo->prepare("UPDATE students SET user_id = NULL WHERE user_id = ?")->execute([$user_id]);
+
+                // Reassign recorded_by to first available admin
+                $adminStmt = $pdo->prepare("SELECT id FROM users WHERE role IN ('admin','super_admin') AND id != ? ORDER BY id ASC LIMIT 1");
+                $adminStmt->execute([$user_id]);
+                $fallbackAdmin = $adminStmt->fetchColumn();
+                if ($fallbackAdmin) {
+                    $pdo->prepare("UPDATE payments SET recorded_by = ? WHERE recorded_by = ?")->execute([(int)$fallbackAdmin, $user_id]);
+                    $pdo->prepare("UPDATE student_attendance SET recorded_by = ? WHERE recorded_by = ?")->execute([(int)$fallbackAdmin, $user_id]);
+                }
+
+                // Clean up all FK-referencing records
                 $pdo->prepare("DELETE FROM messages WHERE sender_id = ?")->execute([$user_id]);
                 $pdo->prepare("DELETE FROM messages WHERE receiver_id = ?")->execute([$user_id]);
                 $pdo->prepare("DELETE FROM message_reads WHERE user_id = ?")->execute([$user_id]);
+                $pdo->prepare("DELETE FROM notifications WHERE user_id = ?")->execute([$user_id]);
+                $pdo->prepare("DELETE FROM executives WHERE user_id = ?")->execute([$user_id]);
+                $pdo->prepare("DELETE FROM parent_students WHERE parent_user_id = ?")->execute([$user_id]);
+                $pdo->prepare("DELETE FROM staff_invites WHERE user_id = ?")->execute([$user_id]);
+                $pdo->prepare("UPDATE staff_invites SET invited_by = NULL WHERE invited_by = ?")->execute([$user_id]);
+
+                // Delete the user
                 $stmt = $pdo->prepare("DELETE FROM users WHERE id = ?");
                 if ($stmt->execute([$user_id])) {
                     $pdo->commit();
@@ -79,11 +99,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if ($user['role'] === 'super_admin') continue;
 
                     $pdo->beginTransaction();
-                    // Delete messages referencing this user to avoid FK violations
-                    // Note: Bridge delete does NOT support OR — run separate queries
+
+                    // Unlink staff and students that reference this user
+                    $pdo->prepare("UPDATE staff SET user_id = NULL WHERE user_id = ?")->execute([$userId]);
+                    $pdo->prepare("UPDATE students SET user_id = NULL WHERE user_id = ?")->execute([$userId]);
+
+                    // Reassign recorded_by to first available admin
+                    $adminStmt = $pdo->prepare("SELECT id FROM users WHERE role IN ('admin','super_admin') AND id != ? ORDER BY id ASC LIMIT 1");
+                    $adminStmt->execute([$userId]);
+                    $fallbackAdmin = $adminStmt->fetchColumn();
+                    if ($fallbackAdmin) {
+                        $pdo->prepare("UPDATE payments SET recorded_by = ? WHERE recorded_by = ?")->execute([(int)$fallbackAdmin, $userId]);
+                        $pdo->prepare("UPDATE student_attendance SET recorded_by = ? WHERE recorded_by = ?")->execute([(int)$fallbackAdmin, $userId]);
+                    }
+
+                    // Clean up all FK-referencing records
                     $pdo->prepare("DELETE FROM messages WHERE sender_id = ?")->execute([$userId]);
                     $pdo->prepare("DELETE FROM messages WHERE receiver_id = ?")->execute([$userId]);
                     $pdo->prepare("DELETE FROM message_reads WHERE user_id = ?")->execute([$userId]);
+                    $pdo->prepare("DELETE FROM notifications WHERE user_id = ?")->execute([$userId]);
+                    $pdo->prepare("DELETE FROM executives WHERE user_id = ?")->execute([$userId]);
+                    $pdo->prepare("DELETE FROM parent_students WHERE parent_user_id = ?")->execute([$userId]);
+                    $pdo->prepare("DELETE FROM staff_invites WHERE user_id = ?")->execute([$userId]);
+                    $pdo->prepare("UPDATE staff_invites SET invited_by = NULL WHERE invited_by = ?")->execute([$userId]);
+
                     $pdo->prepare("DELETE FROM users WHERE id = ?")->execute([$userId]);
                     $pdo->commit();
                     $deleted_count++;

@@ -216,14 +216,19 @@ BEGIN
     END IF;
     
     -- terms table
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'terms_academic_year_name_key' AND conrelid = 'terms'::regclass) THEN
-        -- Fix duplicates in terms first (keep first occurrence by id)
-        DELETE FROM terms a USING terms b
-            WHERE a.id > b.id
-            AND a.academic_year = b.academic_year
-            AND a.name = b.name;
-        -- Now safe to add constraint
-        ALTER TABLE terms ADD CONSTRAINT terms_academic_year_name_key UNIQUE (academic_year, name);
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'terms_name_academic_year_key' AND conrelid = 'terms'::regclass) THEN
+        -- Check for legacy constraint name
+        IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'terms_academic_year_name_key' AND conrelid = 'terms'::regclass) THEN
+            -- Skip, legacy name exists; no action needed
+        ELSE
+            -- Fix duplicates in terms first (keep first occurrence by id)
+            DELETE FROM terms a USING terms b
+                WHERE a.id > b.id
+                AND a.academic_year = b.academic_year
+                AND a.name = b.name;
+            -- Now safe to add constraint
+            ALTER TABLE terms ADD CONSTRAINT terms_name_academic_year_key UNIQUE (name, academic_year);
+        END IF;
     END IF;
     
     -- subjects table: ensure proper unique indexes exist
@@ -254,13 +259,19 @@ BEGIN
     END IF;
     
     -- student_attendance table
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'student_attendance_student_attendance_date_key' AND conrelid = 'student_attendance'::regclass) THEN
-        ALTER TABLE student_attendance ADD CONSTRAINT student_attendance_student_attendance_date_key UNIQUE (student_id, attendance_date);
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'student_attendance_student_date_key' AND conrelid = 'student_attendance'::regclass) THEN
+        -- Check for legacy constraint name
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'student_attendance_student_attendance_date_key' AND conrelid = 'student_attendance'::regclass) THEN
+            ALTER TABLE student_attendance ADD CONSTRAINT student_attendance_student_date_key UNIQUE (student_id, attendance_date);
+        END IF;
     END IF;
     
     -- staff_attendance table
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'staff_attendance_staff_attendance_date_key' AND conrelid = 'staff_attendance'::regclass) THEN
-        ALTER TABLE staff_attendance ADD CONSTRAINT staff_attendance_staff_attendance_date_key UNIQUE (staff_id, attendance_date);
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'staff_attendance_staff_date_key' AND conrelid = 'staff_attendance'::regclass) THEN
+        -- Check for legacy constraint name
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'staff_attendance_staff_attendance_date_key' AND conrelid = 'staff_attendance'::regclass) THEN
+            ALTER TABLE staff_attendance ADD CONSTRAINT staff_attendance_staff_date_key UNIQUE (staff_id, attendance_date);
+        END IF;
     END IF;
     
     -- message_reads table
@@ -273,13 +284,13 @@ END $$;
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'fee_structures' AND column_name = 'fee_type') THEN
-        ALTER TABLE fee_structures ADD COLUMN fee_type VARCHAR(50) NOT NULL DEFAULT 'tuition';
+        ALTER TABLE fee_structures ADD COLUMN fee_type VARCHAR(50) NOT NULL DEFAULT 'school_fees';
     END IF;
     -- Drop any legacy UUID class_id and replace with INTEGER to match classes.id
     IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'fee_structures' AND column_name = 'class_id') THEN
         ALTER TABLE fee_structures DROP COLUMN IF EXISTS class_id;
     END IF;
-    ALTER TABLE fee_structures ADD COLUMN class_id INTEGER REFERENCES classes(id);
+    ALTER TABLE fee_structures ADD COLUMN class_id INTEGER REFERENCES classes(id) ON DELETE CASCADE;
 END $$;
 
 -- Fee structures are seeded per-class in seed-data.sql (section 14).
@@ -320,7 +331,7 @@ CREATE TABLE IF NOT EXISTS payments (
     payment_method VARCHAR(50),
     payment_date DATE DEFAULT CURRENT_DATE,
     receipt_number VARCHAR(50) UNIQUE NOT NULL,
-    recorded_by INTEGER REFERENCES users(id),
+    recorded_by INTEGER REFERENCES users(id) ON DELETE CASCADE,
     status VARCHAR(20) DEFAULT 'completed',
     enrollment_id VARCHAR(20),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -329,8 +340,8 @@ CREATE TABLE IF NOT EXISTS payments (
 -- 5. Messaging Tables
 CREATE TABLE IF NOT EXISTS messages (
     id SERIAL PRIMARY KEY,
-    sender_id INTEGER REFERENCES users(id),
-    receiver_id INTEGER REFERENCES users(id),
+    sender_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    receiver_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
     title VARCHAR(255) NOT NULL,
     content TEXT NOT NULL,
     is_broadcast BOOLEAN DEFAULT FALSE,
@@ -340,7 +351,7 @@ CREATE TABLE IF NOT EXISTS messages (
 
 CREATE TABLE IF NOT EXISTS notifications (
     id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id),
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
     title VARCHAR(255) NOT NULL,
     message TEXT NOT NULL,
     is_read BOOLEAN DEFAULT FALSE,
@@ -349,8 +360,8 @@ CREATE TABLE IF NOT EXISTS notifications (
 
 CREATE TABLE IF NOT EXISTS message_reads (
     id SERIAL PRIMARY KEY,
-    message_id INTEGER REFERENCES messages(id),
-    user_id INTEGER REFERENCES users(id),
+    message_id INTEGER REFERENCES messages(id) ON DELETE CASCADE,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
     read_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     UNIQUE(message_id, user_id)
 );
@@ -358,7 +369,7 @@ CREATE TABLE IF NOT EXISTS message_reads (
 -- 5. Executives Table
 CREATE TABLE IF NOT EXISTS executives (
     id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id),
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
     position VARCHAR(100) NOT NULL,
     full_name VARCHAR(255) NOT NULL,
     phone VARCHAR(20),
@@ -387,7 +398,7 @@ END $$;
 
 CREATE TABLE IF NOT EXISTS staff (
     id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id),
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
     staff_id VARCHAR(50) UNIQUE,
     full_name VARCHAR(255) NOT NULL,
     position VARCHAR(100) NOT NULL,
@@ -407,7 +418,7 @@ CREATE TABLE IF NOT EXISTS staff (
 
 CREATE TABLE IF NOT EXISTS salary_structures (
     id SERIAL PRIMARY KEY,
-    staff_id INTEGER REFERENCES staff(id),
+    staff_id INTEGER REFERENCES staff(id) ON DELETE CASCADE,
     basic_salary NUMERIC(10,2) NOT NULL DEFAULT 0,
     housing_allowance NUMERIC(10,2) DEFAULT 0,
     transport_allowance NUMERIC(10,2) DEFAULT 0,
@@ -420,7 +431,7 @@ CREATE TABLE IF NOT EXISTS salary_structures (
 
 CREATE TABLE IF NOT EXISTS deductions (
     id SERIAL PRIMARY KEY,
-    staff_id INTEGER REFERENCES staff(id),
+    staff_id INTEGER REFERENCES staff(id) ON DELETE CASCADE,
     deduction_type VARCHAR(50) NOT NULL,
     amount NUMERIC(10,2) NOT NULL,
     description TEXT,
@@ -430,7 +441,7 @@ CREATE TABLE IF NOT EXISTS deductions (
 
 CREATE TABLE IF NOT EXISTS payroll (
     id SERIAL PRIMARY KEY,
-    staff_id INTEGER REFERENCES staff(id),
+    staff_id INTEGER REFERENCES staff(id) ON DELETE CASCADE,
     month INTEGER NOT NULL,
     year INTEGER NOT NULL,
     basic_salary NUMERIC(10,2) DEFAULT 0,
@@ -448,7 +459,7 @@ CREATE TABLE IF NOT EXISTS payroll (
 
 CREATE TABLE IF NOT EXISTS pay_slips (
     id SERIAL PRIMARY KEY,
-    payroll_id INTEGER REFERENCES payroll(id),
+    payroll_id INTEGER REFERENCES payroll(id) ON DELETE CASCADE,
     pdf_path TEXT,
     generated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -506,8 +517,8 @@ CREATE TABLE IF NOT EXISTS subjects (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     code VARCHAR(20),
-    class_id INTEGER REFERENCES classes(id),
-    teacher_id INTEGER REFERENCES staff(id),
+    class_id INTEGER REFERENCES classes(id) ON DELETE CASCADE,
+    teacher_id INTEGER REFERENCES staff(id) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 CREATE UNIQUE INDEX IF NOT EXISTS subjects_name_unique_null_class_id 
@@ -555,8 +566,8 @@ ON CONFLICT DO NOTHING;
 CREATE TABLE IF NOT EXISTS sba_scores (
     id SERIAL PRIMARY KEY,
     student_id INTEGER NOT NULL,
-    subject_id INTEGER REFERENCES subjects(id),
-    term_id INTEGER REFERENCES terms(id),
+    subject_id INTEGER REFERENCES subjects(id) ON DELETE CASCADE,
+    term_id INTEGER REFERENCES terms(id) ON DELETE CASCADE,
     class_test NUMERIC(5,2) DEFAULT 0,
     mid_term NUMERIC(5,2) DEFAULT 0,
     end_term NUMERIC(5,2) DEFAULT 0,
@@ -570,8 +581,8 @@ CREATE TABLE IF NOT EXISTS sba_scores (
 CREATE TABLE IF NOT EXISTS exam_scores (
     id SERIAL PRIMARY KEY,
     student_id INTEGER NOT NULL,
-    subject_id INTEGER REFERENCES subjects(id),
-    term_id INTEGER REFERENCES terms(id),
+    subject_id INTEGER REFERENCES subjects(id) ON DELETE CASCADE,
+    term_id INTEGER REFERENCES terms(id) ON DELETE CASCADE,
     exam_score NUMERIC(5,2) DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     UNIQUE(student_id, subject_id, term_id)
@@ -580,7 +591,7 @@ CREATE TABLE IF NOT EXISTS exam_scores (
 CREATE TABLE IF NOT EXISTS report_cards (
     id SERIAL PRIMARY KEY,
     student_id INTEGER NOT NULL,
-    term_id INTEGER REFERENCES terms(id),
+    term_id INTEGER REFERENCES terms(id) ON DELETE CASCADE,
     class_position INTEGER,
     total_students INTEGER,
     class_teacher_remarks TEXT,
@@ -614,18 +625,18 @@ END $$;
 CREATE TABLE IF NOT EXISTS student_attendance (
     id SERIAL PRIMARY KEY,
     student_id INTEGER NOT NULL,
-    class_id INTEGER REFERENCES classes(id),
+    class_id INTEGER REFERENCES classes(id) ON DELETE CASCADE,
     attendance_date DATE NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'present',
     reason TEXT,
-    recorded_by INTEGER REFERENCES users(id),
+    recorded_by INTEGER REFERENCES users(id) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     UNIQUE(student_id, attendance_date)
 );
 
 CREATE TABLE IF NOT EXISTS staff_attendance (
     id SERIAL PRIMARY KEY,
-    staff_id INTEGER REFERENCES staff(id),
+    staff_id INTEGER REFERENCES staff(id) ON DELETE CASCADE,
     attendance_date DATE NOT NULL,
     check_in TIMESTAMP WITH TIME ZONE,
     check_out TIMESTAMP WITH TIME ZONE,
@@ -714,6 +725,65 @@ CREATE TABLE IF NOT EXISTS sessions (
 CREATE INDEX IF NOT EXISTS idx_sessions_last_accessed ON sessions(last_accessed);
 
 -- ==========================================
+-- PHASE 7: CONTENT & RESOURCE TABLES
+-- ==========================================
+
+-- Events table (public-facing events page)
+CREATE TABLE IF NOT EXISTS events (
+    id BIGSERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    event_date TIMESTAMP WITH TIME ZONE NOT NULL,
+    location VARCHAR(255),
+    source_url TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- News table (public-facing news/updates page)
+CREATE TABLE IF NOT EXISTS news (
+    id BIGSERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    content TEXT,
+    source_url TEXT UNIQUE,
+    image_url TEXT,
+    published_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Resources table (public-facing learning resources page)
+CREATE TABLE IF NOT EXISTS resources (
+    id BIGSERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    file_url TEXT NOT NULL,
+    category VARCHAR(100),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Student resources table (dashboard/internal resources)
+CREATE TABLE IF NOT EXISTS student_resources (
+    id BIGSERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    file_url TEXT NOT NULL,
+    resource_type VARCHAR(50),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Receipts table (payment receipts with verification)
+CREATE TABLE IF NOT EXISTS receipts (
+    id SERIAL PRIMARY KEY,
+    payment_id INTEGER NOT NULL REFERENCES payments(id) ON DELETE CASCADE,
+    receipt_file_path TEXT,
+    verification_hash VARCHAR(255),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Indexes for content tables
+CREATE INDEX IF NOT EXISTS idx_events_event_date ON events(event_date);
+CREATE INDEX IF NOT EXISTS idx_receipts_payment_id ON receipts(payment_id);
+
+-- ==========================================
 -- VERIFICATION
 -- ==========================================
 SELECT 'students' AS tbl, COUNT(*) FROM students
@@ -721,6 +791,7 @@ UNION ALL SELECT 'users', COUNT(*) FROM users
 UNION ALL SELECT 'classes', COUNT(*) FROM classes
 UNION ALL SELECT 'staff', COUNT(*) FROM staff
 UNION ALL SELECT 'payments', COUNT(*) FROM payments
+UNION ALL SELECT 'receipts', COUNT(*) FROM receipts
 UNION ALL SELECT 'fee_structures', COUNT(*) FROM fee_structures
 UNION ALL SELECT 'system_settings', COUNT(*) FROM system_settings
 UNION ALL SELECT 'terms', COUNT(*) FROM terms
@@ -728,6 +799,10 @@ UNION ALL SELECT 'subjects', COUNT(*) FROM subjects
 UNION ALL SELECT 'messages', COUNT(*) FROM messages
 UNION ALL SELECT 'notifications', COUNT(*) FROM notifications
 UNION ALL SELECT 'parent_students', COUNT(*) FROM parent_students
+UNION ALL SELECT 'events', COUNT(*) FROM events
+UNION ALL SELECT 'news', COUNT(*) FROM news
+UNION ALL SELECT 'resources', COUNT(*) FROM resources
+UNION ALL SELECT 'student_resources', COUNT(*) FROM student_resources
 UNION ALL SELECT 'sessions', COUNT(*) FROM sessions;
 
 -- ==========================================
@@ -746,7 +821,7 @@ CREATE TABLE IF NOT EXISTS staff_invites (
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     token VARCHAR(64) UNIQUE NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'pending',
-    invited_by INTEGER REFERENCES users(id),
+    invited_by INTEGER REFERENCES users(id) ON DELETE CASCADE,
     invited_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     accepted_at TIMESTAMP WITH TIME ZONE,
     expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
@@ -757,3 +832,56 @@ CREATE TABLE IF NOT EXISTS staff_invites (
 -- Index for fast token lookups
 CREATE INDEX IF NOT EXISTS idx_staff_invites_token ON staff_invites(token);
 CREATE INDEX IF NOT EXISTS idx_staff_invites_staff_id ON staff_invites(staff_id);
+
+-- ============================================================
+-- FIX SCHEMA-CODE MISMATCHES (idempotent)
+-- ============================================================
+
+-- 1. Add 'semester' alias column for payments (code uses it)
+ALTER TABLE IF EXISTS public.payments ADD COLUMN IF NOT EXISTS semester character varying;
+UPDATE public.payments SET semester = term WHERE term IS NOT NULL;
+
+-- 2. Add 'caption' alias column for gallery (code uses it)
+ALTER TABLE IF EXISTS public.gallery ADD COLUMN IF NOT EXISTS caption character varying;
+
+-- 3. Create missing enrollment_inquiries table
+CREATE TABLE IF NOT EXISTS public.enrollment_inquiries (
+    id integer NOT NULL GENERATED BY DEFAULT AS IDENTITY,
+    parent_name character varying NOT NULL,
+    email character varying NOT NULL,
+    phone character varying,
+    child_name character varying,
+    class_applying character varying,
+    message text,
+    created_at timestamp with time zone DEFAULT now(),
+    CONSTRAINT enrollment_inquiries_pkey PRIMARY KEY (id)
+);
+
+-- 4. Add profile_picture to users (code references it)
+ALTER TABLE IF EXISTS public.users ADD COLUMN IF NOT EXISTS profile_picture text;
+
+-- 5. Safer UNIQUE constraints (optional, PG <14 compatible)
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'subjects_name_class_key') THEN
+        ALTER TABLE public.subjects ADD CONSTRAINT subjects_name_class_key UNIQUE (name, class_id);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'payroll_staff_month_year_key') THEN
+        ALTER TABLE public.payroll ADD CONSTRAINT payroll_staff_month_year_key UNIQUE (staff_id, month, year);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'staff_attendance_staff_date_key') THEN
+        ALTER TABLE public.staff_attendance ADD CONSTRAINT staff_attendance_staff_date_key UNIQUE (staff_id, attendance_date);
+    END IF;
+END $$;
+
+-- ============================================================
+-- CLEANUP: Remove university remnants for basic school system
+-- ============================================================
+
+-- 6. Drop dead columns from students (university artifacts, never used by PHP code)
+ALTER TABLE IF EXISTS public.students DROP COLUMN IF EXISTS department;
+ALTER TABLE IF EXISTS public.students DROP COLUMN IF EXISTS level;
+
+-- 7. Fix fee_type default (university 'tuition' → basic school 'school_fees')
+ALTER TABLE IF EXISTS public.fee_structures 
+    ALTER COLUMN fee_type SET DEFAULT 'school_fees';

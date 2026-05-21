@@ -842,6 +842,63 @@ BEGIN
 END $$;
 
 -- ==========================================
+-- 20. EVENTS (6 school events)
+-- ==========================================
+INSERT INTO events (title, description, event_date, location)
+SELECT 'School Reopening – First Term', 'School reopens for the first term of the academic year. All students are expected to report in full uniform.', '2025-09-08 07:30:00+00', 'School Campus'
+WHERE NOT EXISTS (SELECT 1 FROM events WHERE title = 'School Reopening – First Term');
+
+INSERT INTO events (title, description, event_date, location)
+SELECT 'Open Day / Parent-Teacher Conference', 'Parents and guardians are invited to meet with teachers to discuss student progress and performance.', '2025-11-28 09:00:00+00', 'School Hall'
+WHERE NOT EXISTS (SELECT 1 FROM events WHERE title = 'Open Day / Parent-Teacher Conference');
+
+INSERT INTO events (title, description, event_date, location)
+SELECT 'Christmas Break', 'School closes for the Christmas holiday. Students resume next term.', '2025-12-20 12:00:00+00', 'School Campus'
+WHERE NOT EXISTS (SELECT 1 FROM events WHERE title = 'Christmas Break');
+
+INSERT INTO events (title, description, event_date, location)
+SELECT 'Second Term Begins', 'School reopens for the second term.', '2026-01-06 07:30:00+00', 'School Campus'
+WHERE NOT EXISTS (SELECT 1 FROM events WHERE title = 'Second Term Begins');
+
+INSERT INTO events (title, description, event_date, location)
+SELECT 'BECE Preparation Clinic', 'Intensive revision classes for JHS 3 students preparing for the BECE.', '2026-04-01 08:00:00+00', 'JHS Block'
+WHERE NOT EXISTS (SELECT 1 FROM events WHERE title = 'BECE Preparation Clinic');
+
+INSERT INTO events (title, description, event_date, location)
+SELECT 'End of Year Speech & Prize-Giving Day', 'Annual speech day and prize-giving ceremony to celebrate student achievements.', '2026-07-15 09:00:00+00', 'School Auditorium'
+WHERE NOT EXISTS (SELECT 1 FROM events WHERE title = 'End of Year Speech & Prize-Giving Day');
+
+-- ==========================================
+-- 21. NEWS (school updates)
+-- ==========================================
+INSERT INTO news (title, content, published_at)
+SELECT 'School Honours Best Performing Students', 'The school has recognised outstanding students for their academic excellence and good conduct this term.', '2025-12-15 10:00:00+00'
+WHERE NOT EXISTS (SELECT 1 FROM news WHERE title = 'School Honours Best Performing Students');
+
+INSERT INTO news (title, content, published_at)
+SELECT 'Inter-House Sports Competition Held', 'Students participated actively in the annual inter-house sports competition showcasing talent and teamwork.', '2025-11-20 14:00:00+00'
+WHERE NOT EXISTS (SELECT 1 FROM news WHERE title = 'Inter-House Sports Competition Held');
+
+-- ==========================================
+-- 22. RESOURCES (public learning resources)
+-- ==========================================
+INSERT INTO resources (title, description, file_url, category)
+SELECT 'School Calendar', 'View the academic calendar with term dates, holidays, and key events.', '', 'Calendar'
+WHERE NOT EXISTS (SELECT 1 FROM resources WHERE title = 'School Calendar');
+
+INSERT INTO resources (title, description, file_url, category)
+SELECT 'Uniform Guidelines', 'Download the school uniform policy and dress code requirements.', '', 'Guidelines'
+WHERE NOT EXISTS (SELECT 1 FROM resources WHERE title = 'Uniform Guidelines');
+
+INSERT INTO resources (title, description, file_url, category)
+SELECT 'Fee Schedule', 'Review the approved fee structure for the current academic year.', '', 'Fees'
+WHERE NOT EXISTS (SELECT 1 FROM resources WHERE title = 'Fee Schedule');
+
+INSERT INTO resources (title, description, file_url, category)
+SELECT 'PTA Information', 'Information about the Parent-Teacher Association and how to get involved.', '', 'Community'
+WHERE NOT EXISTS (SELECT 1 FROM resources WHERE title = 'PTA Information');
+
+-- ==========================================
 -- VERIFICATION
 -- ==========================================
 SELECT 'users' AS tbl, COUNT(*) AS cnt FROM users
@@ -860,4 +917,7 @@ UNION ALL SELECT 'report_cards', COUNT(*) FROM report_cards
 UNION ALL SELECT 'messages', COUNT(*) FROM messages
 UNION ALL SELECT 'notifications', COUNT(*) FROM notifications
 UNION ALL SELECT 'system_settings', COUNT(*) FROM system_settings
-UNION ALL SELECT 'fee_structures', COUNT(*) FROM fee_structures;
+UNION ALL SELECT 'fee_structures', COUNT(*) FROM fee_structures
+UNION ALL SELECT 'events', COUNT(*) FROM events
+UNION ALL SELECT 'news', COUNT(*) FROM news
+UNION ALL SELECT 'resources', COUNT(*) FROM resources;

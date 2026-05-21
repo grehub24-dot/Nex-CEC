@@ -235,12 +235,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
         $pdo->beginTransaction();
 
-        // Delete messages referencing this user to avoid FK violations
-        // Note: Bridge delete does NOT support OR — run separate queries
+        // Clean up all records referencing student_id
+        $pdo->prepare("DELETE FROM payments WHERE student_id = ?")->execute([$studentId]);
+        $pdo->prepare("DELETE FROM student_attendance WHERE student_id = ?")->execute([$studentId]);
+        $pdo->prepare("DELETE FROM exam_scores WHERE student_id = ?")->execute([$studentId]);
+        $pdo->prepare("DELETE FROM sba_scores WHERE student_id = ?")->execute([$studentId]);
+        $pdo->prepare("DELETE FROM attendance_summary WHERE student_id = ?")->execute([$studentId]);
+        $pdo->prepare("DELETE FROM report_cards WHERE student_id = ?")->execute([$studentId]);
+        $pdo->prepare("DELETE FROM parent_students WHERE student_id = ?")->execute([$studentId]);
+
+        // Clean up user-level FK references
         if ($userId) {
             $pdo->prepare("DELETE FROM messages WHERE sender_id = ?")->execute([$userId]);
             $pdo->prepare("DELETE FROM messages WHERE receiver_id = ?")->execute([$userId]);
             $pdo->prepare("DELETE FROM message_reads WHERE user_id = ?")->execute([$userId]);
+            $pdo->prepare("DELETE FROM notifications WHERE user_id = ?")->execute([$userId]);
+            $pdo->prepare("DELETE FROM executives WHERE user_id = ?")->execute([$userId]);
+            $pdo->prepare("DELETE FROM parent_students WHERE parent_user_id = ?")->execute([$userId]);
+            $pdo->prepare("UPDATE staff_invites SET invited_by = NULL WHERE invited_by = ?")->execute([$userId]);
         }
 
         // Delete the student record
@@ -276,12 +288,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $userId = $stu_row ? ($stu_row['user_id'] ?? null) : null;
                 $pdo->beginTransaction();
 
-                // Delete messages referencing this user to avoid FK violations
-                // Note: Bridge delete does NOT support OR — run separate queries
+                // Clean up all records referencing student_id
+                $pdo->prepare("DELETE FROM payments WHERE student_id = ?")->execute([$studentId]);
+                $pdo->prepare("DELETE FROM student_attendance WHERE student_id = ?")->execute([$studentId]);
+                $pdo->prepare("DELETE FROM exam_scores WHERE student_id = ?")->execute([$studentId]);
+                $pdo->prepare("DELETE FROM sba_scores WHERE student_id = ?")->execute([$studentId]);
+                $pdo->prepare("DELETE FROM attendance_summary WHERE student_id = ?")->execute([$studentId]);
+                $pdo->prepare("DELETE FROM report_cards WHERE student_id = ?")->execute([$studentId]);
+                $pdo->prepare("DELETE FROM parent_students WHERE student_id = ?")->execute([$studentId]);
+
+                // Clean up user-level FK references
                 if ($userId) {
                     $pdo->prepare("DELETE FROM messages WHERE sender_id = ?")->execute([$userId]);
                     $pdo->prepare("DELETE FROM messages WHERE receiver_id = ?")->execute([$userId]);
                     $pdo->prepare("DELETE FROM message_reads WHERE user_id = ?")->execute([$userId]);
+                    $pdo->prepare("DELETE FROM notifications WHERE user_id = ?")->execute([$userId]);
+                    $pdo->prepare("DELETE FROM executives WHERE user_id = ?")->execute([$userId]);
+                    $pdo->prepare("DELETE FROM parent_students WHERE parent_user_id = ?")->execute([$userId]);
+                    $pdo->prepare("UPDATE staff_invites SET invited_by = NULL WHERE invited_by = ?")->execute([$userId]);
                 }
 
                 $pdo->prepare("DELETE FROM students WHERE id = ?")->execute([$studentId]);

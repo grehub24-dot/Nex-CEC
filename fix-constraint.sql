@@ -7,6 +7,35 @@
 -- ==========================================
 
 -- ==========================================
+-- 0. FIX subjects.teacher_id ON DELETE behavior
+-- ==========================================
+-- PROBLEM: Deleting a staff member fails if they are assigned as teacher
+-- to any subject, because subjects_teacher_id_fkey has no ON DELETE
+-- behavior (defaults to NO ACTION).
+--
+-- FIX: Drop and recreate the FK with ON DELETE SET NULL so the database
+-- automatically nullifies teacher_id when the referenced staff is deleted.
+-- ==========================================
+DO $fix_subject_fk$
+BEGIN
+    -- Drop the existing FK constraint if it exists
+    IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'subjects_teacher_id_fkey' AND conrelid = 'subjects'::regclass) THEN
+        ALTER TABLE subjects DROP CONSTRAINT subjects_teacher_id_fkey;
+    END IF;
+
+    -- Check if the constraint already has ON DELETE SET NULL (skip if so)
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint 
+        WHERE conname = 'subjects_teacher_id_fkey' 
+          AND conrelid = 'subjects'::regclass
+          AND confdeltype = 'n'
+    ) THEN
+        ALTER TABLE subjects ADD CONSTRAINT subjects_teacher_id_fkey 
+            FOREIGN KEY (teacher_id) REFERENCES staff(id) ON DELETE SET NULL;
+    END IF;
+END $fix_subject_fk$;
+
+-- ==========================================
 -- 1. FIX subjects UNIQUE constraint
 -- ==========================================
 -- PROBLEM: UNIQUE(name, class_id) allows duplicate name when class_id IS NULL

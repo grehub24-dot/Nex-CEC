@@ -470,7 +470,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $staff && !empty($_POST['password']
                 <div class="form-group">
                     <label for="documents">Additional Documents <span class="hint">(optional, multiple files)</span></label>
                     <input type="file" name="documents[]" id="documents" multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
-                    <span class="file-upload-hint">Certificates, transcripts, or any supporting documents.</span>
+                    <span class="file-upload-hint">Certificates, academic records, or any supporting documents.</span>
                 </div>
 
                 <!-- Account Security -->

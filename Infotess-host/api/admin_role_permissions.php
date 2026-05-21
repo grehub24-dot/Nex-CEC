@@ -355,12 +355,9 @@ function levelIcon($level) {
             transition: background 0.35s ease, box-shadow 0.35s ease;
             box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
         }
-        .toggle-slider.active {
+        .toggle-slider.enabled {
             background: linear-gradient(135deg, #27ae60, #2ecc71);
             box-shadow: inset 0 1px 3px rgba(0,0,0,0.2), 0 0 8px rgba(39,174,96,0.35);
-        }
-        .toggle-slider.inactive {
-            background: linear-gradient(135deg, #b0b0b0, #cccccc);
         }
         .toggle-slider.disabled {
             background: #e8e8e8;
@@ -408,11 +405,11 @@ function levelIcon($level) {
             padding: 2px 6px;
             border-radius: 4px;
         }
-        .toggle-status-label.active {
+        .toggle-status-label.enabled {
             color: #fff;
             background: #27ae60;
         }
-        .toggle-status-label.inactive {
+        .toggle-status-label.disabled {
             color: #fff;
             background: #b0b0b0;
         }
@@ -587,10 +584,10 @@ function levelIcon($level) {
                                                     <label class="toggle-switch" title="Click to <?php echo $isActive ? 'suspend' : 'approve'; ?>">
                                                         <input type="checkbox" <?php echo $isActive ? 'checked' : ''; ?>
                                                             onchange="if(confirm('<?php echo $isActive ? 'Suspend' : 'Approve'; ?> this staff account?')){this.closest('form').submit();}else{this.checked=<?php echo $isActive ? 'true' : 'false'; ?>};">
-                                                        <span class="toggle-slider <?php echo $isActive ? 'active' : 'inactive'; ?>"></span>
+                                                        <span class="toggle-slider <?php echo $isActive ? 'enabled' : 'disabled'; ?>"></span>
                                                     </label>
                                                 </form>
-                                                <span class="toggle-status-label <?php echo $isActive ? 'active' : 'inactive'; ?>">
+                                                <span class="toggle-status-label <?php echo $isActive ? 'enabled' : 'disabled'; ?>">
                                                     <?php echo $isActive ? 'Active' : 'Suspended'; ?>
                                                 </span>
                                             <?php elseif ($hasUser && !$canToggle): ?>

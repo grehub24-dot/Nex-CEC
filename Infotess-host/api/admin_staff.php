@@ -284,7 +284,26 @@ $search = $_GET['search'] ?? '';
 // Complex search filtering is done in PHP.
 // Select ONLY columns needed for the listing — avoids pulling large fields (cv_path, documents)
 // that bloat the Vercel serverless response beyond the 4.5MB limit (413 PAYLOAD_TOO_LARGE).
-$all_staff = $pdo->query("SELECT s.id, s.staff_id, s.full_name, s.position, s.department, s.phone, s.status AS staff_status, COALESCE(u.status, 'inactive') AS user_status, s.cv_path, s.documents, s.created_at FROM staff s LEFT JOIN users u ON s.user_id = u.id")->fetchAll();
+// NOTE: Supabase REST bridge cannot do JOINs — we fetch users separately.
+$all_staff = $pdo->query("SELECT id, staff_id, full_name, position, department, phone, status AS staff_status, user_id, cv_path, documents, created_at FROM staff")->fetchAll();
+
+// Build a user-status lookup for linked user accounts
+$userStatusMap = [];
+$userIds = array_filter(array_column($all_staff, 'user_id'));
+if (!empty($userIds)) {
+    $placeholders = implode(',', array_fill(0, count($userIds), '?'));
+    $userStmt = $pdo->prepare("SELECT id, status FROM users WHERE id IN ($placeholders)");
+    $userStmt->execute(array_values($userIds));
+    foreach ($userStmt->fetchAll() as $u) {
+        $userStatusMap[(int)$u['id']] = $u['status'] ?? 'inactive';
+    }
+}
+// Merge user_status into each staff row
+foreach ($all_staff as &$staff) {
+    $uid = (int)($staff['user_id'] ?? 0);
+    $staff['user_status'] = ($uid && isset($userStatusMap[$uid])) ? $userStatusMap[$uid] : 'inactive';
+}
+unset($staff);
 
 // Apply search filter in PHP (matches full_name, staff_id, and position)
 if ($search !== '') {

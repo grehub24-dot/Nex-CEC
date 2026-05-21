@@ -137,15 +137,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 }
 
 // Fetch ALL staff with their linked user accounts
+// NOTE: Supabase REST bridge cannot do JOINs — we fetch users separately
 $allStaff = [];
 try {
-    $stmt = $pdo->query("
-        SELECT s.*, u.role AS user_role, u.email AS user_email, u.is_password_reset, u.status AS user_status
-        FROM staff s
-        LEFT JOIN users u ON s.user_id = u.id
-        ORDER BY s.department, s.full_name
-    ");
+    // 1. Fetch all staff
+    $stmt = $pdo->query("SELECT * FROM staff");
     $allStaff = $stmt->fetchAll();
+    
+    // Sort by department, full_name in PHP
+    usort($allStaff, function($a, $b) {
+        $cmp = strcmp($a['department'] ?? '', $b['department'] ?? '');
+        return $cmp !== 0 ? $cmp : strcmp($a['full_name'] ?? '', $b['full_name'] ?? '');
+    });
+    
+    // 2. Collect user_ids that exist
+    $userIds = array_filter(array_column($allStaff, 'user_id'));
+    
+    // 3. Fetch matching users' role, email, status
+    $userMap = [];
+    if (!empty($userIds)) {
+        $placeholders = implode(',', array_fill(0, count($userIds), '?'));
+        $userStmt = $pdo->prepare("SELECT id, role, email, is_password_reset, status FROM users WHERE id IN ($placeholders)");
+        $userStmt->execute(array_values($userIds));
+        foreach ($userStmt->fetchAll() as $u) {
+            $userMap[(int)$u['id']] = $u;
+        }
+    }
+    
+    // 4. Merge user data into each staff row
+    foreach ($allStaff as &$staff) {
+        $uid = (int)($staff['user_id'] ?? 0);
+        if ($uid && isset($userMap[$uid])) {
+            $staff['user_role'] = $userMap[$uid]['role'] ?? '';
+            $staff['user_email'] = $userMap[$uid]['email'] ?? '';
+            $staff['user_status'] = $userMap[$uid]['status'] ?? 'inactive';
+            $staff['is_password_reset'] = $userMap[$uid]['is_password_reset'] ?? false;
+        } else {
+            $staff['user_role'] = '';
+            $staff['user_email'] = '';
+            $staff['user_status'] = 'inactive';
+            $staff['is_password_reset'] = false;
+        }
+    }
+    unset($staff);
 } catch (Exception $e) {
     $error = "Database error: " . $e->getMessage();
 }

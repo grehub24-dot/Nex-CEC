@@ -334,12 +334,12 @@ function levelIcon($level) {
         .status-toggle-wrap {
             display: inline-flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
         }
         .toggle-switch {
             position: relative;
-            width: 44px;
-            height: 22px;
+            width: 52px;
+            height: 26px;
             flex-shrink: 0;
         }
         .toggle-switch input {
@@ -351,36 +351,81 @@ function levelIcon($level) {
             position: absolute;
             cursor: pointer;
             top: 0; left: 0; right: 0; bottom: 0;
-            border-radius: 22px;
-            transition: 0.3s;
+            border-radius: 26px;
+            transition: background 0.35s ease, box-shadow 0.35s ease;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
         }
         .toggle-slider.active {
-            background: #27ae60;
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.2), 0 0 8px rgba(39,174,96,0.35);
         }
         .toggle-slider.inactive {
-            background: #b0b0b0;
+            background: linear-gradient(135deg, #b0b0b0, #cccccc);
+        }
+        .toggle-slider.disabled {
+            background: #e8e8e8;
+            cursor: not-allowed;
+            box-shadow: none;
         }
         .toggle-slider::before {
             content: "";
             position: absolute;
-            left: 2px;
-            bottom: 2px;
-            width: 18px;
-            height: 18px;
+            left: 3px;
+            bottom: 3px;
+            width: 20px;
+            height: 20px;
             background: white;
             border-radius: 50%;
-            transition: 0.3s;
+            transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+            z-index: 2;
+        }
+        /* Knob inner dot — subtle presence indicator */
+        .toggle-slider::after {
+            content: "";
+            position: absolute;
+            left: 9px;
+            bottom: 9px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.5);
+            transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 3;
+            pointer-events: none;
         }
         .toggle-switch input:checked + .toggle-slider::before {
-            transform: translateX(22px);
+            transform: translateX(26px);
+        }
+        .toggle-switch input:checked + .toggle-slider::after {
+            transform: translateX(26px);
         }
         .toggle-status-label {
-            font-weight: 600;
-            font-size: 0.8rem;
+            font-weight: 700;
+            font-size: 0.85rem;
             white-space: nowrap;
+            letter-spacing: 0.02em;
+            padding: 2px 6px;
+            border-radius: 4px;
         }
-        .toggle-status-label.active { color: #27ae60; }
-        .toggle-status-label.inactive { color: #b0b0b0; }
+        .toggle-status-label.active {
+            color: #fff;
+            background: #27ae60;
+        }
+        .toggle-status-label.inactive {
+            color: #fff;
+            background: #b0b0b0;
+        }
+        .toggle-status-label.pending {
+            color: #856404;
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+        }
+        .toggle-status-label.no-account {
+            color: #666;
+            background: #f0f0f0;
+            border: 1px solid #ddd;
+        }
 
         @media (max-width: 768px) {
             .table-wrap { overflow-x: auto; }
@@ -527,9 +572,12 @@ function levelIcon($level) {
                                         <?php
                                         $userStatus = $staff['user_status'] ?? 'inactive';
                                         $isActive = $userStatus === 'active';
+                                        $inviteSt = $hasUser ? getStaffInviteStatus((int)$staff['id']) : 'not_invited';
+                                        $canToggle = $hasUser && $inviteSt === 'accepted';
                                         ?>
                                         <div class="status-toggle-wrap">
-                                            <?php if ($hasUser): ?>
+                                            <?php if ($canToggle): ?>
+                                                <?php /* Fully interactive toggle — user has registered */ ?>
                                                 <form method="POST" style="margin:0;">
                                                     <input type="hidden" name="action" value="toggle_account_status">
                                                     <input type="hidden" name="staff_id" value="<?php echo $staff['id']; ?>">
@@ -542,14 +590,26 @@ function levelIcon($level) {
                                                         <span class="toggle-slider <?php echo $isActive ? 'active' : 'inactive'; ?>"></span>
                                                     </label>
                                                 </form>
+                                                <span class="toggle-status-label <?php echo $isActive ? 'active' : 'inactive'; ?>">
+                                                    <?php echo $isActive ? 'Active' : 'Suspended'; ?>
+                                                </span>
+                                            <?php elseif ($hasUser && !$canToggle): ?>
+                                                <?php /* Has a user account but hasn't accepted invite yet */ ?>
+                                                <span class="toggle-switch" style="display:inline-block;">
+                                                    <span class="toggle-slider disabled"></span>
+                                                </span>
+                                                <span class="toggle-status-label pending">
+                                                    <i class="fas fa-clock" style="font-size:0.7rem;"></i> Pending Registration
+                                                </span>
                                             <?php else: ?>
-                                                <span class="toggle-slider inactive" style="display:inline-block; width:44px; height:22px; border-radius:22px; background:#ddd; position:relative;">
-                                                    <span style="position:absolute; left:2px; bottom:2px; width:18px; height:18px; background:white; border-radius:50%;"></span>
+                                                <?php /* No linked user account at all */ ?>
+                                                <span class="toggle-switch" style="display:inline-block;">
+                                                    <span class="toggle-slider disabled"></span>
+                                                </span>
+                                                <span class="toggle-status-label no-account">
+                                                    <i class="fas fa-user-slash" style="font-size:0.7rem;"></i> No Account
                                                 </span>
                                             <?php endif; ?>
-                                            <span class="toggle-status-label <?php echo $isActive ? 'active' : 'inactive'; ?>">
-                                                <?php echo $isActive ? 'Active' : 'Suspended'; ?>
-                                            </span>
                                         </div>
                                     </td>
                                     <td>

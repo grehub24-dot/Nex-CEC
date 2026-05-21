@@ -398,30 +398,21 @@ function levelIcon($level) {
             transform: translateX(26px);
         }
         .toggle-status-label {
-            font-weight: 700;
+            font-weight: 600;
             font-size: 0.85rem;
             white-space: nowrap;
-            letter-spacing: 0.02em;
-            padding: 2px 6px;
-            border-radius: 4px;
         }
         .toggle-status-label.enabled {
-            color: #fff;
-            background: #27ae60;
+            color: #27ae60;
         }
         .toggle-status-label.disabled {
-            color: #fff;
-            background: #b0b0b0;
+            color: #b0b0b0;
         }
         .toggle-status-label.pending {
             color: #856404;
-            background: #fff3cd;
-            border: 1px solid #ffc107;
         }
         .toggle-status-label.no-account {
-            color: #666;
-            background: #f0f0f0;
-            border: 1px solid #ddd;
+            color: #999;
         }
 
         @media (max-width: 768px) {
@@ -585,7 +576,7 @@ function levelIcon($level) {
                                                         <span class="toggle-slider <?php echo $isActive ? 'enabled' : 'disabled'; ?>"></span>
                                                     </span>
                                                     <button type="submit" class="toggle-status-label <?php echo $isActive ? 'enabled' : 'disabled'; ?>"
-                                                            style="border:none; cursor:pointer; font:inherit;"
+                                                            style="border:none; background:transparent; padding:0; cursor:pointer; font:inherit;"
                                                             onclick="return confirm('<?php echo $isActive ? 'Suspend' : 'Approve'; ?> this staff account?');">
                                                         <?php echo $isActive ? 'Active' : 'Suspended'; ?>
                                                     </button>

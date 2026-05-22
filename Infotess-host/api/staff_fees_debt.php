@@ -94,6 +94,18 @@ foreach ($all_payments as $p) {
     $payments_by_student[$sid][] = $p;
 }
 
+// Fetch student_bill_items for this year/term
+$bill_items_by_student = [];
+try {
+    $stmt = $pdo->prepare("SELECT * FROM student_bill_items WHERE academic_year = ? AND term = ?");
+    $stmt->execute([$filter_year, $filter_term]);
+    foreach ($stmt->fetchAll() as $bi) {
+        $sid = (int)$bi['student_id'];
+        if (!isset($bill_items_by_student[$sid])) $bill_items_by_student[$sid] = [];
+        $bill_items_by_student[$sid][] = $bi;
+    }
+} catch (Exception $e) { $bill_items_by_student = []; }
+
 // Fetch exemptions
 $exemptions = [];
 try {
@@ -138,10 +150,15 @@ foreach ($all_students as $s) {
     $sid = (int)$s['id'];
     $class_name = $s['class_name'] ?? '';
 
-    $expected = 0;
-    foreach ($all_class_fees as $f) { $expected += (float)$f['amount']; }
-    if ($class_name && isset($fees_by_class[$class_name])) {
-        foreach ($fees_by_class[$class_name] as $f) { $expected += (float)$f['amount']; }
+    $has_bill = isset($bill_items_by_student[$sid]) && !empty($bill_items_by_student[$sid]);
+    if ($has_bill) {
+        $expected = array_sum(array_map(fn($bi) => (float)$bi['amount'], $bill_items_by_student[$sid]));
+    } else {
+        $expected = 0;
+        foreach ($all_class_fees as $f) { $expected += (float)$f['amount']; }
+        if ($class_name && isset($fees_by_class[$class_name])) {
+            foreach ($fees_by_class[$class_name] as $f) { $expected += (float)$f['amount']; }
+        }
     }
 
     $paid = 0;
@@ -168,6 +185,7 @@ foreach ($all_students as $s) {
     $is_exempted = isset($exemptions[$sid]);
 
     if ($is_exempted) $status = 'exempted';
+    elseif (!$has_bill) $status = 'no_bill';
     elseif ($expected <= 0) $status = 'no_fees';
     elseif ($balance <= 0) $status = 'paid';
     elseif ($paid > 0) $status = 'partial';
@@ -182,6 +200,7 @@ foreach ($all_students as $s) {
         'paid' => $paid,
         'balance' => $balance,
         'status' => $status,
+        'has_bill' => $has_bill,
     ];
 }
 
@@ -197,6 +216,7 @@ $stats = [
     'partial' => count(array_filter($fee_data, fn($d) => $d['status'] === 'partial')),
     'unpaid' => count(array_filter($fee_data, fn($d) => $d['status'] === 'unpaid')),
     'exempted' => count(array_filter($fee_data, fn($d) => $d['status'] === 'exempted')),
+    'no_bill' => count(array_filter($fee_data, fn($d) => $d['status'] === 'no_bill')),
 ];
 
 // Handle POST (SMS/Email reminders)
@@ -308,13 +328,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             </div>
             <div class="form-group">
                 <label>Status</label>
-                <select name="status">
-                    <option value="">All</option>
-                    <option value="paid" <?php echo $filter_status==='paid'?'selected':'';?>>Paid</option>
-                    <option value="partial" <?php echo $filter_status==='partial'?'selected':'';?>>Partial</option>
-                    <option value="unpaid" <?php echo $filter_status==='unpaid'?'selected':'';?>>Unpaid</option>
-                    <option value="exempted" <?php echo $filter_status==='exempted'?'selected':'';?>>Exempted</option>
-                </select>
+                    <select name="status">
+                        <option value="">All</option>
+                        <option value="no_bill" <?php echo $filter_status==='no_bill'?'selected':'';?>>No Bill</option>
+                        <option value="paid" <?php echo $filter_status==='paid'?'selected':'';?>>Paid</option>
+                        <option value="partial" <?php echo $filter_status==='partial'?'selected':'';?>>Partial</option>
+                        <option value="unpaid" <?php echo $filter_status==='unpaid'?'selected':'';?>>Unpaid</option>
+                        <option value="exempted" <?php echo $filter_status==='exempted'?'selected':'';?>>Exempted</option>
+                    </select>
             </div>
             <button type="submit"><i class="fas fa-filter"></i> Filter</button>
             <a href="fees_debt.php" class="btn-reset">Reset</a>
@@ -335,7 +356,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         <td><?php echo $i; ?></td>
                         <td><strong><?php echo htmlspecialchars($d['name']); ?></strong></td>
                         <td><?php echo htmlspecialchars($d['class_name']); ?></td>
-                        <td>GHS <?php echo number_format($d['expected'],2); ?></td>
+                        <td>GHS <?php echo number_format($d['expected'],2); ?>
+                            <?php if ($d['has_bill']): ?>
+                                <span style="display:inline-block;background:#d6eaf8;color:#2471a3;font-size:9px;padding:1px 4px;border-radius:4px;margin-left:2px;font-weight:600;">bill</span>
+                            <?php endif; ?>
+                        </td>
                         <td>GHS <?php echo number_format($d['paid'],2); ?></td>
                         <td><strong style="color:<?php echo $d['balance']>0?'#e74c3c':'#2ecc71';?>;">GHS <?php echo number_format($d['balance'],2); ?></strong></td>
                         <td>
@@ -343,6 +368,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                             <?php elseif ($d['status']==='partial'): ?><span class="status-badge partial">Partial</span>
                             <?php elseif ($d['status']==='unpaid'): ?><span class="status-badge unpaid">Not Paid</span>
                             <?php elseif ($d['status']==='exempted'): ?><span class="status-badge exempted">Exempted</span>
+                            <?php elseif ($d['status']==='no_bill'): ?><span class="status-badge" style="background:#fef9e7;color:#b7950b;border:1px solid #f9e79f;">No Bill</span>
                             <?php else: ?><span class="status-badge" style="background:#eee;color:#999;">No Fees</span>
                             <?php endif; ?>
                         </td>

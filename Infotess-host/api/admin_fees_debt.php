@@ -113,6 +113,18 @@ foreach ($all_payments as $p) {
     $payments_by_student[$sid][] = $p;
 }
 
+// Fetch student_bill_items for this year/term
+$bill_items_by_student = [];
+try {
+    $stmt = $pdo->prepare("SELECT * FROM student_bill_items WHERE academic_year = ? AND term = ?");
+    $stmt->execute([$filter_year, $filter_term]);
+    foreach ($stmt->fetchAll() as $bi) {
+        $sid = (int)$bi['student_id'];
+        if (!isset($bill_items_by_student[$sid])) $bill_items_by_student[$sid] = [];
+        $bill_items_by_student[$sid][] = $bi;
+    }
+} catch (Exception $e) { $bill_items_by_student = []; }
+
 // Fetch fee_exemptions for this year/term
 $exemptions = [];
 try {
@@ -130,16 +142,21 @@ foreach ($all_students as $s) {
     $sid = (int)$s['id'];
     $class_name = $s['class_name'] ?? '';
 
-    // Calculate expected fees
-    $expected = 0;
-    // All-class fees
-    foreach ($all_class_fees as $f) {
-        $expected += (float)$f['amount'];
-    }
-    // Class-specific fees
-    if ($class_name && isset($fees_by_class[$class_name])) {
-        foreach ($fees_by_class[$class_name] as $f) {
+    // Calculate expected fees: use bill_items if available, otherwise fee_structures
+    $has_bill = isset($bill_items_by_student[$sid]) && !empty($bill_items_by_student[$sid]);
+    if ($has_bill) {
+        $expected = array_sum(array_map(fn($bi) => (float)$bi['amount'], $bill_items_by_student[$sid]));
+    } else {
+        $expected = 0;
+        // All-class fees
+        foreach ($all_class_fees as $f) {
             $expected += (float)$f['amount'];
+        }
+        // Class-specific fees
+        if ($class_name && isset($fees_by_class[$class_name])) {
+            foreach ($fees_by_class[$class_name] as $f) {
+                $expected += (float)$f['amount'];
+            }
         }
     }
 
@@ -173,6 +190,8 @@ foreach ($all_students as $s) {
     // Determine status
     if ($is_exempted) {
         $status = 'exempted';
+    } elseif (!$has_bill) {
+        $status = 'no_bill'; // No bill created yet
     } elseif ($expected <= 0) {
         $status = 'no_fees'; // No fee structure defined
     } elseif ($balance <= 0) {
@@ -195,6 +214,7 @@ foreach ($all_students as $s) {
         'paid' => $paid,
         'balance' => $balance,
         'status' => $status,
+        'has_bill' => $has_bill,
         'exemption_reason' => $exemption_reason,
     ];
 }
@@ -211,6 +231,7 @@ $stats = [
     'partial' => count(array_filter($fee_data, fn($d) => $d['status'] === 'partial')),
     'unpaid' => count(array_filter($fee_data, fn($d) => $d['status'] === 'unpaid')),
     'exempted' => count(array_filter($fee_data, fn($d) => $d['status'] === 'exempted')),
+    'no_bill' => count(array_filter($fee_data, fn($d) => $d['status'] === 'no_bill')),
     'no_fees' => count(array_filter($fee_data, fn($d) => $d['status'] === 'no_fees')),
 ];
 $stats['total_expected'] = array_sum(array_column($fee_data, 'expected'));
@@ -363,6 +384,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 <div class="stat-card partial"><h3><?php echo $stats['partial']; ?></h3><p>Partial Payment</p></div>
                 <div class="stat-card unpaid"><h3><?php echo $stats['unpaid']; ?></h3><p>Not Paid</p></div>
                 <div class="stat-card exempted"><h3><?php echo $stats['exempted']; ?></h3><p>Exempted</p></div>
+                <?php if ($stats['no_bill'] > 0): ?>
+                <div class="stat-card" style="background:#fef9e7;"><h3 style="color:#b7950b;"><?php echo $stats['no_bill']; ?></h3><p>No Bill</p></div>
+                <?php endif; ?>
                 <?php if ($stats['no_fees'] > 0): ?>
                 <div class="stat-card" style="background:#f8f9fa;"><h3 style="color:#7f8c8d;"><?php echo $stats['no_fees']; ?></h3><p>No Fee Structure</p></div>
                 <?php endif; ?>
@@ -402,6 +426,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     <label>Status</label>
                     <select name="status">
                         <option value="">All Status</option>
+                        <option value="no_bill" <?php echo $filter_status === 'no_bill' ? 'selected' : ''; ?>>No Bill</option>
                         <option value="paid" <?php echo $filter_status === 'paid' ? 'selected' : ''; ?>>Paid in Full</option>
                         <option value="partial" <?php echo $filter_status === 'partial' ? 'selected' : ''; ?>>Partial Payment</option>
                         <option value="unpaid" <?php echo $filter_status === 'unpaid' ? 'selected' : ''; ?>>Not Paid</option>
@@ -410,6 +435,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 </div>
                 <button type="submit"><i class="fas fa-filter"></i> Filter</button>
                 <a href="fees_debt.php" class="btn-reset" style="padding:8px 18px;background:#95a5a6;color:white;border:none;border-radius:6px;text-decoration:none;font-size:13px;">Reset</a>
+                <a href="class_billing.php" class="btn-reset" style="padding:8px 18px;background:#1a5276;color:white;border:none;border-radius:6px;text-decoration:none;font-size:13px;display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-users"></i> Bulk Bill</a>
             </form>
 
             <!-- Table -->
@@ -435,7 +461,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                                 <td><?php echo $i; ?></td>
                                 <td><strong><?php echo htmlspecialchars($d['name']); ?></strong><br><small style="color:#999;"><?php echo htmlspecialchars($d['admission_number'] ?: $d['enrollment_id']); ?></small></td>
                                 <td><?php echo htmlspecialchars($d['class_name']); ?></td>
-                                <td>GHS <?php echo number_format($d['expected'], 2); ?></td>
+                                <td>GHS <?php echo number_format($d['expected'], 2); ?>
+                                    <?php if ($d['has_bill']): ?>
+                                        <span style="display:inline-block;background:#d6eaf8;color:#2471a3;font-size:9px;padding:1px 4px;border-radius:4px;margin-left:2px;font-weight:600;">bill</span>
+                                    <?php endif; ?>
+                                </td>
                                 <td>GHS <?php echo number_format($d['paid'], 2); ?></td>
                                 <td><strong style="color:<?php echo $d['balance'] > 0 ? '#e74c3c' : '#2ecc71'; ?>;">GHS <?php echo number_format($d['balance'], 2); ?></strong></td>
                                 <td>
@@ -448,11 +478,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                                     <?php elseif ($d['status'] === 'exempted'): ?>
                                         <span class="status-badge exempted">Exempted</span>
                                         <?php if ($d['exemption_reason']): ?><br><small style="color:#3498db;"><?php echo htmlspecialchars($d['exemption_reason']); ?></small><?php endif; ?>
+                                    <?php elseif ($d['status'] === 'no_bill'): ?>
+                                        <span class="status-badge" style="background:#fef9e7;color:#b7950b;border:1px solid #f9e79f;">No Bill</span>
                                     <?php else: ?>
                                         <span class="status-badge no-fees">No Fees</span>
                                     <?php endif; ?>
                                 </td>
                                 <td>
+                                    <!-- Bill Button -->
+                                    <a href="student_billing.php?student_id=<?php echo $d['id']; ?>&year=<?php echo urlencode($filter_year); ?>&term=<?php echo urlencode($filter_term); ?>&redirect=fees_debt.php" style="text-decoration:none;">
+                                        <button type="button" class="actions-btn" style="background:<?php echo $d['has_bill'] ? '#2980b9' : '#f39c12'; ?>;color:white;border:none;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:11px;margin:1px;" title="<?php echo $d['has_bill'] ? 'Edit bill items' : 'Create bill for this student'; ?>">
+                                            <i class="fas fa-file-invoice"></i> <?php echo $d['has_bill'] ? 'Bill' : 'Set Bill'; ?>
+                                        </button>
+                                    </a>
                                     <!-- SMS Reminder -->
                                     <form method="POST" style="display:inline;" onsubmit="return confirm('Send SMS reminder to guardian?');">
                                         <?php csrf_field(); ?>
@@ -514,6 +552,7 @@ function printChit(studentId) {
     else if (s.status === 'partial') statusLabel = 'PARTIALLY PAID';
     else if (s.status === 'unpaid') statusLabel = 'NOT PAID';
     else if (s.status === 'exempted') statusLabel = 'EXEMPTED';
+    else if (s.status === 'no_bill') statusLabel = 'NO BILL SET';
     else statusLabel = 'NO FEES';
 
     var html = '<div style="max-width:700px;margin:0 auto;padding:40px;font-size:14px;">';

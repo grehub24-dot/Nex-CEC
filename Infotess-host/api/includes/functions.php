@@ -238,6 +238,7 @@ function getSidebarMenu($currentPage = '') {
     $allItems[] = ['href' => 'payments.php', 'icon' => 'fas fa-money-bill-wave', 'label' => 'Payments', 'acl' => 'payments'];
     $allItems[] = ['href' => 'fees.php', 'icon' => 'fas fa-list-alt', 'label' => 'Fee Structure', 'acl' => 'fees'];
     $allItems[] = ['href' => 'fees_debt.php', 'icon' => 'fas fa-file-invoice', 'label' => 'Fee Debt Report', 'acl' => 'fees_debt'];
+    $allItems[] = ['href' => 'class_billing.php', 'icon' => 'fas fa-users-cog', 'label' => 'Class Billing', 'acl' => 'fees_debt'];
     
     if ($isFullAdmin || $isTeacher) {
         $allItems[] = ['href' => 'grades.php', 'icon' => 'fas fa-clipboard-list', 'label' => 'SBA / Grades', 'acl' => 'grades'];

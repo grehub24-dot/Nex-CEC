@@ -142,6 +142,7 @@ function getAccessControl() {
         'edit_student' => ['admin', 'super_admin', 'bursar'],
         'payments' => ['admin', 'super_admin', 'bursar'],
         'fees' => ['admin', 'super_admin', 'bursar', 'teacher'],
+        'fees_debt' => ['admin', 'super_admin', 'bursar', 'teacher'],
         'reports' => ['admin', 'super_admin', 'bursar', 'teacher'],
         'verify' => ['admin', 'super_admin', 'bursar'],
         'messaging' => ['admin', 'super_admin', 'bursar', 'teacher', 'staff'],
@@ -236,6 +237,7 @@ function getSidebarMenu($currentPage = '') {
     
     $allItems[] = ['href' => 'payments.php', 'icon' => 'fas fa-money-bill-wave', 'label' => 'Payments', 'acl' => 'payments'];
     $allItems[] = ['href' => 'fees.php', 'icon' => 'fas fa-list-alt', 'label' => 'Fee Structure', 'acl' => 'fees'];
+    $allItems[] = ['href' => 'fees_debt.php', 'icon' => 'fas fa-file-invoice', 'label' => 'Fee Debt Report', 'acl' => 'fees_debt'];
     
     if ($isFullAdmin || $isTeacher) {
         $allItems[] = ['href' => 'grades.php', 'icon' => 'fas fa-clipboard-list', 'label' => 'SBA / Grades', 'acl' => 'grades'];
@@ -402,6 +404,7 @@ function renderStaffSidebar($currentPage = '', $schoolName = 'Nex CEC', $unreadC
         ['href' => '../staff/profile.php',   'icon' => 'fas fa-user-cog',   'label' => 'Profile',           'key' => 'profile'],
         ['href' => '../staff/messaging.php', 'icon' => 'fas fa-envelope',    'label' => 'Messages',          'key' => 'messaging',   'badge' => $unreadCount],
         ['href' => '../staff/student_attendance.php','icon' => 'fas fa-user-check', 'label' => 'Student Attendance','key' => 'student_attendance', 'teacherOnly' => true],
+        ['href' => '../staff/fees_debt.php', 'icon' => 'fas fa-file-invoice', 'label' => 'Fee Debt', 'key' => 'fees_debt', 'teacherOnly' => true],
     ];
     
     // Add Parent Portal link for dual-role staff (staff + parent)

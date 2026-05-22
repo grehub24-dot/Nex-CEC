@@ -65,7 +65,7 @@ $routes['forgot-password.php'] = 'forgot-password.php';
 $routes['route_selector.php'] = 'route_selector.php';
 
 // Admin routes
-$adminPages = ['dashboard','students','staff','edit_staff','payments','fees','payroll','pay_slip','salary','grades','attendance','staff_attendance','reports','settings','users','edit_student','inbox','messaging','module_settings','subjects','verify','bulk_import','enrollments','role_permissions'];
+$adminPages = ['dashboard','students','staff','edit_staff','payments','fees','fees_debt','payroll','pay_slip','salary','grades','attendance','staff_attendance','reports','settings','users','edit_student','inbox','messaging','module_settings','subjects','verify','bulk_import','enrollments','role_permissions'];
 foreach ($adminPages as $page) {
     $routes["admin/$page.php"] = "admin_$page.php";
 }
@@ -83,7 +83,7 @@ $routes['ajax_get_subjects_by_class.php'] = 'ajax_get_subjects_by_class.php';
 $routes['admin/view_receipt.php'] = 'view_receipt.php';
 
 // Staff routes
-$staffPages = ['dashboard', 'payslip', 'attendance', 'grades', 'profile', 'messaging'];
+$staffPages = ['dashboard', 'payslip', 'attendance', 'grades', 'fees_debt', 'profile', 'messaging'];
 foreach ($staffPages as $page) {
     $routes["staff/$page.php"] = "staff_$page.php";
 }

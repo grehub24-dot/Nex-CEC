@@ -245,6 +245,7 @@ CREATE TABLE IF NOT EXISTS public.students (
     previous_class character varying,
     admission_date date DEFAULT CURRENT_DATE,
     academic_year character varying,
+    admission_term character varying DEFAULT '1',
     admission_number character varying,
     CONSTRAINT students_pkey PRIMARY KEY (id),
     CONSTRAINT students_enrollment_id_key UNIQUE (enrollment_id),

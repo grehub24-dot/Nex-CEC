@@ -82,14 +82,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         user_id, admission_number, full_name, class_name, gender, date_of_birth,
                         guardian_name, guardian_email, guardian_relationship,
                         guardian_phone_primary, guardian_phone_emergency,
-                        health_insurance_id, previous_school, address
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                        health_insurance_id, previous_school, address,
+                        academic_year, admission_term
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                     $stmt->execute([
                         $user_id, $admission_number, $full_name, $class_name, $gender,
                         $date_of_birth ?: null,
                         $guardian_name, $guardian_email, $guardian_relationship,
                         $guardian_phone_primary, $guardian_phone_emergency,
-                        $health_insurance_id, $previous_school, $address
+                        $health_insurance_id, $previous_school, $address,
+                        $settings['current_academic_year'] ?? date('Y') . '/' . (date('Y') + 1),
+                        $settings['current_term'] ?? '1'
                     ]);
                     
                     $pdo->commit();

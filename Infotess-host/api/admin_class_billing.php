@@ -73,7 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['apply_bill']) && $fil
 
         foreach ($students_in_class as $s) {
             $sid = (int)$s['id'];
-            $is_new = ($s['academic_year'] ?? '') === $filter_year;
+            $is_new = ($s['academic_year'] ?? '') === $filter_year && (string)($s['admission_term'] ?? '1') === (string)$filter_term;
 
             // In 'new_only' mode, skip returning students
             if ($apply_mode === 'new_only' && !$is_new) {
@@ -231,7 +231,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['clear_bills']) && $fi
             </form>
 
             <?php if ($filter_class && !empty($students_in_class)): 
-                $new_count = count(array_filter($students_in_class, fn($s) => ($s['academic_year'] ?? '') === $filter_year));
+                $new_count = count(array_filter($students_in_class, fn($s) => ($s['academic_year'] ?? '') === $filter_year && (string)($s['admission_term'] ?? '1') === (string)$filter_term));
                 $returning_count = count($students_in_class) - $new_count;
             ?>
                 <!-- Stats -->
@@ -252,7 +252,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['clear_bills']) && $fi
                     <h4 style="margin:0 0 12px;">Select Fee Items to Apply</h4>
                     <p style="font-size:12px;color:#888;margin:0 0 12px;">
                         <span class="badge-auto">Mandatory (all students)</span> — auto-applied to everyone (locked)
-                        &nbsp;|&nbsp; <span class="badge-new-only">New students only</span> — only applied to students admitted in <?php echo htmlspecialchars($filter_year); ?>
+                        &nbsp;|&nbsp; <span class="badge-new-only">New students only</span> — only applied to students admitted in <?php echo htmlspecialchars($filter_year); ?> Term <?php echo htmlspecialchars($filter_term); ?>
                         &nbsp;|&nbsp; Others — optional, staff discretion
                     </p>
 
@@ -324,7 +324,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['clear_bills']) && $fi
                             <thead><tr style="border-bottom:2px solid #e9ecef;">
                                 <th style="text-align:left;padding:8px 6px;">#</th>
                                 <th style="text-align:left;padding:8px 6px;">Student</th>
-                                <th style="text-align:center;padding:8px 6px;">Admission Year</th>
+                                <th style="text-align:center;padding:8px 6px;">Admitted (Year/Term)</th>
                                 <th style="text-align:center;padding:8px 6px;">Status</th>
                                 <th style="text-align:right;padding:8px 6px;">Bill Total</th>
                                 <th style="text-align:center;padding:8px 6px;">Actions</th>
@@ -347,14 +347,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['clear_bills']) && $fi
                             $i = 0; 
                             foreach ($students_in_class as $s): $i++; 
                                 $sid = (int)$s['id'];
-                                $is_new = ($s['academic_year'] ?? '') === $filter_year;
+                                $is_new = ($s['academic_year'] ?? '') === $filter_year && (string)($s['admission_term'] ?? '1') === (string)$filter_term;
                                 $bt = $bill_totals[$sid] ?? 0;
                             ?>
                                 <tr style="border-bottom:1px solid #f0f0f0;">
                                     <td style="padding:8px 6px;"><?php echo $i; ?></td>
                                     <td style="padding:8px 6px;"><strong><?php echo htmlspecialchars($s['full_name'] ?? ''); ?></strong></td>
-                                    <td style="padding:8px 6px;text-align:center;">
-                                        <?php echo htmlspecialchars($s['academic_year'] ?? '-'); ?>
+                                    <td style="padding:8px 6px;text-align:center;font-size:12px;">
+                                        <?php echo htmlspecialchars($s['academic_year'] ?? '-'); ?> / T<?php echo htmlspecialchars($s['admission_term'] ?? '1'); ?>
                                         <?php if ($is_new): ?><span style="display:inline-block;background:#d5f5e3;color:#1e8449;padding:1px 6px;border-radius:8px;font-size:10px;font-weight:600;margin-left:4px;">NEW</span><?php endif; ?>
                                     </td>
                                     <td style="padding:8px 6px;text-align:center;">

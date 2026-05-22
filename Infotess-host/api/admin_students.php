@@ -92,13 +92,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 guardian_name, guardian_email, guardian_relationship,
                 guardian_phone_primary, guardian_phone_emergency, guardian_occupation, guardian_address,
                 health_insurance_id, medical_conditions, allergies, special_needs,
-                previous_school, previous_class, admission_date, academic_year, enrollment_type,
+                previous_school, previous_class, admission_date, academic_year, admission_term, enrollment_type,
                 payment_status, status
             ) VALUES (
                 ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                 ?, ?, ?, ?, ?, ?, ?,
                 ?, ?, ?, ?,
-                ?, ?, ?, ?, ?, ?, ?, ?
+                ?, ?, ?, ?, ?, ?, ?, ?, ?
             )");
             $stmt->execute([
                 $user_id, $admission_number, $enrollmentId, $full_name, $class_name, $gender,
@@ -106,7 +106,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $guardian_name, $guardian_email, $guardian_relationship,
                 $guardian_phone_primary, $guardian_phone_emergency, $guardian_occupation, $guardian_address,
                 $health_insurance_id, $medical_conditions, $allergies, $special_needs,
-                $previous_school, $previous_class, $admission_date, $academic_year, 'admin',
+                $previous_school, $previous_class, $admission_date, $academic_year, $settings['current_term'] ?? '1', 'admin',
                 'unpaid', 'pending'
             ]);
             

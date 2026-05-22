@@ -44,8 +44,9 @@ try {
     $available_fees = $stmt->fetchAll();
 } catch (Exception $e) {}
 
-// Determine if student is "new" (admitted this academic year)
-$is_new_student = ($student['academic_year'] ?? '') === $filter_year;
+// Determine if student is "new" (admitted in this term of this academic year)
+// A student is new only in the exact term they enrolled; once the term advances they become returning
+$is_new_student = ($student['academic_year'] ?? '') === $filter_year && (string)($student['admission_term'] ?? '1') === (string)$filter_term;
 
 // Fetch existing bill items for this student
 $existing_items = [];
@@ -201,7 +202,7 @@ function isAutoChecked($fee, $is_new_student) {
                         <h3><?php echo htmlspecialchars($student['full_name'] ?? ''); ?></h3>
                         <p>Class: <strong><?php echo htmlspecialchars($student['class_name'] ?? ''); ?></strong> 
                            | Admission No: <?php echo htmlspecialchars($student['admission_number'] ?? $student['enrollment_id'] ?? ''); ?>
-                           | Admitted: <?php echo htmlspecialchars($student['academic_year'] ?? 'N/A'); ?>
+                           | Admitted: <?php echo htmlspecialchars($student['academic_year'] ?? 'N/A'); ?> / T<?php echo htmlspecialchars($student['admission_term'] ?? '1'); ?>
                            <span class="<?php echo $is_new_student ? 'badge-new' : 'badge-old'; ?>" style="margin-left:8px;">
                                <?php echo $is_new_student ? '★ New Admission' : 'Returning'; ?>
                            </span>

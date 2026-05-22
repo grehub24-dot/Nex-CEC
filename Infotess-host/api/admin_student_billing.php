@@ -34,13 +34,21 @@ foreach ($classes as $c) { $classIdToName[(int)$c['id']] = $c['name']; }
 
 // Fetch fee_structures for this class/year/term
 $available_fees = [];
+// First resolve the class_id from the student's class name
+$student_class_id = null;
 try {
-    $stmt = $pdo->prepare("SELECT fs.* FROM fee_structures fs 
-        LEFT JOIN classes c ON fs.class_id = c.id 
-        WHERE fs.academic_year = ? AND fs.term = ? 
-        AND (c.name = ? OR fs.class_id IS NULL)
-        ORDER BY fs.is_mandatory DESC, fs.fee_type, fs.title");
-    $stmt->execute([$filter_year, $filter_term, $student['class_name']]);
+    $stmt = $pdo->prepare("SELECT id FROM classes WHERE name = ?");
+    $stmt->execute([$student['class_name']]);
+    $row = $stmt->fetch();
+    if ($row) $student_class_id = (int)$row['id'];
+} catch (Exception $e) {}
+
+try {
+    $stmt = $pdo->prepare("SELECT * FROM fee_structures 
+        WHERE academic_year = ? AND term = ? 
+        AND (class_id = ? OR class_id IS NULL)
+        ORDER BY is_mandatory DESC, fee_type, title");
+    $stmt->execute([$filter_year, $filter_term, $student_class_id]);
     $available_fees = $stmt->fetchAll();
 } catch (Exception $e) {}
 

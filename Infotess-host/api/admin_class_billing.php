@@ -39,13 +39,21 @@ if ($filter_class) {
     } catch (Exception $e) {}
 
     // Fetch fee_structures for this class/year/term
+    // First resolve the class_id from the class name
+    $filter_class_id = null;
     try {
-        $stmt = $pdo->prepare("SELECT fs.* FROM fee_structures fs 
-            LEFT JOIN classes c ON fs.class_id = c.id 
-            WHERE fs.academic_year = ? AND fs.term = ? 
-            AND (c.name = ? OR fs.class_id IS NULL)
-            ORDER BY fs.is_mandatory DESC, fs.fee_type, fs.title");
-        $stmt->execute([$filter_year, $filter_term, $filter_class]);
+        $stmt = $pdo->prepare("SELECT id FROM classes WHERE name = ?");
+        $stmt->execute([$filter_class]);
+        $row = $stmt->fetch();
+        if ($row) $filter_class_id = (int)$row['id'];
+    } catch (Exception $e) {}
+    
+    try {
+        $stmt = $pdo->prepare("SELECT * FROM fee_structures 
+            WHERE academic_year = ? AND term = ? 
+            AND (class_id = ? OR class_id IS NULL)
+            ORDER BY is_mandatory DESC, fee_type, title");
+        $stmt->execute([$filter_year, $filter_term, $filter_class_id]);
         $available_fees = $stmt->fetchAll();
     } catch (Exception $e) {}
 }

@@ -48,13 +48,25 @@ if ($filter_class) {
         if ($row) $filter_class_id = (int)$row['id'];
     } catch (Exception $e) {}
     
+    // Use separate queries to avoid pg-bridge OR issues with parameters
+    $available_fees = [];
     try {
+        // 1) Class-specific fees
+        if ($filter_class_id) {
+            $stmt = $pdo->prepare("SELECT * FROM fee_structures 
+                WHERE academic_year = ? AND term = ? 
+                AND class_id = ? 
+                ORDER BY is_mandatory DESC, fee_type, title");
+            $stmt->execute([$filter_year, $filter_term, $filter_class_id]);
+            $available_fees = $stmt->fetchAll();
+        }
+        // 2) Global fees (null class_id)
         $stmt = $pdo->prepare("SELECT * FROM fee_structures 
             WHERE academic_year = ? AND term = ? 
-            AND (class_id = ? OR class_id IS NULL)
+            AND class_id IS NULL 
             ORDER BY is_mandatory DESC, fee_type, title");
-        $stmt->execute([$filter_year, $filter_term, $filter_class_id]);
-        $available_fees = $stmt->fetchAll();
+        $stmt->execute([$filter_year, $filter_term]);
+        $available_fees = array_merge($available_fees, $stmt->fetchAll());
     } catch (Exception $e) {}
     
     // DEBUG: log class_id info

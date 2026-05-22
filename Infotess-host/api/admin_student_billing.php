@@ -44,12 +44,22 @@ try {
 } catch (Exception $e) {}
 
 try {
+    // 1) Class-specific fees for this student's class
+    if ($student_class_id) {
+        $stmt = $pdo->prepare("SELECT * FROM fee_structures 
+            WHERE academic_year = ? AND term = ? 
+            AND class_id = ? 
+            ORDER BY is_mandatory DESC, fee_type, title");
+        $stmt->execute([$filter_year, $filter_term, $student_class_id]);
+        $available_fees = $stmt->fetchAll();
+    }
+    // 2) Global fees (null class_id)
     $stmt = $pdo->prepare("SELECT * FROM fee_structures 
         WHERE academic_year = ? AND term = ? 
-        AND (class_id = ? OR class_id IS NULL)
+        AND class_id IS NULL 
         ORDER BY is_mandatory DESC, fee_type, title");
-    $stmt->execute([$filter_year, $filter_term, $student_class_id]);
-    $available_fees = $stmt->fetchAll();
+    $stmt->execute([$filter_year, $filter_term]);
+    $available_fees = array_merge($available_fees, $stmt->fetchAll());
 } catch (Exception $e) {}
 
 // Determine if student is "new" (admitted in this term of this academic year)

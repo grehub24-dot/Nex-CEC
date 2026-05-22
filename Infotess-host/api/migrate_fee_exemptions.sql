@@ -8,9 +8,12 @@ CREATE TABLE IF NOT EXISTS fee_exemptions (
     term VARCHAR(10),
     reason TEXT DEFAULT '',
     exempted_by INTEGER REFERENCES users(id),
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    UNIQUE(student_id, academic_year, COALESCE(term, '_all_'))
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Unique index with expression (COALESCE not allowed in UNIQUE constraint)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_fee_exemptions_unique
+    ON fee_exemptions(student_id, academic_year, COALESCE(term, '_all_'));
 
 -- Index for faster lookups
 CREATE INDEX IF NOT EXISTS idx_fee_exemptions_student ON fee_exemptions(student_id);

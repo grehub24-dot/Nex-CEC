@@ -56,6 +56,16 @@ if ($filter_class) {
         $stmt->execute([$filter_year, $filter_term, $filter_class_id]);
         $available_fees = $stmt->fetchAll();
     } catch (Exception $e) {}
+    
+    // DEBUG: log class_id info
+    $debug_class_id = $filter_class_id;
+    $debug_fee_count = count($available_fees);
+    $debug_class_ids = [];
+    foreach ($available_fees as $f) {
+        $cid = $f['class_id'];
+        $debug_class_ids[] = is_null($cid) ? 'NULL' : (int)$cid;
+    }
+    $debug_class_ids = array_unique($debug_class_ids);
 }
 
 // Handle bulk apply
@@ -257,6 +267,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['clear_bills']) && $fi
                     <input type="hidden" name="year" value="<?php echo htmlspecialchars($filter_year); ?>">
                     <input type="hidden" name="term" value="<?php echo htmlspecialchars($filter_term); ?>">
 
+                    <!-- DEBUG: class_id resolution -->
+                    <div style="background:#f0f0f0;padding:8px 12px;margin-bottom:12px;border-radius:6px;font-size:13px;">
+                        <strong>🔍 Debug:</strong> class "<?php echo htmlspecialchars($filter_class); ?>" → class_id = <strong><?php echo $debug_class_id !== null ? $debug_class_id : 'NULL (not found!)'; ?></strong> | 
+                        Fee items found: <?php echo $debug_fee_count; ?> | 
+                        class_ids in fees: <?php echo implode(', ', $debug_class_ids); ?>
+                    </div>
                     <h4 style="margin:0 0 12px;">Select Fee Items to Apply</h4>
                     <p style="font-size:12px;color:#888;margin:0 0 12px;">
                         <span class="badge-auto">Mandatory (all students)</span> — auto-applied to everyone (locked)

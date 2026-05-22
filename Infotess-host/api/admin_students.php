@@ -56,6 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $previous_class = sanitize($_POST['previous_class'] ?? '');
     $admission_date = sanitize($_POST['admission_date'] ?? date('Y-m-d'));
     $academic_year = sanitize($_POST['academic_year'] ?? date('Y') . '/' . (date('Y') + 1));
+    $admission_term = sanitize($_POST['admission_term'] ?? $settings['current_term'] ?? '1');
     
     // Handle Profile Picture — upload to Supabase Storage
     $profile_picture = null;
@@ -106,7 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $guardian_name, $guardian_email, $guardian_relationship,
                 $guardian_phone_primary, $guardian_phone_emergency, $guardian_occupation, $guardian_address,
                 $health_insurance_id, $medical_conditions, $allergies, $special_needs,
-                $previous_school, $previous_class, $admission_date, $academic_year, $settings['current_term'] ?? '1', 'admin',
+                $previous_school, $previous_class, $admission_date, $academic_year, $admission_term, 'admin',
                 'unpaid', 'pending'
             ]);
             
@@ -682,6 +683,14 @@ $total_pages = $total_rows > 0 ? (int)ceil($total_rows / $limit) : 1;
                                     echo "<option value=\"$yr\" $sel>$yr</option>";
                                 }
                                 ?>
+                            </select>
+                        </div>
+                        <div>
+                            <label>Admission Term</label>
+                            <select name="admission_term" class="form-control">
+                                <option value="1" <?php echo ($settings['current_term'] ?? '1') === '1' ? 'selected' : ''; ?>>Term 1</option>
+                                <option value="2" <?php echo ($settings['current_term'] ?? '1') === '2' ? 'selected' : ''; ?>>Term 2</option>
+                                <option value="3" <?php echo ($settings['current_term'] ?? '1') === '3' ? 'selected' : ''; ?>>Term 3</option>
                             </select>
                         </div>
 

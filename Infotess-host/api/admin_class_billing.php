@@ -416,17 +416,22 @@ render_page:
                             <tbody>
                             <?php 
                             // Pre-fetch bill totals for all students
+                            // Bridge doesn't support SUM() — fetch rows, sum in PHP
                             $sid_list = array_map(fn($s) => (int)$s['id'], $students_in_class);
                             $bill_totals = [];
                             if (!empty($sid_list)) {
                                 $ph = implode(',', array_fill(0, count($sid_list), '?'));
                                 try {
-                                    $stmt = $pdo->prepare("SELECT student_id, SUM(amount) as total FROM student_bill_items WHERE student_id IN ($ph) AND academic_year = ? AND term = ? GROUP BY student_id");
+                                    $stmt = $pdo->prepare("SELECT student_id, amount FROM student_bill_items WHERE student_id IN ($ph) AND academic_year = ? AND term = ?");
                                     $stmt->execute(array_merge($sid_list, [$filter_year, $filter_term]));
                                     foreach ($stmt->fetchAll() as $bt) {
-                                        $bill_totals[(int)$bt['student_id']] = (float)$bt['total'];
+                                        $sid = (int)$bt['student_id'];
+                                        if (!isset($bill_totals[$sid])) $bill_totals[$sid] = 0;
+                                        $bill_totals[$sid] += (float)($bt['amount'] ?? 0);
                                     }
-                                } catch (Exception $e) {}
+                                } catch (Exception $e) {
+                                    error_log("admin_class_billing: bill_totals query failed: " . $e->getMessage());
+                                }
                             }
                             $i = 0; 
                             foreach ($students_in_class as $s): $i++; 

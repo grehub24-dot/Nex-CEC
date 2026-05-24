@@ -23,7 +23,13 @@ define('BASE_PATH', '');
 // Enforce HTTPS (honors proxy-forwarded protocol for Cloudflare/AWS)
 if (empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'on'
     && (!isset($_SERVER['HTTP_X_FORWARDED_PROTO']) || $_SERVER['HTTP_X_FORWARDED_PROTO'] !== 'https')) {
-    $redirect = 'https://' . ($_SERVER['HTTP_HOST'] ?? '') . ($_SERVER['REQUEST_URI'] ?? '');
+    $host = $_SERVER['HTTP_HOST'] ?? '';
+    // Validate HTTP_HOST to prevent host header injection
+    $allowedHost = parse_url(getenv('APP_URL') ?: 'https://nex-cec.vercel.app', PHP_URL_HOST);
+    if ($allowedHost && $host !== $allowedHost) {
+        $host = $allowedHost;
+    }
+    $redirect = 'https://' . $host . ($_SERVER['REQUEST_URI'] ?? '');
     header("Location: $redirect", true, 301);
     exit;
 }
@@ -147,6 +153,12 @@ if ($targetPath && pathinfo($targetPath, PATHINFO_EXTENSION) === 'php') {
 if ($targetPath) {
     $mime = mime_content_type($targetPath);
     header("Content-Type: $mime");
+
+    // Add Cache-Control for static assets (1 hour for HTML/PDF, 7 days for images/css/js)
+    $ext = pathinfo($targetPath, PATHINFO_EXTENSION);
+    $cacheMaxAge = in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'css', 'js', 'ico', 'woff2', 'woff', 'ttf']) ? 604800 : 3600;
+    header("Cache-Control: public, max-age=$cacheMaxAge, immutable");
+
     readfile($targetPath);
     exit;
 }

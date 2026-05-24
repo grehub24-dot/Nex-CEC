@@ -449,8 +449,7 @@ function renderStaffSidebar($currentPage = '', $schoolName = 'Nex CEC', $unreadC
             if (overlay) overlay.classList.remove("active");
             document.body.style.overflow = "";
         }
-        hamburger.addEventListener("click", function(e) {
-            e.stopPropagation();
+        hamburger.addEventListener("click", function() {
             if (sidebar.classList.contains("open")) {
                 closeSidebar();
             } else {
@@ -553,8 +552,7 @@ function renderParentSidebar($currentPage = '', $schoolName = 'Nex CEC', $unread
             if (overlay) overlay.classList.remove("active");
             document.body.style.overflow = "";
         }
-        hamburger.addEventListener("click", function(e) {
-            e.stopPropagation();
+        hamburger.addEventListener("click", function() {
             if (sidebar.classList.contains("open")) {
                 closeSidebar();
             } else {
@@ -584,6 +582,16 @@ function redirect($url) {
     if (strpos($url, 'http') !== 0) {
         $basePath = defined('BASE_PATH') ? BASE_PATH : getBasePath();
         $url = $basePath . '/' . ltrim($url, '/');
+    } else {
+        // Validate external redirect against trusted host to prevent host header injection
+        $allowedHost = getenv('APP_URL') ? parse_url(getenv('APP_URL'), PHP_URL_HOST) : '';
+        if ($allowedHost) {
+            $urlHost = parse_url($url, PHP_URL_HOST);
+            if ($urlHost && $urlHost !== $allowedHost) {
+                error_log("redirect() blocked untrusted host: $urlHost (allowed: $allowedHost)");
+                $url = '/'; // fallback to root
+            }
+        }
     }
     header("Location: $url");
     exit;
@@ -727,6 +735,10 @@ function migrateNurseryClasses($pdo): void {
  */
 function fetchSettings($pdo): array {
     $settings = [];
+    if (!$pdo) {
+        error_log("fetchSettings: \$pdo is null");
+        return $settings;
+    }
     try {
         $stmt = $pdo->query("SELECT setting_key, setting_value FROM system_settings");
         while ($row = $stmt->fetch()) {
@@ -851,17 +863,26 @@ function upload_to_supabase_storage(array $file, string $bucket, string $filenam
             $filename = time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
         }
 
+        // Validate MIME type against whitelist
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $contentType = finfo_file($finfo, $tmpPath);
+        finfo_close($finfo);
+        $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+        if (!in_array($contentType, $allowedTypes, true)) {
+            throw new Exception("File type '$contentType' is not allowed. Accepted: " . implode(', ', $allowedTypes));
+        }
+
+        // Reject files larger than 2 MB
+        if (filesize($tmpPath) > 2 * 1024 * 1024) {
+            throw new Exception("File exceeds maximum size of 2 MB.");
+        }
+
         $fileData = file_get_contents($tmpPath);
         if ($fileData === false) {
             throw new Exception("Cannot read uploaded file from " . $tmpPath);
         }
 
-        // Detect content type
-        $finfo = finfo_open(FILEINFO_MIME_TYPE);
-        $contentType = finfo_file($finfo, $tmpPath);
-        finfo_close($finfo);
-
-        $supabase->uploadFile($bucket, $filename, $fileData, $contentType ?: 'application/octet-stream');
+        $supabase->uploadFile($bucket, $filename, $fileData, $contentType);
         return $supabase->getPublicUrl($bucket, $filename);
     } catch (Exception $e) {
         $msg = "Supabase Storage upload error (" . $bucket . "/" . $filename . "): " . $e->getMessage();
@@ -926,30 +947,45 @@ function generate_csrf_token(): string {
     if (session_status() === PHP_SESSION_NONE) {
         session_start();
     }
-    if (empty($_SESSION['csrf_token'])) {
-        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    if (empty($_SESSION['csrf_tokens'])) {
+        // Initialize pool of tokens (keep last 3 valid)
+        $_SESSION['csrf_tokens'] = [];
     }
-    return $_SESSION['csrf_token'];
+    if (empty($_SESSION['csrf_tokens'])) {
+        $token = bin2hex(random_bytes(32));
+        $_SESSION['csrf_tokens'][] = $token;
+    }
+    // Return the most recently generated token for new forms
+    return end($_SESSION['csrf_tokens']);
 }
 
 /**
- * Validate a submitted CSRF token against the session token using timing-safe comparison.
- * Automatically regenerates the token after successful validation (one-time use).
+ * Validate a submitted CSRF token against the session token pool using timing-safe comparison.
+ * Tokens are single-use but multiple valid tokens are kept (last 3) for multi-tab support.
  * Returns true if valid, false otherwise.
  */
 function validate_csrf_token(?string $token): bool {
     if (session_status() === PHP_SESSION_NONE) {
         session_start();
     }
-    if (empty($_SESSION['csrf_token']) || empty($token)) {
+    if (empty($_SESSION['csrf_tokens']) || empty($token)) {
         return false;
     }
-    $valid = hash_equals($_SESSION['csrf_token'], $token);
-    if ($valid) {
-        // Regenerate token after successful validation (one-time use)
-        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    $index = array_search($token, $_SESSION['csrf_tokens'], true);
+    if ($index === false) {
+        return false;
     }
-    return $valid;
+    // Remove the used token
+    array_splice($_SESSION['csrf_tokens'], $index, 1);
+    // Ensure at least one token remains for subsequent forms
+    if (empty($_SESSION['csrf_tokens'])) {
+        $_SESSION['csrf_tokens'][] = bin2hex(random_bytes(32));
+    }
+    // Prune pool to last 3 tokens
+    if (count($_SESSION['csrf_tokens']) > 3) {
+        $_SESSION['csrf_tokens'] = array_slice($_SESSION['csrf_tokens'], -3);
+    }
+    return true;
 }
 
 /**
@@ -1006,6 +1042,17 @@ function generateStaffInviteToken(): string {
 function sendStaffInvite(int $staffId, int $userId, int $invitedBy, string $email, string $phone, string $staffName): array {
     global $pdo;
 
+    // Load school name directly instead of relying on $GLOBALS
+    $schoolName = 'SchoolName';
+    if ($pdo) {
+        try {
+            $settings = fetchSettings($pdo);
+            $schoolName = $settings['school_name'] ?? 'SchoolName';
+        } catch (Exception $e) {
+            error_log("sendStaffInvite: fetchSettings failed - " . $e->getMessage());
+        }
+    }
+
     try {
         $token = generateStaffInviteToken();
         $expiresAt = date('Y-m-d H:i:s', time() + 172800); // 48 hours from now
@@ -1034,12 +1081,12 @@ function sendStaffInvite(int $staffId, int $userId, int $invitedBy, string $emai
                 require_once __DIR__ . '/Mailer.php';
                 $mailer = new Mailer();
                 if ($mailer) {
-                    $subject = "Staff Registration Invitation - " . ($GLOBALS['school_name'] ?? 'SchoolName');
+                    $subject = "Staff Registration Invitation - " . $schoolName;
                     $body = "
                     <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'>
                         <h2 style='color: #1a5276;'>Staff Registration Invitation</h2>
                         <p>Dear <strong>" . htmlspecialchars($staffName) . "</strong>,</p>
-                        <p>You have been invited to register for the staff portal of <strong>" . ($GLOBALS['school_name'] ?? 'SchoolName') . "</strong>.</p>
+                        <p>You have been invited to register for the staff portal of <strong>" . $schoolName . "</strong>.</p>
                         <p>Please click the button below to complete your registration. This link will expire in <strong>48 hours</strong>.</p>
                         <p style='text-align: center; margin: 30px 0;'>
                             <a href='$inviteLink' style='background: #1a5276; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-size: 16px; display: inline-block;'>Complete Registration</a>
@@ -1048,7 +1095,7 @@ function sendStaffInvite(int $staffId, int $userId, int $invitedBy, string $emai
                         <p style='background: #f5f5f5; padding: 10px; word-break: break-all; font-size: 13px;'>$inviteLink</p>
                         <p>If you did not expect this invitation, please ignore this email.</p>
                         <hr style='border: none; border-top: 1px solid #eee;'>
-                        <p style='color: #999; font-size: 12px;'>This is an automated message from " . ($GLOBALS['school_name'] ?? 'SchoolName') . ".</p>
+                        <p style='color: #999; font-size: 12px;'>This is an automated message from " . $schoolName . ".</p>
                     </div>";
                     $sentEmail = $mailer->sendHTML($email, $subject, $body);
                 }
@@ -1060,7 +1107,7 @@ function sendStaffInvite(int $staffId, int $userId, int $invitedBy, string $emai
         // Send SMS
         if (!empty($phone)) {
             try {
-                $smsText = "Staff Registration: $inviteLink (expires in 48h) - " . ($GLOBALS['school_name'] ?? 'SchoolName');
+                $smsText = "Staff Registration: $inviteLink (expires in 48h) - " . $schoolName;
                 require_once __DIR__ . '/SMSHelper.php';
                 $smsHelper = new SMSHelper();
                 $sentSms = $smsHelper->send($phone, $smsText);

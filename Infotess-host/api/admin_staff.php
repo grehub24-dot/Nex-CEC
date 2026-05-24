@@ -8,7 +8,7 @@ $settings = [];
 $stmt = $pdo->query("SELECT setting_key, setting_value FROM system_settings");
 while ($row = $stmt->fetch()) { $settings[$row['setting_key']] = $row['setting_value']; }
 $school_name = $settings['school_name'] ?? 'Nex CEC';
-$GLOBALS['school_name'] = $school_name; // For email templates in sendStaffInvite()
+// sendStaffInvite() now loads school name via fetchSettings() internally
 
 $message = '';
 $error = '';

@@ -1,10 +1,22 @@
 <?php
 require_once 'includes/header.php';
 
+// Rate limiting: max 3 submissions per 15 min per session
+$rl_key = 'enroll_rate_limit';
+if (!isset($_SESSION[$rl_key])) {
+    $_SESSION[$rl_key] = ['count' => 0, 'window_start' => time()];
+}
+// Reset window after 15 minutes
+if (time() - $_SESSION[$rl_key]['window_start'] > 900) {
+    $_SESSION[$rl_key] = ['count' => 0, 'window_start' => time()];
+}
+
 $message = '';
 $message_type = '';
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+$rateLimited = ($_SERVER['REQUEST_METHOD'] === 'POST' && $_SESSION[$rl_key]['count'] >= 3);
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$rateLimited) {
     $parent_name = trim($_POST['parent_name'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $phone = trim($_POST['phone'] ?? '');
@@ -19,6 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $stmt = $pdo->prepare("INSERT INTO enrollment_inquiries (parent_name, email, phone, child_name, class_applying, message) VALUES (?, ?, ?, ?, ?, ?)");
             $stmt->execute([$parent_name, $email, $phone, $child_name, $class_applying, $inquiry_message]);
+            $_SESSION[$rl_key]['count']++;
             $message = 'Thank you, ' . htmlspecialchars($parent_name) . '! Your enrollment inquiry has been received. We will contact you shortly.';
             $message_type = 'success';
         } catch (Exception $e) {
@@ -26,6 +39,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message_type = 'error';
         }
     }
+} elseif ($rateLimited) {
+    $message = 'You have submitted too many inquiries. Please try again later.';
+    $message_type = 'error';
 }
 ?>
 

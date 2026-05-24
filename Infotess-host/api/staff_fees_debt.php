@@ -1,9 +1,6 @@
 <?php
 require_once 'includes/db.php';
-
-if (!isLoggedIn() || !isTeacher()) {
-    redirect('../login.php');
-}
+requireAccess('fees_debt');
 
 $settings = fetchSettings($pdo);
 $school_name = $settings['school_name'] ?? 'Nex CEC';
@@ -40,6 +37,11 @@ $filter_year = isset($_GET['year']) ? sanitize($_GET['year']) : $current_year;
 $filter_term = isset($_GET['term']) ? sanitize($_GET['term']) : $current_term;
 $filter_status = isset($_GET['status']) ? sanitize($_GET['status']) : '';
 
+// Pagination
+$page = max(1, (int)($_GET['page'] ?? 1));
+$per_page = 100;
+$offset = ($page - 1) * $per_page;
+
 // Fetch fee_structures for selected year/term
 $all_fees = [];
 try {
@@ -63,12 +65,17 @@ foreach ($all_fees as $f) {
     }
 }
 
-// Fetch students in teacher's classes
+// Count total students (for pagination)
+$total_students = 0;
 $all_students = [];
 if (!empty($teacher_class_names)) {
     try {
         $placeholders = implode(',', array_fill(0, count($teacher_class_names), '?'));
-        $stmt = $pdo->prepare("SELECT * FROM students WHERE status = 'active' AND class_name IN ($placeholders) ORDER BY class_name, full_name ASC");
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM students WHERE status = 'active' AND class_name IN ($placeholders)");
+        $stmt->execute($teacher_class_names);
+        $total_students = (int)$stmt->fetchColumn();
+
+        $stmt = $pdo->prepare("SELECT * FROM students WHERE status = 'active' AND class_name IN ($placeholders) ORDER BY class_name, full_name ASC LIMIT $per_page OFFSET $offset");
         $stmt->execute($teacher_class_names);
         $all_students = $stmt->fetchAll();
     } catch (Exception $e) { $all_students = []; }
@@ -94,55 +101,68 @@ foreach ($all_payments as $p) {
     $payments_by_student[$sid][] = $p;
 }
 
-// Fetch student_bill_items for this year/term
+// Fetch student_bill_items for this year/term (filtered by visible student_ids)
 $bill_items_by_student = [];
-try {
-    $stmt = $pdo->prepare("SELECT * FROM student_bill_items WHERE academic_year = ? AND term = ?");
-    $stmt->execute([$filter_year, $filter_term]);
-    foreach ($stmt->fetchAll() as $bi) {
-        $sid = (int)$bi['student_id'];
-        if (!isset($bill_items_by_student[$sid])) $bill_items_by_student[$sid] = [];
-        $bill_items_by_student[$sid][] = $bi;
-    }
-} catch (Exception $e) { $bill_items_by_student = []; }
+if (!empty($student_ids)) {
+    try {
+        $placeholders = implode(',', array_fill(0, count($student_ids), '?'));
+        $stmt = $pdo->prepare("SELECT * FROM student_bill_items WHERE academic_year = ? AND term = ? AND student_id IN ($placeholders)");
+        $stmt->execute(array_merge([$filter_year, $filter_term], $student_ids));
+        foreach ($stmt->fetchAll() as $bi) {
+            $sid = (int)$bi['student_id'];
+            if (!isset($bill_items_by_student[$sid])) $bill_items_by_student[$sid] = [];
+            $bill_items_by_student[$sid][] = $bi;
+        }
+    } catch (Exception $e) { $bill_items_by_student = []; }
+}
 
-// Fetch exemptions
+// Fetch exemptions (filtered by student_ids)
 $exemptions = [];
-try {
-    $stmt = $pdo->prepare("SELECT * FROM fee_exemptions WHERE academic_year = ? AND (term = ? OR term IS NULL)");
-    $stmt->execute([$filter_year, $filter_term]);
-    foreach ($stmt->fetchAll() as $e) {
-        $exemptions[(int)$e['student_id']] = $e;
-    }
-} catch (Exception $e) {}
+if (!empty($student_ids)) {
+    try {
+        $placeholders_es = implode(',', array_fill(0, count($student_ids), '?'));
+        $stmt = $pdo->prepare("SELECT * FROM fee_exemptions WHERE academic_year = ? AND (term = ? OR term IS NULL) AND student_id IN ($placeholders_es)");
+        $stmt->execute(array_merge([$filter_year, $filter_term], $student_ids));
+        foreach ($stmt->fetchAll() as $e) {
+            $exemptions[(int)$e['student_id']] = $e;
+        }
+    } catch (Exception $e) {}
+}
 
-// Unread messages
-$stmt = $pdo->prepare("SELECT id FROM messages WHERE receiver_id = ?");
-$stmt->execute([$user_id]);
-$direct_ids = array_map(fn($r) => (int)$r['id'], $stmt->fetchAll());
-$stmt = $pdo->prepare("SELECT id FROM messages WHERE is_broadcast = ?");
-$stmt->execute([1]);
-$broadcast_ids = array_map(fn($r) => (int)$r['id'], $stmt->fetchAll());
-$all_msg_ids = array_unique(array_merge($direct_ids, $broadcast_ids));
-$stmt = $pdo->prepare("SELECT message_id FROM message_reads WHERE user_id = ?");
-$stmt->execute([$user_id]);
-$read_ids = array_map(fn($r) => (int)$r['message_id'], $stmt->fetchAll());
-$unread_message_ids = [];
-foreach ($all_msg_ids as $mid) {
-    if (!in_array($mid, $read_ids)) {
-        $unread_message_ids[] = $mid;
+// Unread messages (cached in session to avoid 4+ queries per page load)
+if (!isset($_SESSION['unread_cache']) || $_SESSION['unread_cache']['expires'] < time()) {
+    $stmt = $pdo->prepare("SELECT id FROM messages WHERE receiver_id = ?");
+    $stmt->execute([$user_id]);
+    $direct_ids = array_map(fn($r) => (int)$r['id'], $stmt->fetchAll());
+    $stmt = $pdo->prepare("SELECT id FROM messages WHERE is_broadcast = ?");
+    $stmt->execute([1]);
+    $broadcast_ids = array_map(fn($r) => (int)$r['id'], $stmt->fetchAll());
+    $all_msg_ids = array_unique(array_merge($direct_ids, $broadcast_ids));
+    $stmt = $pdo->prepare("SELECT message_id FROM message_reads WHERE user_id = ?");
+    $stmt->execute([$user_id]);
+    $read_ids = array_map(fn($r) => (int)$r['message_id'], $stmt->fetchAll());
+    $unread_message_ids = [];
+    foreach ($all_msg_ids as $mid) {
+        if (!in_array($mid, $read_ids)) {
+            $unread_message_ids[] = $mid;
+        }
     }
-}
-foreach (array_chunk($unread_message_ids, 50) as $chunk) {
-    if (empty($chunk)) continue;
-    $ph = implode(',', array_fill(0, count($chunk), '?'));
-    $stmt = $pdo->prepare("SELECT id FROM messages WHERE id IN ($ph) AND read_at IS NOT NULL");
-    $stmt->execute($chunk);
-    foreach ($stmt->fetchAll() as $r) {
-        $unread_message_ids = array_diff($unread_message_ids, [(int)$r['id']]);
+    // Remove any that have been read_at (catch read timestamp without message_reads entry)
+    foreach (array_chunk($unread_message_ids, 50) as $chunk) {
+        if (empty($chunk)) continue;
+        $ph = implode(',', array_fill(0, count($chunk), '?'));
+        $stmt = $pdo->prepare("SELECT id FROM messages WHERE id IN ($ph) AND read_at IS NOT NULL");
+        $stmt->execute($chunk);
+        foreach ($stmt->fetchAll() as $r) {
+            $unread_message_ids = array_diff($unread_message_ids, [(int)$r['id']]);
+        }
     }
+    $_SESSION['unread_cache'] = [
+        'count' => count($unread_message_ids),
+        'expires' => time() + 60 // 60-second cache TTL
+    ];
 }
-$unread_count = count($unread_message_ids);
+$unread_count = $_SESSION['unread_cache']['count'];
 
 // Process fee status
 $fee_data = [];
@@ -391,6 +411,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 </tbody>
             </table>
         </div>
+
+        <!-- Pagination -->
+        <?php $total_pages = ceil($total_students / $per_page); if ($total_pages > 1): ?>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;font-size:13px;">
+            <span style="color:#666;">Page <?php echo $page; ?> of <?php echo $total_pages; ?> (<?php echo $total_students; ?> students)</span>
+            <div style="display:flex;gap:6px;">
+                <?php if ($page > 1): ?>
+                <a href="?<?php echo http_build_query(array_merge($_GET, ['page' => $page - 1])); ?>" style="padding:6px 12px;background:#f8f9fa;border:1px solid #ddd;border-radius:4px;text-decoration:none;color:#333;">&laquo; Prev</a>
+                <?php endif; ?>
+                <?php for ($p = max(1, $page - 2); $p <= min($total_pages, $page + 2); $p++): ?>
+                <a href="?<?php echo http_build_query(array_merge($_GET, ['page' => $p])); ?>" style="padding:6px 12px;background:<?php echo $p === $page ? '#1a5276' : '#f8f9fa'; ?>;border:1px solid <?php echo $p === $page ? '#1a5276' : '#ddd'; ?>;border-radius:4px;text-decoration:none;color:<?php echo $p === $page ? '#fff' : '#333'; ?>;font-weight:<?php echo $p === $page ? '700' : '400'; ?>;"><?php echo $p; ?></a>
+                <?php endfor; ?>
+                <?php if ($page < $total_pages): ?>
+                <a href="?<?php echo http_build_query(array_merge($_GET, ['page' => $page + 1])); ?>" style="padding:6px 12px;background:#f8f9fa;border:1px solid #ddd;border-radius:4px;text-decoration:none;color:#333;">Next &raquo;</a>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php endif; ?>
+
     </div>
 </div>
 </body>

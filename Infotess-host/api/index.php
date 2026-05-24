@@ -2,9 +2,11 @@
 // api/index.php — Central Router
 // ALL requests go through here. Files are in the same api/ directory.
 
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
+// Production mode: errors logged, never displayed
+ini_set('display_errors', 0);
+ini_set('display_startup_errors', 0);
 error_reporting(E_ALL);
+ini_set('log_errors', 1);
 
 // Load Environment Variables
 if (file_exists(__DIR__ . '/../.env')) {
@@ -17,6 +19,11 @@ if (file_exists(__DIR__ . '/../.env')) {
 }
 
 define('BASE_PATH', '');
+
+// Security headers
+header('X-Content-Type-Options: nosniff');
+header('X-Frame-Options: SAMEORIGIN');
+header('Referrer-Policy: strict-origin-when-cross-origin');
 
 // Pre-load ALL dependencies
 require_once __DIR__ . '/lib/Supabase.php';
@@ -103,8 +110,8 @@ foreach ($parentPages as $page) {
 
 $file = $routes[$uri] ?? $uri;
 
-// Prevent directory traversal
-$file = str_replace(['../', '..\\'], '', $file);
+// Prevent directory traversal (iterative removal to defeat ....// bypass)
+do { $clean = $file; $file = str_replace(['../', '..\\'], '', $file); } while ($clean !== $file);
 
 $targetPath = realpath(__DIR__ . '/' . $file);
 

@@ -594,7 +594,10 @@ function sanitize($input) {
     if ($input === null || $input === false) {
         return '';
     }
-    return htmlspecialchars(strip_tags(trim($input)), ENT_QUOTES, 'UTF-8');
+    // Strip tags only — NO htmlspecialchars here.
+    // Callers MUST apply htmlspecialchars() at render time for safe HTML output.
+    // This avoids double-encoding (the old sanitize() encoded AND callers encoded again).
+    return strip_tags(trim($input));
 }
 
 /**

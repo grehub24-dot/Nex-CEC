@@ -110,8 +110,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['apply_bill']) && $fil
         $staffRow = $stmtStaff->fetch();
         $staff_id = $staffRow ? (int)$staffRow['id'] : null;
 
-        $delStmt = $pdo->prepare("DELETE FROM student_bill_items WHERE student_id = ? AND academic_year = ? AND term = ?");
         $insStmt = $pdo->prepare("INSERT INTO student_bill_items (student_id, fee_structure_id, academic_year, term, title, amount, fee_type, is_optional, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+
+        // Bulk DELETE: one query instead of N individual DELETEs
+        $delete_sids = [];
+        foreach ($students_in_class as $s) {
+            $sid = (int)$s['id'];
+            $is_new = ($s['academic_year'] ?? '') === $filter_year && (string)($s['admission_term'] ?? '1') === (string)$filter_term;
+            if ($apply_mode === 'new_only' && !$is_new) continue;
+            $delete_sids[] = $sid;
+        }
+        if (!empty($delete_sids)) {
+            $ph = implode(',', array_fill(0, count($delete_sids), '?'));
+            $delParams = array_merge($delete_sids, [$filter_year, $filter_term]);
+            $stmt_del = $pdo->prepare("DELETE FROM student_bill_items WHERE student_id IN ($ph) AND academic_year = ? AND term = ?");
+            $stmt_del->execute($delParams);
+        }
 
         $processed = 0;
         $skipped = 0;
@@ -126,10 +140,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['apply_bill']) && $fil
                 continue;
             }
 
-            // Delete existing bill items for this student
-            $delStmt->execute([$sid, $filter_year, $filter_term]);
-
-            // Insert selected fee items
+            // Insert selected fee items (DELETE already done in bulk above)
             foreach ($available_fees as $af) {
                 $fs_id = $af['id'];
                 if (!in_array($fs_id, $selected_ids)) continue;

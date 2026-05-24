@@ -223,6 +223,12 @@ class SupabaseClient {
         return $newClient;
     }
 
+    public function offset($count) {
+        $newClient = clone $this;
+        $newClient->filters[] = "offset=$count";
+        return $newClient;
+    }
+
     public function insert($data) {
         if (!$this->table) throw new Exception("Table not set.");
         $url = "$this->url/rest/v1/{$this->table}";

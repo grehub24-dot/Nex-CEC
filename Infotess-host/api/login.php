@@ -62,6 +62,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($user['status'] !== 'active') {
                 $error = "Your account is inactive or banned. Please contact support.";
             } else {
+                // Regenerate session to prevent session fixation attacks
+                session_regenerate_id(true);
                 $_SESSION['user_id'] = $user['id'];
                 $_SESSION['email'] = $user['email'];
                 $_SESSION['role'] = $user['role'];

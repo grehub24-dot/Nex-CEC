@@ -35,6 +35,11 @@ $filter_year = isset($_GET['year']) ? sanitize($_GET['year']) : $current_year;
 $filter_term = isset($_GET['term']) ? sanitize($_GET['term']) : $current_term;
 $filter_status = isset($_GET['status']) ? sanitize($_GET['status']) : '';
 
+// Pagination
+$page = max(1, (int)($_GET['page'] ?? 1));
+$per_page = 100;
+$offset = ($page - 1) * $per_page;
+
 // Fetch fee_structures for selected year/term
 $all_fees = [];
 try {
@@ -59,12 +64,17 @@ foreach ($all_fees as $f) {
     }
 }
 
-// Fetch all students
+// Count total students (for pagination)
+$total_students = 0;
 $all_students = [];
 try {
+    $countSql = "SELECT COUNT(*) FROM students WHERE status = 'active'";
+    $countParams = [];
     $sql = "SELECT * FROM students WHERE status = 'active'";
     $params = [];
     if ($filter_class !== '') {
+        $countSql .= " AND class_name = ?";
+        $countParams[] = $filter_class;
         $sql .= " AND class_name = ?";
         $params[] = $filter_class;
     }
@@ -78,11 +88,19 @@ try {
         $teacher_class_names = array_unique($teacher_class_names);
         if (!empty($teacher_class_names)) {
             $placeholders = implode(',', array_fill(0, count($teacher_class_names), '?'));
+            $countSql .= " AND class_name IN ($placeholders)";
+            $countParams = array_merge($countParams, $teacher_class_names);
             $sql .= " AND class_name IN ($placeholders)";
             $params = array_merge($params, $teacher_class_names);
         }
     }
-    $sql .= " ORDER BY class_name, full_name ASC";
+    // Get total count for pagination
+    $stmt = $pdo->prepare($countSql);
+    $stmt->execute($countParams);
+    $total_students = (int)$stmt->fetchColumn();
+
+    // Fetch page with LIMIT/OFFSET
+    $sql .= " ORDER BY class_name, full_name ASC LIMIT $per_page OFFSET $offset";
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
     $all_students = $stmt->fetchAll();
@@ -109,28 +127,34 @@ foreach ($all_payments as $p) {
     $payments_by_student[$sid][] = $p;
 }
 
-// Fetch student_bill_items for this year/term
+// Fetch student_bill_items for this year/term (filtered by student_ids for pagination)
 $bill_items_by_student = [];
-try {
-    $stmt = $pdo->prepare("SELECT * FROM student_bill_items WHERE academic_year = ? AND term = ?");
-    $stmt->execute([$filter_year, $filter_term]);
-    foreach ($stmt->fetchAll() as $bi) {
-        $sid = (int)$bi['student_id'];
-        if (!isset($bill_items_by_student[$sid])) $bill_items_by_student[$sid] = [];
-        $bill_items_by_student[$sid][] = $bi;
-    }
-} catch (Exception $e) { $bill_items_by_student = []; }
+if (!empty($student_ids)) {
+    try {
+        $placeholders = implode(',', array_fill(0, count($student_ids), '?'));
+        $stmt = $pdo->prepare("SELECT * FROM student_bill_items WHERE academic_year = ? AND term = ? AND student_id IN ($placeholders)");
+        $stmt->execute(array_merge([$filter_year, $filter_term], $student_ids));
+        foreach ($stmt->fetchAll() as $bi) {
+            $sid = (int)$bi['student_id'];
+            if (!isset($bill_items_by_student[$sid])) $bill_items_by_student[$sid] = [];
+            $bill_items_by_student[$sid][] = $bi;
+        }
+    } catch (Exception $e) { $bill_items_by_student = []; }
+}
 
-// Fetch fee_exemptions for this year/term
+// Fetch fee_exemptions for this year/term (filtered by student_ids for pagination)
 $exemptions = [];
-try {
-    $stmt = $pdo->prepare("SELECT * FROM fee_exemptions WHERE academic_year = ? AND (term = ? OR term IS NULL)");
-    $stmt->execute([$filter_year, $filter_term]);
-    $exemptions_raw = $stmt->fetchAll();
-    foreach ($exemptions_raw as $e) {
-        $exemptions[(int)$e['student_id']] = $e;
-    }
-} catch (Exception $e) { $exemptions = []; }
+if (!empty($student_ids)) {
+    try {
+        $placeholders_es = implode(',', array_fill(0, count($student_ids), '?'));
+        $stmt = $pdo->prepare("SELECT * FROM fee_exemptions WHERE academic_year = ? AND (term = ? OR term IS NULL) AND student_id IN ($placeholders_es)");
+        $stmt->execute(array_merge([$filter_year, $filter_term], $student_ids));
+        $exemptions_raw = $stmt->fetchAll();
+        foreach ($exemptions_raw as $e) {
+            $exemptions[(int)$e['student_id']] = $e;
+        }
+    } catch (Exception $e) { $exemptions = []; }
+}
 
 // Process each student → fee status
 $fee_data = [];
@@ -526,6 +550,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     </tbody>
                 </table>
             </div>
+
+            <!-- Pagination -->
+            <?php $total_pages = ceil($total_students / $per_page); if ($total_pages > 1): ?>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;font-size:13px;">
+                <span style="color:#666;">Showing page <?php echo $page; ?> of <?php echo $total_pages; ?> (<?php echo $total_students; ?> students)</span>
+                <div style="display:flex;gap:6px;">
+                    <?php if ($page > 1): ?>
+                    <a href="?<?php echo http_build_query(array_merge($_GET, ['page' => $page - 1])); ?>" style="padding:6px 12px;background:#f8f9fa;border:1px solid #ddd;border-radius:4px;text-decoration:none;color:#333;">&laquo; Prev</a>
+                    <?php endif; ?>
+                    <?php for ($p = max(1, $page - 2); $p <= min($total_pages, $page + 2); $p++): ?>
+                    <a href="?<?php echo http_build_query(array_merge($_GET, ['page' => $p])); ?>" style="padding:6px 12px;background:<?php echo $p === $page ? '#1a5276' : '#f8f9fa'; ?>;border:1px solid <?php echo $p === $page ? '#1a5276' : '#ddd'; ?>;border-radius:4px;text-decoration:none;color:<?php echo $p === $page ? '#fff' : '#333'; ?>;font-weight:<?php echo $p === $page ? '700' : '400'; ?>;"><?php echo $p; ?></a>
+                    <?php endfor; ?>
+                    <?php if ($page < $total_pages): ?>
+                    <a href="?<?php echo http_build_query(array_merge($_GET, ['page' => $page + 1])); ?>" style="padding:6px 12px;background:#f8f9fa;border:1px solid #ddd;border-radius:4px;text-decoration:none;color:#333;">Next &raquo;</a>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <?php endif; ?>
+
         </div>
     </main>
 </div>

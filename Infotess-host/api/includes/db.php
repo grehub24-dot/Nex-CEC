@@ -208,6 +208,9 @@ class LegacyStatement {
                                 $paramVal = $this->params[$paramIndex] ?? null;
                                 if ($paramVal !== null && $paramVal !== '') {
                                     $query = $query->where($col, $paramVal);
+                                } else {
+                                    error_log("pg-bridge GUARD: Null UPDATE WHERE param for column '$col' — using sentinel. SQL: " . substr($this->sql, 0, 200));
+                                    $query = $query->where($col, '__NULL_WHERE_GUARD__' . $paramIndex);
                                 }
                                 $paramIndex++;
                             } elseif (strpos($val, ':') === 0) {
@@ -216,6 +219,9 @@ class LegacyStatement {
                                 $paramVal = $this->params[$paramName] ?? null;
                                 if ($paramVal !== null && $paramVal !== '') {
                                     $query = $query->where($col, $paramVal);
+                                } else {
+                                    error_log("pg-bridge GUARD: Null UPDATE named-param ':$paramName' for column '$col' — using sentinel. SQL: " . substr($this->sql, 0, 200));
+                                    $query = $query->where($col, '__NULL_WHERE_GUARD__' . $paramName);
                                 }
                             }
                         }
@@ -262,17 +268,23 @@ class LegacyStatement {
                             $col = $inMatch[1];
                             $inParts = array_map('trim', explode(',', $inMatch[2]));
                             $inValues = [];
+                            $allNull = true;
                             foreach ($inParts as $part) {
                                 if ($part === '?') {
                                     $pv = $this->params[$paramIndex] ?? null;
                                     if ($pv !== null && $pv !== '') {
                                         $inValues[] = $pv;
+                                        $allNull = false;
                                     }
                                     $paramIndex++;
                                 }
                             }
                             if (!empty($inValues)) {
                                 $query = $query->in($col, $inValues);
+                            } elseif ($allNull) {
+                                // All IN params were null — guard against data leak
+                                error_log("pg-bridge GUARD: All IN params null for column '$col' — using sentinel. SQL: " . substr($this->sql, 0, 200));
+                                $query = $query->in($col, ['__NULL_IN_GUARD__']);
                             }
                         } else {
                             // Handle: col = ?
@@ -284,6 +296,9 @@ class LegacyStatement {
                                     $paramVal = $this->params[$paramIndex] ?? null;
                                     if ($paramVal !== null && $paramVal !== '') {
                                         $query = $query->where($col, $paramVal);
+                                    } else {
+                                        error_log("pg-bridge GUARD: Null DELETE WHERE param for column '$col' — using sentinel. SQL: " . substr($this->sql, 0, 200));
+                                        $query = $query->where($col, '__NULL_WHERE_GUARD__' . $paramIndex);
                                     }
                                     $paramIndex++;
                                 }
@@ -302,8 +317,9 @@ class LegacyStatement {
                 
                 // Handle WHERE clause with ? (positional) or :name (named) parameters
                 // NOTE: Empty string ('') is converted to null above.
-                // If a param is null, skip the WHERE condition entirely — passing null
-                // to Supabase REST creates a broken "col=eq." filter that causes 22P02.
+                // If a param is null/empty, we must NOT silently drop the WHERE condition
+                // (which would return ALL rows — a data leak). Instead we add an impossible
+                // filter so 0 rows are returned, alerting the caller of the bug.
                 preg_match_all('/WHERE\s+([\s\S]+?)(\s+ORDER|\s+LIMIT|$)/i', $this->sql, $whereMatches);
                 
                 $currentParamIndex = 0;
@@ -316,9 +332,12 @@ class LegacyStatement {
                             $val = trim($parts[1]);
                             if ($val === '?') {
                                 $paramVal = $this->params[$currentParamIndex] ?? null;
-                                // Skip null params to avoid broken "col=eq." filters
                                 if ($paramVal !== null && $paramVal !== '') {
                                     $query = $query->where($col, $paramVal);
+                                } else {
+                                    // Null/empty param: guard against data leak by using sentinel
+                                    error_log("pg-bridge GUARD: Null WHERE param for column '$col' — using sentinel to prevent data leak. SQL: " . substr($this->sql, 0, 200));
+                                    $query = $query->where($col, '__NULL_WHERE_GUARD__' . $currentParamIndex);
                                 }
                                 $currentParamIndex++;
                             } elseif (strpos($val, ':') === 0) {
@@ -326,15 +345,21 @@ class LegacyStatement {
                                 $paramVal = $this->params[$paramName] ?? null;
                                 if ($paramVal !== null && $paramVal !== '') {
                                     $query = $query->where($col, $paramVal);
+                                } else {
+                                    error_log("pg-bridge GUARD: Null named-param ':$paramName' for column '$col' — using sentinel. SQL: " . substr($this->sql, 0, 200));
+                                    $query = $query->where($col, '__NULL_WHERE_GUARD__' . $paramName);
                                 }
                             }
                         }
                     }
                 }
 
-                // Handle LIMIT
+                // Handle LIMIT and OFFSET
                 if (preg_match('/LIMIT\s+(\d+)/i', $this->sql, $limitMatch)) {
                     $query = $query->limit((int)$limitMatch[1]);
+                }
+                if (preg_match('/OFFSET\s+(\d+)/i', $this->sql, $offsetMatch)) {
+                    $query = $query->offset((int)$offsetMatch[1]);
                 }
 
                 $this->result = $query->get();

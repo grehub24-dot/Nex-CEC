@@ -20,10 +20,26 @@ if (file_exists(__DIR__ . '/../.env')) {
 
 define('BASE_PATH', '');
 
+// Enforce HTTPS (honors proxy-forwarded protocol for Cloudflare/AWS)
+if (empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'on'
+    && (!isset($_SERVER['HTTP_X_FORWARDED_PROTO']) || $_SERVER['HTTP_X_FORWARDED_PROTO'] !== 'https')) {
+    $redirect = 'https://' . ($_SERVER['HTTP_HOST'] ?? '') . ($_SERVER['REQUEST_URI'] ?? '');
+    header("Location: $redirect", true, 301);
+    exit;
+}
+
 // Security headers
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: SAMEORIGIN');
 header('Referrer-Policy: strict-origin-when-cross-origin');
+header("Content-Security-Policy: default-src 'self'; "
+    . "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; "
+    . "font-src 'self' data: https://cdnjs.cloudflare.com https://fonts.gstatic.com; "
+    . "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; "
+    . "img-src 'self' data:; "
+    . "connect-src 'self'; "
+    . "frame-ancestors 'self'; "
+    . "base-uri 'self'");
 
 // Pre-load ALL dependencies
 require_once __DIR__ . '/lib/Supabase.php';

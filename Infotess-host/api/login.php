@@ -32,10 +32,29 @@ $school_name = $settings['school_name'] ?? 'Nex CEC';
 $school_logo = $settings['school_logo_url'] ?? 'images/aamusted.jpg';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Rate limiting: 5 attempts within 15 min → delays; 10 → lockout
+    $attempts = &$_SESSION['login_attempts'];
+    if (!isset($attempts)) {
+        $attempts = ['count' => 0, 'first' => 0];
+    }
+    // Reset if 30+ minutes since first attempt
+    if ($attempts['first'] > 0 && (time() - $attempts['first']) > 1800) {
+        $attempts = ['count' => 0, 'first' => 0];
+    }
+    if ($attempts['count'] >= 10) {
+        $error = "Too many failed login attempts. Please try again in 30 minutes.";
+    } elseif ($attempts['count'] >= 5) {
+        // Progressive delay: 2s per failed attempt beyond 5
+        $delay = min(($attempts['count'] - 4) * 2, 10);
+        sleep($delay);
+    }
+
     $identifier = trim($_POST['identifier'] ?? '');
     $password = $_POST['password'] ?? '';
 
-    if (empty($identifier) || empty($password)) {
+    if ($error) {
+        // Already locked out, skip processing
+    } elseif (empty($identifier) || empty($password)) {
         $error = "Please enter both identifier and password.";
     } elseif (!validate_csrf_token($_POST['csrf_token'] ?? '')) {
         $error = "Invalid or expired session. Please refresh the page and try again.";
@@ -62,6 +81,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($user['status'] !== 'active') {
                 $error = "Your account is inactive or banned. Please contact support.";
             } else {
+                // Reset rate limiter on successful login
+                $_SESSION['login_attempts'] = ['count' => 0, 'first' => 0];
+
                 // Regenerate session to prevent session fixation attacks
                 session_regenerate_id(true);
                 $_SESSION['user_id'] = $user['id'];
@@ -144,6 +166,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
         } else {
+            // Track failed attempt for rate limiting
+            if ($attempts['count'] === 0) $attempts['first'] = time();
+            $attempts['count']++;
             $error = "Invalid credentials. Please try again.";
         }
     }

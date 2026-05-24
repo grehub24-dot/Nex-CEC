@@ -100,7 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_bill'])) {
         $stmtStaff->execute([$user_id]);
         $staffRow = $stmtStaff->fetch();
 
-        $insStmt = $pdo->prepare("INSERT INTO student_bill_items (student_id, fee_structure_id, academic_year, term, title, amount, fee_type, is_optional, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (student_id, academic_year, term, fee_structure_id) DO NOTHING");
+        $insStmt = $pdo->prepare("INSERT INTO student_bill_items (student_id, fee_structure_id, academic_year, term, title, amount, fee_type, is_optional, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
         foreach ($available_fees as $af) {
             $fs_id = $af['id'];
@@ -108,13 +108,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_bill'])) {
             if (!$is_selected) continue;
 
             $is_optional = empty($af['is_mandatory']) ? true : false;
-            $insStmt->execute([
-                $student_id, $fs_id, $filter_year, $filter_term,
-                $af['title'], $af['amount'], $af['fee_type'] ?? 'General',
-                $is_optional ? 1 : 0,
-                $staffRow ? (int)$staffRow['id'] : null
-            ]);
-            $inserted++;
+            try {
+                $insStmt->execute([
+                    $student_id, $fs_id, $filter_year, $filter_term,
+                    $af['title'], $af['amount'], $af['fee_type'] ?? 'General',
+                    $is_optional ? 1 : 0,
+                    $staffRow ? (int)$staffRow['id'] : null
+                ]);
+                $inserted++;
+            } catch (Exception $e) {
+                // Ignore 409 duplicate key violations (race condition — already deleted then re-inserted)
+                if (strpos($e->getMessage(), '409') === false && strpos($e->getMessage(), '23505') === false) {
+                    throw $e; // Re-throw non-duplicate errors
+                }
+            }
         }
 
         $pdo->commit();

@@ -110,7 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['apply_bill']) && $fil
         $staffRow = $stmtStaff->fetch();
         $staff_id = $staffRow ? (int)$staffRow['id'] : null;
 
-        $insStmt = $pdo->prepare("INSERT INTO student_bill_items (student_id, fee_structure_id, academic_year, term, title, amount, fee_type, is_optional, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (student_id, academic_year, term, fee_structure_id) DO NOTHING");
+        $insStmt = $pdo->prepare("INSERT INTO student_bill_items (student_id, fee_structure_id, academic_year, term, title, amount, fee_type, is_optional, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
         // Bulk DELETE: one query instead of N individual DELETEs
         $delete_sids = [];
@@ -150,12 +150,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['apply_bill']) && $fil
                 if ($is_admission && !$is_new) continue;
 
                 $is_optional = empty($af['is_mandatory']) ? true : false;
-                $insStmt->execute([
-                    $sid, $fs_id, $filter_year, $filter_term,
-                    $af['title'], $af['amount'], $af['fee_type'] ?? 'General',
-                    $is_optional ? 1 : 0,
-                    $staff_id
-                ]);
+                try {
+                    $insStmt->execute([
+                        $sid, $fs_id, $filter_year, $filter_term,
+                        $af['title'], $af['amount'], $af['fee_type'] ?? 'General',
+                        $is_optional ? 1 : 0,
+                        $staff_id
+                    ]);
+                } catch (Exception $e) {
+                    // Ignore 409 duplicate key violations (race condition — already deleted then re-inserted)
+                    if (strpos($e->getMessage(), '409') === false && strpos($e->getMessage(), '23505') === false) {
+                        throw $e; // Re-throw non-duplicate errors
+                    }
+                }
             }
 
             $processed++;

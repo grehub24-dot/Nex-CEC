@@ -326,7 +326,33 @@ class LegacyStatement {
                 if (!empty($whereMatches[1])) {
                     $conditions = explode(' AND ', $whereMatches[1][0]);
                     foreach ($conditions as $cond) {
-                        $parts = preg_split('/\s*=\s*/', trim($cond));
+                        $cond = trim($cond);
+                        // Handle: col IN (?, ?, ?) — same pattern as DELETE path
+                        if (preg_match('/^(\w+)\s+IN\s*\(([^)]+)\)$/i', $cond, $inMatch)) {
+                            $col = $inMatch[1];
+                            $inParts = array_map('trim', explode(',', $inMatch[2]));
+                            $inValues = [];
+                            $allNull = true;
+                            foreach ($inParts as $part) {
+                                if ($part === '?') {
+                                    $pv = $this->params[$currentParamIndex] ?? null;
+                                    if ($pv !== null && $pv !== '') {
+                                        $inValues[] = $pv;
+                                        $allNull = false;
+                                    }
+                                    $currentParamIndex++;
+                                }
+                            }
+                            if (!empty($inValues)) {
+                                $query = $query->in($col, $inValues);
+                            } elseif ($allNull) {
+                                error_log("pg-bridge GUARD: All SELECT IN params null for column '$col' — using sentinel. SQL: " . substr($this->sql, 0, 200));
+                                $query = $query->in($col, ['__NULL_IN_GUARD__']);
+                            }
+                            continue;
+                        }
+                        // Handle: col = ?
+                        $parts = preg_split('/\s*=\s*/', $cond);
                         if (count($parts) === 2) {
                             $col = preg_replace('/^\w+\./', '', $parts[0]); // strip table alias: s.teacher_id → teacher_id
                             $val = trim($parts[1]);

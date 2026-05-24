@@ -2,11 +2,7 @@
 require_once 'includes/db.php';
 requireAccess('fees_debt');
 
-$settings = [];
-$stmt = $pdo->query("SELECT setting_key, setting_value FROM system_settings");
-while ($row = $stmt->fetch()) {
-    $settings[$row['setting_key']] = $row['setting_value'];
-}
+$settings = fetchSettings($pdo);
 $school_name = $settings['school_name'] ?? 'Nex CEC';
 $current_year = $settings['current_academic_year'] ?? date('Y') . '/' . (date('Y') + 1);
 $current_term = $settings['current_term'] ?? '1';

@@ -2,14 +2,14 @@
 require_once 'includes/db.php';
 requireAccess('fees_debt');
 
-$settings = [];
-$stmt = $pdo->query("SELECT setting_key, setting_value FROM system_settings");
-while ($row = $stmt->fetch()) {
-    $settings[$row['setting_key']] = $row['setting_value'];
-}
+$settings = fetchSettings($pdo);
 $school_name = $settings['school_name'] ?? 'Nex CEC';
 $current_year = $settings['current_academic_year'] ?? date('Y') . '/' . (date('Y') + 1);
 $current_term = $settings['current_term'] ?? '1';
+
+// Determine teacher's class restriction (for authorization check)
+$teacher_class_ids = isTeacher() ? getTeacherClassIds($pdo) : [];
+$teacher_class_names = []; // Resolved after classes are loaded below
 
 $classes = [];
 try {
@@ -20,6 +20,16 @@ try {
 // Build class lookup
 $classIdToName = [];
 foreach ($classes as $c) { $classIdToName[(int)$c['id']] = $c['name']; }
+
+// Resolve teacher class names now that classes are loaded
+if (!empty($teacher_class_ids)) {
+    $teacher_class_names = [];
+    foreach ($teacher_class_ids as $tcid) {
+        $n = $classIdToName[$tcid] ?? '';
+        if ($n) $teacher_class_names[] = $n;
+    }
+    $teacher_class_names = array_unique($teacher_class_names);
+}
 
 $filter_class = isset($_GET['class']) ? sanitize($_GET['class']) : ($_POST['class_name'] ?? '');
 $filter_year = isset($_GET['year']) ? sanitize($_GET['year']) : ($_POST['year'] ?? $current_year);
@@ -69,23 +79,28 @@ if ($filter_class) {
         $available_fees = array_merge($available_fees, $stmt->fetchAll());
     } catch (Exception $e) {}
     
-    // DEBUG: log class_id info
-    $debug_class_id = $filter_class_id;
-    $debug_fee_count = count($available_fees);
-    $debug_class_ids = [];
-    foreach ($available_fees as $f) {
-        $cid = $f['class_id'];
-        $debug_class_ids[] = is_null($cid) ? 'NULL' : (int)$cid;
-    }
-    $debug_class_ids = array_unique($debug_class_ids);
 }
 
 // Handle bulk apply
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['apply_bill']) && $filter_class) {
+    // Authorization: verify teacher can only bill their assigned classes
+    if (!isAdmin() && !empty($teacher_class_names) && !in_array($filter_class, $teacher_class_names)) {
+        $error = "Access denied: you are not authorized to bill this class.";
+        goto render_page;
+    }
     validate_request_csrf();
     $selected_ids = $_POST['fee_items'] ?? [];
     $apply_mode = $_POST['apply_mode'] ?? 'all'; // 'all' or 'new_only'
     if (!is_array($selected_ids)) $selected_ids = [];
+
+    // Re-fetch students inside POST handler to prevent stale data
+    try {
+        $stmt = $pdo->prepare("SELECT * FROM students WHERE status = 'active' AND class_name = ? ORDER BY full_name ASC");
+        $stmt->execute([$filter_class]);
+        $students_in_class = $stmt->fetchAll();
+    } catch (Exception $e) {
+        $students_in_class = [];
+    }
 
     try {
         $pdo->beginTransaction();
@@ -151,9 +166,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['apply_bill']) && $fil
 
 // Handle clear all bills for this class
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['clear_bills']) && $filter_class) {
+    // Authorization: verify teacher can only clear bills for their assigned classes
+    if (!isAdmin() && !empty($teacher_class_names) && !in_array($filter_class, $teacher_class_names)) {
+        $error = "Access denied: you are not authorized to modify bills for this class.";
+        goto render_page;
+    }
     validate_request_csrf();
+    // Re-fetch students to prevent stale data
     try {
-        $student_ids = array_map(fn($s) => (int)$s['id'], $students_in_class);
+        $stmt = $pdo->prepare("SELECT id FROM students WHERE status = 'active' AND class_name = ? ORDER BY full_name ASC");
+        $stmt->execute([$filter_class]);
+        $fresh_students = $stmt->fetchAll();
+    } catch (Exception $e) {
+        $fresh_students = [];
+    }
+    try {
+        $student_ids = array_map(fn($s) => (int)$s['id'], $fresh_students);
         if (!empty($student_ids)) {
             $ph = implode(',', array_fill(0, count($student_ids), '?'));
             $params = array_merge($student_ids, [$filter_year, $filter_term]);
@@ -165,6 +193,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['clear_bills']) && $fi
         $error = "Error: " . $e->getMessage();
     }
 }
+
+render_page:
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -240,9 +270,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['clear_bills']) && $fi
                     <div class="form-group">
                         <label>Academic Year</label>
                         <select name="year">
-                            <option value="2024/2025" <?php echo $filter_year === '2024/2025' ? 'selected' : ''; ?>>2024/2025</option>
-                            <option value="2025/2026" <?php echo $filter_year === '2025/2026' ? 'selected' : ''; ?>>2025/2026</option>
-                            <option value="2026/2027" <?php echo $filter_year === '2026/2027' ? 'selected' : ''; ?>>2026/2027</option>
+                            <?php
+                            $base_year = (int)date('Y');
+                            for ($y = $base_year - 2; $y <= $base_year + 1; $y++) {
+                                $yr = $y . '/' . ($y + 1);
+                                $sel = ($filter_year === $yr) ? 'selected' : '';
+                                echo "<option value=\"$yr\" $sel>$yr</option>";
+                            }
+                            ?>
                         </select>
                     </div>
                     <div class="form-group">
@@ -279,12 +314,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['clear_bills']) && $fi
                     <input type="hidden" name="year" value="<?php echo htmlspecialchars($filter_year); ?>">
                     <input type="hidden" name="term" value="<?php echo htmlspecialchars($filter_term); ?>">
 
-                    <!-- DEBUG: class_id resolution -->
-                    <div style="background:#f0f0f0;padding:8px 12px;margin-bottom:12px;border-radius:6px;font-size:13px;">
-                        <strong>🔍 Debug:</strong> class "<?php echo htmlspecialchars($filter_class); ?>" → class_id = <strong><?php echo $debug_class_id !== null ? $debug_class_id : 'NULL (not found!)'; ?></strong> | 
-                        Fee items found: <?php echo $debug_fee_count; ?> | 
-                        class_ids in fees: <?php echo implode(', ', $debug_class_ids); ?>
-                    </div>
+
                     <h4 style="margin:0 0 12px;">Select Fee Items to Apply</h4>
                     <p style="font-size:12px;color:#888;margin:0 0 12px;">
                         <span class="badge-auto">Mandatory (all students)</span> — auto-applied to everyone (locked)

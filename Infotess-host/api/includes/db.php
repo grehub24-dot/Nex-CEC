@@ -286,22 +286,32 @@ class LegacyStatement {
                                 error_log("pg-bridge GUARD: All IN params null for column '$col' — using sentinel. SQL: " . substr($this->sql, 0, 200));
                                 $query = $query->in($col, ['__NULL_IN_GUARD__']);
                             }
-                        } else {
-                            // Handle: col = ?
-                            $parts = preg_split('/\s*=\s*/', $cond);
-                            if (count($parts) === 2) {
-                                $col = preg_replace('/^\w+\./', '', $parts[0]); // strip table alias
-                                $val = trim($parts[1]);
-                                if ($val === '?') {
-                                    $paramVal = $this->params[$paramIndex] ?? null;
-                                    if ($paramVal !== null && $paramVal !== '') {
-                                        $query = $query->where($col, $paramVal);
-                                    } else {
-                                        error_log("pg-bridge GUARD: Null DELETE WHERE param for column '$col' — using sentinel. SQL: " . substr($this->sql, 0, 200));
-                                        $query = $query->where($col, '__NULL_WHERE_GUARD__' . $paramIndex);
-                                    }
-                                    $paramIndex++;
+                            continue;
+                        }
+                        // Handle: col IS NULL
+                        if (preg_match('/^(\w+)\s+IS\s+NULL$/i', $cond, $nullMatch)) {
+                            $query = $query->isNull($nullMatch[1]);
+                            continue;
+                        }
+                        // Handle: col IS NOT NULL
+                        if (preg_match('/^(\w+)\s+IS\s+NOT\s+NULL$/i', $cond, $nnMatch)) {
+                            $query = $query->notNull($nnMatch[1]);
+                            continue;
+                        }
+                        // Handle: col = ?
+                        $parts = preg_split('/\s*=\s*/', $cond);
+                        if (count($parts) === 2) {
+                            $col = preg_replace('/^\w+\./', '', $parts[0]); // strip table alias
+                            $val = trim($parts[1]);
+                            if ($val === '?') {
+                                $paramVal = $this->params[$paramIndex] ?? null;
+                                if ($paramVal !== null && $paramVal !== '') {
+                                    $query = $query->where($col, $paramVal);
+                                } else {
+                                    error_log("pg-bridge GUARD: Null DELETE WHERE param for column '$col' — using sentinel. SQL: " . substr($this->sql, 0, 200));
+                                    $query = $query->where($col, '__NULL_WHERE_GUARD__' . $paramIndex);
                                 }
+                                $paramIndex++;
                             }
                         }
                     }
@@ -349,6 +359,16 @@ class LegacyStatement {
                                 error_log("pg-bridge GUARD: All SELECT IN params null for column '$col' — using sentinel. SQL: " . substr($this->sql, 0, 200));
                                 $query = $query->in($col, ['__NULL_IN_GUARD__']);
                             }
+                            continue;
+                        }
+                        // Handle: col IS NULL
+                        if (preg_match('/^(\w+)\s+IS\s+NULL$/i', $cond, $nullMatch)) {
+                            $query = $query->isNull($nullMatch[1]);
+                            continue;
+                        }
+                        // Handle: col IS NOT NULL
+                        if (preg_match('/^(\w+)\s+IS\s+NOT\s+NULL$/i', $cond, $nnMatch)) {
+                            $query = $query->notNull($nnMatch[1]);
                             continue;
                         }
                         // Handle: col = ?

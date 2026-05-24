@@ -186,6 +186,20 @@ class SupabaseClient {
         return $newClient;
     }
 
+    public function isNull($column) {
+        $newClient = clone $this;
+        // PostgREST uses column=is.null for IS NULL
+        $newClient->filters[] = "$column=is.null";
+        return $newClient;
+    }
+
+    public function notNull($column) {
+        $newClient = clone $this;
+        // PostgREST uses column=is.not.null for IS NOT NULL
+        $newClient->filters[] = "$column=is.not.null";
+        return $newClient;
+    }
+
     public function like($column, $pattern) {
         $newClient = clone $this;
         // URL-encode so that spaces and special chars are handled correctly;

@@ -100,7 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_bill'])) {
         $stmtStaff->execute([$user_id]);
         $staffRow = $stmtStaff->fetch();
 
-        $insStmt = $pdo->prepare("INSERT INTO student_bill_items (student_id, fee_structure_id, academic_year, term, title, amount, fee_type, is_optional, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT ON CONSTRAINT idx_bill_items_unique DO NOTHING");
+        $insStmt = $pdo->prepare("INSERT INTO student_bill_items (student_id, fee_structure_id, academic_year, term, title, amount, fee_type, is_optional, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (student_id, academic_year, term, fee_structure_id) DO NOTHING");
 
         foreach ($available_fees as $af) {
             $fs_id = $af['id'];

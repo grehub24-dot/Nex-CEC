@@ -164,7 +164,19 @@ class LegacyStatement {
                     }
                 }
 
-                $res = $this->client->table($this->table)->insert($data);
+                // Detect ON CONFLICT clause for PostgREST upsert support
+                $insertOptions = [];
+                if (preg_match('/ON CONFLICT\s+(?:ON CONSTRAINT\s+(\w+)|\(([^)]+)\))\s*DO NOTHING/i', $this->sql, $ocMatch)) {
+                    if (!empty($ocMatch[1])) {
+                        $insertOptions['on_conflict'] = $ocMatch[1];
+                    } else {
+                        // Strip whitespace around column names: "a , b, c" → "a,b,c"
+                        $insertOptions['on_conflict'] = preg_replace('/\s*,\s*/', ',', $ocMatch[2]);
+                    }
+                    $insertOptions['ignore_duplicates'] = true;
+                }
+
+                $res = $this->client->table($this->table)->insert($data, $insertOptions);
                 if ($res && isset($res[0]['id'])) {
                     $this->pdoRef->setLastInsertId($res[0]['id']);
                 }

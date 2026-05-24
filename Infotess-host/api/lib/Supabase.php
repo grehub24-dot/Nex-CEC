@@ -229,21 +229,10 @@ class SupabaseClient {
         return $newClient;
     }
 
-    public function insert($data, array $options = []) {
+    public function insert($data) {
         if (!$this->table) throw new Exception("Table not set.");
         $url = "$this->url/rest/v1/{$this->table}";
-
-        // Support ON CONFLICT via PostgREST query parameter
-        if (!empty($options['on_conflict'])) {
-            $url .= '?on_conflict=' . urlencode($options['on_conflict']);
-        }
-
-        $preferHeader = "Prefer: return=representation";
-        if (!empty($options['ignore_duplicates'])) {
-            $preferHeader .= ",resolution=ignore-duplicates";
-        }
-
-        return $this->request('POST', $url, $data, [$preferHeader]);
+        return $this->request('POST', $url, $data);
     }
 
     public function update($data) {
@@ -374,21 +363,14 @@ class SupabaseClient {
         throw new Exception($message);
     }
 
-    private function request($method, $url, $data = null, array $customHeaders = []) {
+    private function request($method, $url, $data = null) {
         $ch = curl_init();
-        $headers = $customHeaders ?: [
+        $headers = [
             "apikey: {$this->key}",
             "Authorization: Bearer {$this->key}",
             "Content-Type: application/json",
             "Prefer: return=representation"
         ];
-        // Ensure required auth headers are always present
-        if (!in_array("apikey: {$this->key}", $headers)) {
-            array_unshift($headers, "apikey: {$this->key}", "Authorization: Bearer {$this->key}");
-        }
-        if (!in_array("Content-Type: application/json", $headers)) {
-            $headers[] = "Content-Type: application/json";
-        }
 
         curl_setopt_array($ch, [
             CURLOPT_URL => $url,

@@ -443,16 +443,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                             <input type="text" name="transaction_reference" id="pay_transaction_ref" class="form-control" placeholder="e.g. Momo ref, Bank teller no.">
                         </div>
 
-                        <div>
-                            <label>Fee Type</label>
-                            <select name="fee_type" id="pay_fee_type" class="form-control" required>
-                                <option value="">-- Select Class &amp; Term First --</option>
-                            </select>
+                        <div style="grid-column: span 2;">
+                            <div id="bill_summary" style="display:none; background:#f0f8ff; border:1px solid #d4e6f1; border-radius:8px; padding:15px; margin-bottom:10px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                                    <strong style="font-size:16px;">Total Bill: GHS <span id="total_bill_amount">0.00</span></strong>
+                                    <span id="bill_source" style="font-size:12px; color:#666;"></span>
+                                </div>
+                                <div style="border-top:1px solid #d4e6f1; padding-top:10px;">
+                                    <label style="display:flex; align-items:center; gap:10px; margin-bottom:8px; cursor:pointer;">
+                                        <input type="radio" name="payment_type" value="full" id="pay_full" checked onchange="togglePaymentType()">
+                                        <strong>Full Payment</strong> <span style="color:#666; font-size:13px;">&mdash; Pay entire bill</span>
+                                    </label>
+                                    <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+                                        <input type="radio" name="payment_type" value="partial" id="pay_partial" onchange="togglePaymentType()">
+                                        <strong>Partial Payment</strong> <span style="color:#666; font-size:13px;">&mdash; Select specific items to pay</span>
+                                    </label>
+                                </div>
+                                <div id="partial_breakdown" style="display:none; margin-top:12px; max-height:250px; overflow-y:auto; border:1px solid #e0e0e0; border-radius:6px;">
+                                    <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                                        <thead>
+                                            <tr style="background:#f8f9fa;">
+                                                <th style="padding:8px 10px; width:40px; text-align:center;">Pay</th>
+                                                <th style="padding:8px 10px; text-align:left;">Fee Item</th>
+                                                <th style="padding:8px 10px; text-align:center; width:80px;">Amount (GHS)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="breakdown_items"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div id="no_bill_msg" style="display:none; background:#fef9e7; border:1px solid #f9e79f; border-radius:8px; padding:15px; text-align:center; color:#7d6608;">
+                                No bill items found for this student in the selected term.
+                            </div>
                         </div>
 
                         <div>
                             <label>Amount (GHS)</label>
-                            <input type="number" step="0.01" name="amount" id="pay_amount" class="form-control" required readonly placeholder="Auto-filled from fee type">
+                            <input type="number" step="0.01" name="amount" id="pay_amount" class="form-control" required readonly placeholder="Auto-calculated from bill">
                         </div>
 
                         <div>
@@ -483,6 +510,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                             <input type="date" name="payment_date" class="form-control" value="<?php echo date('Y-m-d'); ?>" required>
                         </div>
 
+                        <input type="hidden" name="fee_items_json" id="fee_items_json" value="">
                         <?php csrf_field(); ?>
                         <div style="grid-column: span 2; margin-top: 10px;">
                             <button type="submit" class="btn-submit" style="width:100%;">Record Payment &amp; Generate Receipt</button>
@@ -507,7 +535,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         var classSelect = document.getElementById("pay_class_name");
         var studentSelect = document.getElementById("pay_student_id");
         var transRefInput = document.getElementById("pay_transaction_ref");
-        var feeTypeSelect = document.getElementById("pay_fee_type");
         var amountInput = document.getElementById("pay_amount");
         var academicYearInput = document.getElementById("pay_academic_year");
         var termSelect = document.getElementById("pay_term");
@@ -525,7 +552,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             // Reset downstream fields
             studentSelect.innerHTML = '<option value="">-- Select Student --</option>';
             transRefInput.value = '';
-            feeTypeSelect.innerHTML = '<option value="">-- Select Class & Term First --</option>';
             amountInput.value = '';
 
             if (!className) {
@@ -553,68 +579,143 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             });
             statusEl.textContent = matching.length + ' student(s) loaded for ' + className;
 
-            // Also refresh fee types
-            refreshFeeTypes();
+            // Also render bill breakdown if student was auto-selected
+            renderBillBreakdown();
         });
 
-        // ====== Refresh fee types when class, year, or term changes ======
-        function refreshFeeTypes() {
-            var className = classSelect.value;
+        // ====== Render bill breakdown when student/year/term changes ======
+        function renderBillBreakdown() {
+            var studentId = parseInt(studentSelect.value);
             var year = academicYearInput.value;
             var term = termSelect.value;
+            var billSummary = document.getElementById('bill_summary');
+            var noBillMsg = document.getElementById('no_bill_msg');
+            var breakdownBody = document.getElementById('breakdown_items');
+            var totalBillSpan = document.getElementById('total_bill_amount');
+            var billSource = document.getElementById('bill_source');
+            var amountInput = document.getElementById('pay_amount');
 
-            feeTypeSelect.innerHTML = '<option value="">-- Select Fee --</option>';
-            amountInput.value = '';
+            // Reset
+            billSummary.style.display = 'none';
+            noBillMsg.style.display = 'none';
+            breakdownBody.innerHTML = '';
 
-            if (!className || !year || !term) {
-                feeTypeSelect.innerHTML = '<option value="">-- Select Class, Year & Term --</option>';
+            if (!studentId || !year || !term) return;
+
+            // Filter bill items for this student/year/term
+            var items = BILL_ITEMS.filter(function(b) {
+                return parseInt(b.student_id) === studentId
+                    && (b.academic_year || '') === year
+                    && (b.term || '') === term;
+            });
+
+            if (items.length === 0) {
+                noBillMsg.style.display = 'block';
+                billSummary.style.display = 'none';
+                amountInput.value = '0';
                 return;
             }
 
-            // Find class_id from CLASSES by matching name
-            var classObj = null;
-            for (var i = 0; i < CLASSES.length; i++) {
-                if (CLASSES[i].name === className) { classObj = CLASSES[i]; break; }
-            }
-            if (!classObj) return;
-            var classId = classObj.id;
+            billSummary.style.display = 'block';
+            noBillMsg.style.display = 'none';
 
-            // Filter fee_structures by class_id, academic_year, term
-            // NOTE: term may be stored as 'Term 1' (seed data) or '1' (fee form).
-            // Normalize: extract just the numeric part.
-            var termNum = term.replace(/[^0-9]/g, '');
-            var matching = FEE_STRUCTURES.filter(function(f) {
-                var ft = String(f.term || '');
-                var ftNum = ft.replace(/[^0-9]/g, '');
-                return ftNum === termNum
-                    && (f.academic_year || '') === year
-                    && (f.class_id === null || f.class_id === '' || String(f.class_id) === String(classId));
+            var total = 0;
+            items.forEach(function(item) {
+                var amt = parseFloat(item.amount || 0);
+                total += amt;
+                var isCustom = (item.fee_structure_id === null || item.fee_structure_id === '');
+                var tr = document.createElement('tr');
+                tr.style.borderBottom = '1px solid #f0f0f0';
+                if (isCustom) tr.style.background = '#fef9e7';
+                tr.innerHTML = '<td style="padding:8px 10px;text-align:center;">'
+                    + '<input type="checkbox" class="item-checkbox" checked data-title="' + htmlspecialchars(item.title || item.fee_type)
+                    + '" data-type="' + htmlspecialchars(item.fee_type || 'General')
+                    + '" data-amount="' + amt.toFixed(2) + '"></td>'
+                    + '<td style="padding:8px 10px;">' + htmlspecialchars(item.title || item.fee_type)
+                    + (isCustom ? ' <span style="font-size:10px;color:#e8a317;font-weight:600;">(Custom)</span>' : '')
+                    + '</td>'
+                    + '<td style="padding:8px 10px;text-align:center;font-weight:600;">' + amt.toFixed(2) + '</td>';
+                breakdownBody.appendChild(tr);
             });
 
-            if (matching.length === 0) {
-                feeTypeSelect.innerHTML = '<option value="">-- No fees configured --</option>';
-                return;
-            }
+            totalBillSpan.textContent = total.toFixed(2);
+            billSource.textContent = items.length + ' item(s)';
 
-            matching.forEach(function(f) {
-                var opt = document.createElement('option');
-                opt.value = f.fee_type || f.title || '';
-                opt.textContent = f.title + ' (GHS ' + parseFloat(f.amount || 0).toFixed(2) + ')';
-                opt.setAttribute('data-amount', f.amount || '0');
-                feeTypeSelect.appendChild(opt);
-            });
+            // Default: Full Payment / amount = total bill
+            document.getElementById('pay_full').checked = true;
+            document.getElementById('partial_breakdown').style.display = 'none';
+            amountInput.value = total.toFixed(2);
+            amountInput.readOnly = true;
         }
 
-        // ====== Auto-fill amount when fee type is selected ======
-        feeTypeSelect.addEventListener('change', function() {
-            var selectedOpt = this.options[this.selectedIndex];
-            amountInput.value = selectedOpt ? (selectedOpt.getAttribute('data-amount') || '0') : '0';
+        // ====== Toggle between Full and Partial Payment ======
+        function togglePaymentType() {
+            var isPartial = document.getElementById('pay_partial').checked;
+            var breakdown = document.getElementById('partial_breakdown');
+            var amountInput = document.getElementById('pay_amount');
+            var totalBill = parseFloat(document.getElementById('total_bill_amount').textContent) || 0;
+
+            if (isPartial) {
+                breakdown.style.display = 'block';
+                amountInput.readOnly = false;
+                updatePartialTotal();
+            } else {
+                breakdown.style.display = 'none';
+                amountInput.value = totalBill.toFixed(2);
+                amountInput.readOnly = true;
+            }
+        }
+
+        // ====== Update amount when partial checkboxes change ======
+        function updatePartialTotal() {
+            var checkboxes = document.querySelectorAll('.item-checkbox:checked');
+            var total = 0;
+            checkboxes.forEach(function(cb) {
+                total += parseFloat(cb.getAttribute('data-amount') || 0);
+            });
+            document.getElementById('pay_amount').value = total.toFixed(2);
+        }
+
+        // ====== Wire up event delegation for checkbox changes ======
+        document.addEventListener('change', function(e) {
+            if (e.target && e.target.classList.contains('item-checkbox')) {
+                updatePartialTotal();
+            }
+        });
+
+        // ====== Serialize selected fee items on form submit ======
+        document.querySelector('#paymentModal form').addEventListener('submit', function() {
+            var checkboxes = document.querySelectorAll('.item-checkbox');
+            var items = [];
+            checkboxes.forEach(function(cb) {
+                if (cb.checked) {
+                    items.push({
+                        fee_type: cb.getAttribute('data-type'),
+                        fee_title: cb.getAttribute('data-title'),
+                        amount: parseFloat(cb.getAttribute('data-amount'))
+                    });
+                }
+            });
+            document.getElementById('fee_items_json').value = JSON.stringify(items);
+        });
+
+        // ====== Render bill breakdown when student is selected ======
+        studentSelect.addEventListener('change', function() {
+            renderBillBreakdown();
         });
 
         // ====== Refresh on year/term changes ======
-        academicYearInput.addEventListener('change', refreshFeeTypes);
-        academicYearInput.addEventListener('input', refreshFeeTypes);
-        termSelect.addEventListener('change', refreshFeeTypes);
+        academicYearInput.addEventListener('change', renderBillBreakdown);
+        academicYearInput.addEventListener('input', renderBillBreakdown);
+        termSelect.addEventListener('change', renderBillBreakdown);
+
+        // ====== Helper: htmlspecialchars for JS ======
+        function htmlspecialchars(str) {
+            if (!str) return '';
+            var div = document.createElement('div');
+            div.appendChild(document.createTextNode(String(str)));
+            return div.innerHTML;
+        }
     </script>
 </body>
 </html>

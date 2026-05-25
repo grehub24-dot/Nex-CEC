@@ -155,7 +155,6 @@ function getAccessControl() {
  * Returns an empty array if the user is not a teacher or has no classes assigned.
  */
 function getTeacherClassIds($pdo) {
-    if (!isTeacher()) return [];
     $user_id = $_SESSION['user_id'] ?? 0;
     if (!$user_id) return [];
     
@@ -167,14 +166,20 @@ function getTeacherClassIds($pdo) {
         if (!$staff) return [];
         $staff_id = (int)$staff['id'];
         
-        // 1. Find subjects where this teacher is assigned, extract unique class IDs
-        $stmt = $pdo->prepare("SELECT DISTINCT class_id FROM subjects WHERE teacher_id = ? AND class_id IS NOT NULL");
-        $stmt->execute([$staff_id]);
-        $rows = $stmt->fetchAll();
-        $class_ids = array_map(fn($r) => (int)$r['class_id'], $rows);
+        $class_ids = [];
         
-        // 2. Also check the class_teachers table for direct class assignments
-        //    (used when a staff member is set as "Class Teacher" for a specific class)
+        // 1. If the session says this user is a teacher, check subjects
+        if (isTeacher()) {
+            $stmt = $pdo->prepare("SELECT DISTINCT class_id FROM subjects WHERE teacher_id = ? AND class_id IS NOT NULL");
+            $stmt->execute([$staff_id]);
+            $rows = $stmt->fetchAll();
+            $class_ids = array_map(fn($r) => (int)$r['class_id'], $rows);
+        }
+        
+        // 2. ALWAYS check class_teachers — works regardless of session state.
+        //    This covers Class Teachers who haven't logged out/in after their
+        //    role was changed, and also serves as the primary mechanism for
+        //    Class Teachers who have no subjects assigned.
         try {
             $ctStmt = $pdo->prepare("SELECT class_id FROM class_teachers WHERE staff_id = ?");
             $ctStmt->execute([$staff_id]);

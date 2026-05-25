@@ -258,20 +258,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $saved = 0;
         foreach ($_POST['scores'] as $student_id => $data) {
             $student_id = (int)$student_id;
+            $individual_test = (float)($data['individual_test'] ?? 0);
             $class_test = (float)($data['class_test'] ?? 0);
-            $mid_term = (float)($data['mid_term'] ?? 0);
             $end_term = (float)($data['end_term'] ?? 0);
-            $project = (float)($data['project'] ?? 0);
             $attitude = sanitize($data['attitude'] ?? '');
             $interest = sanitize($data['interest'] ?? '');
             $existing = $pdo->prepare("SELECT id FROM sba_scores WHERE student_id = ? AND subject_id = ? AND term_id = ?");
             $existing->execute([$student_id, $subject_id, $term_id]);
             if ($existing->fetch()) {
-                $stmt = $pdo->prepare("UPDATE sba_scores SET class_test=?, mid_term=?, end_term=?, project=?, attitude=?, interest=? WHERE student_id=? AND subject_id=? AND term_id=?");
-                $stmt->execute([$class_test, $mid_term, $end_term, $project, $attitude, $interest, $student_id, $subject_id, $term_id]);
+                $stmt = $pdo->prepare("UPDATE sba_scores SET class_test=?, mid_term=?, end_term=?, attitude=?, interest=? WHERE student_id=? AND subject_id=? AND term_id=?");
+                $stmt->execute([$individual_test, $class_test, $end_term, $attitude, $interest, $student_id, $subject_id, $term_id]);
             } else {
-                $stmt = $pdo->prepare("INSERT INTO sba_scores (student_id, subject_id, term_id, class_test, mid_term, end_term, project, attitude, interest) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                $stmt->execute([$student_id, $subject_id, $term_id, $class_test, $mid_term, $end_term, $project, $attitude, $interest]);
+                $stmt = $pdo->prepare("INSERT INTO sba_scores (student_id, subject_id, term_id, class_test, mid_term, end_term, attitude, interest) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$student_id, $subject_id, $term_id, $individual_test, $class_test, $end_term, $attitude, $interest]);
             }
             $saved++;
         }
@@ -292,19 +291,39 @@ if ($selected_class && $selected_term && $selected_subject) {
     while ($row = $stmt->fetch()) { $existing_scores[$row['student_id']] = $row; }
 }
 
-// Calculate SBA data
+// Compute SBA calculations and positions (matches admin formula)
 $sba_data = [];
 if (!empty($students)) {
     foreach ($students as $st) {
         $s = $existing_scores[$st['id']] ?? null;
-        $total = $s ? (float)$s['class_test'] + (float)$s['mid_term'] + (float)$s['end_term'] + (float)$s['project'] : 0;
+        $individual_test = (float)($s['class_test'] ?? 0);
+        $class_test = (float)($s['mid_term'] ?? 0);
+        $end_term = (float)($s['end_term'] ?? 0);
+        
+        $total_class_score = $individual_test + $class_test; // out of 60
+        $scaled_60 = $total_class_score * 50 / 60; // scale 60 to 50%
+        $scaled_100 = $end_term * 50 / 100; // scale 100 to 50%
+        $overall_total = $scaled_60 + $scaled_100;
+        
         $sba_data[$st['id']] = [
-            'class_test' => $s ? $s['class_test'] : 0,
-            'mid_term' => $s ? $s['mid_term'] : 0,
-            'end_term' => $s ? $s['end_term'] : 0,
-            'project' => $s ? $s['project'] : 0,
-            'total' => $total,
+            'individual_test'    => $individual_test,
+            'class_test'         => $class_test,
+            'total_class_score'  => $total_class_score,
+            'scaled_60'          => round($scaled_60, 1),
+            'end_term'           => $end_term,
+            'scaled_100'         => round($scaled_100, 1),
+            'overall_total'      => round($overall_total, 1),
         ];
+    }
+    // Sort by overall_total DESC to assign positions
+    $sorted = $sba_data;
+    uasort($sorted, function($a, $b) {
+        return $b['overall_total'] <=> $a['overall_total'];
+    });
+    $rank = 1;
+    foreach ($sorted as $sid => $calc) {
+        $sba_data[$sid]['position'] = $rank;
+        $rank++;
     }
 }
 ?>
@@ -414,7 +433,7 @@ if (!empty($students)) {
                 </div>
                 <?php endif; ?>
                 <div class="alert alert-info" style="margin-top:15px;font-size:0.9rem;">
-                    <i class="fas fa-info-circle"></i> <strong>Ghana SBA Scoring:</strong> Class Test (30) + Mid-Term (20) + End-Term (30) + Project (20) = Total (100).
+                    <span><i class="fas fa-info-circle"></i> <strong>Ghana SBA Scoring:</strong> Individual Test (30) + Class Test (30) = Total Class Score (60) → scaled to 50%. End of Term Exams (100) → scaled to 50%. Overall = Scaled Class Score + Scaled Exams.</span>
                 </div>
                 <form method="POST" action="../staff/grades.php">
                     <input type="hidden" name="action" value="save_bulk_sba">
@@ -427,11 +446,14 @@ if (!empty($students)) {
                                 <tr>
                                     <th>No.</th>
                                     <th>Student Name</th>
-                                    <th style="width:65px;">Class Test (30)</th>
-                                    <th style="width:65px;">Mid-Term (20)</th>
-                                    <th style="width:65px;">End-Term (30)</th>
-                                    <th style="width:65px;">Project (20)</th>
-                                    <th style="width:65px;">Total (100)</th>
+                                    <th style="width:70px;">Individual Test<br><small>(30mks)</small></th>
+                                    <th style="width:70px;">Class Test<br><small>(30mks)</small></th>
+                                    <th style="width:70px;">Total Class Score<br><small>(60mks)</small></th>
+                                    <th style="width:70px;">60 Scaled to<br><small>(50%)</small></th>
+                                    <th style="width:75px;">End of Term Exams<br><small>(100mks)</small></th>
+                                    <th style="width:70px;">100 Scaled to<br><small>(50%)</small></th>
+                                    <th style="width:65px;">Overall Total</th>
+                                    <th style="width:50px;">Position</th>
                                     <th style="width:80px;">Attitude</th>
                                     <th style="width:80px;">Interest</th>
                                 </tr>
@@ -444,11 +466,14 @@ if (!empty($students)) {
                                 <tr>
                                     <td><?php echo $i + 1; ?></td>
                                     <td><strong><?php echo htmlspecialchars($student['full_name'] ?? ''); ?></strong></td>
-                                    <td><input type="number" step="0.5" min="0" max="30" name="scores[<?php echo $student['id']; ?>][class_test]" class="form-control score-input" data-student="<?php echo $student['id']; ?>" value="<?php echo $db ? htmlspecialchars($db['class_test'] ?? 0) : '0'; ?>" style="width:60px;" <?php echo $current_class_locked ? 'disabled' : ''; ?>></td>
-                                    <td><input type="number" step="0.5" min="0" max="20" name="scores[<?php echo $student['id']; ?>][mid_term]" class="form-control score-input" data-student="<?php echo $student['id']; ?>" value="<?php echo $db ? htmlspecialchars($db['mid_term'] ?? 0) : '0'; ?>" style="width:60px;" <?php echo $current_class_locked ? 'disabled' : ''; ?>></td>
-                                    <td><input type="number" step="0.5" min="0" max="30" name="scores[<?php echo $student['id']; ?>][end_term]" class="form-control score-input" data-student="<?php echo $student['id']; ?>" value="<?php echo $db ? htmlspecialchars($db['end_term'] ?? 0) : '0'; ?>" style="width:60px;" <?php echo $current_class_locked ? 'disabled' : ''; ?>></td>
-                                    <td><input type="number" step="0.5" min="0" max="20" name="scores[<?php echo $student['id']; ?>][project]" class="form-control score-input" data-student="<?php echo $student['id']; ?>" value="<?php echo $db ? htmlspecialchars($db['project'] ?? 0) : '0'; ?>" style="width:60px;" <?php echo $current_class_locked ? 'disabled' : ''; ?>></td>
-                                    <td class="calc-cell" id="total_<?php echo $student['id']; ?>" style="font-weight:bold;"><?php echo $calc ? number_format($calc['total'], 1) : '0.0'; ?></td>
+                                    <td><input type="number" step="0.5" min="0" max="30" name="scores[<?php echo $student['id']; ?>][individual_test]" class="form-control score-input" data-student="<?php echo $student['id']; ?>" value="<?php echo $db ? htmlspecialchars($db['class_test'] ?? 0) : '0'; ?>" style="width:60px;" <?php echo $current_class_locked ? 'disabled' : ''; ?>></td>
+                                    <td><input type="number" step="0.5" min="0" max="30" name="scores[<?php echo $student['id']; ?>][class_test]" class="form-control score-input" data-student="<?php echo $student['id']; ?>" value="<?php echo $db ? htmlspecialchars($db['mid_term'] ?? 0) : '0'; ?>" style="width:60px;" <?php echo $current_class_locked ? 'disabled' : ''; ?>></td>
+                                    <td class="calc-cell" id="total_class_<?php echo $student['id']; ?>"><?php echo $calc ? number_format($calc['total_class_score'], 1) : '0.0'; ?></td>
+                                    <td class="calc-cell" id="scaled60_<?php echo $student['id']; ?>"><?php echo $calc ? number_format($calc['scaled_60'], 1) : '0.0'; ?></td>
+                                    <td><input type="number" step="0.5" min="0" max="100" name="scores[<?php echo $student['id']; ?>][end_term]" class="form-control score-input" data-student="<?php echo $student['id']; ?>" value="<?php echo $db ? htmlspecialchars($db['end_term'] ?? 0) : '0'; ?>" style="width:60px;" <?php echo $current_class_locked ? 'disabled' : ''; ?>></td>
+                                    <td class="calc-cell" id="scaled100_<?php echo $student['id']; ?>"><?php echo $calc ? number_format($calc['scaled_100'], 1) : '0.0'; ?></td>
+                                    <td class="calc-cell" id="overall_<?php echo $student['id']; ?>" style="font-weight:bold;"><?php echo $calc ? number_format($calc['overall_total'], 1) : '0.0'; ?></td>
+                                    <td class="calc-cell" id="pos_<?php echo $student['id']; ?>"><?php echo $calc ? $calc['position'] : '-'; ?></td>
                                     <td>
                                         <select name="scores[<?php echo $student['id']; ?>][attitude]" class="form-control" style="width:80px;" <?php echo $current_class_locked ? 'disabled' : ''; ?>>
                                             <option value="">--</option>
@@ -483,17 +508,26 @@ if (!empty($students)) {
 
     <script>
     function recalcStudent(studentId) {
-        var ct = parseFloat(document.querySelector('input[name="scores[' + studentId + '][class_test]"]').value) || 0;
-        var mt = parseFloat(document.querySelector('input[name="scores[' + studentId + '][mid_term]"]').value) || 0;
-        var et = parseFloat(document.querySelector('input[name="scores[' + studentId + '][end_term]"]').value) || 0;
-        var pj = parseFloat(document.querySelector('input[name="scores[' + studentId + '][project]"]').value) || 0;
-        var total = ct + mt + et + pj;
-        document.getElementById('total_' + studentId).textContent = total.toFixed(1);
-        var cell = document.getElementById('total_' + studentId);
-        if (total >= 80) cell.style.color = '#27ae60';
-        else if (total >= 60) cell.style.color = '#2e86c1';
-        else if (total >= 50) cell.style.color = '#f39c12';
-        else cell.style.color = '#e74c3c';
+        var ind = parseFloat(document.querySelector('input[name="scores[' + studentId + '][individual_test]"]').value) || 0;
+        var cls = parseFloat(document.querySelector('input[name="scores[' + studentId + '][class_test]"]').value) || 0;
+        var end = parseFloat(document.querySelector('input[name="scores[' + studentId + '][end_term]"]').value) || 0;
+
+        var totalClass = ind + cls;
+        var scaled60 = totalClass * 50 / 60;
+        var scaled100 = end * 50 / 100;
+        var overall = scaled60 + scaled100;
+
+        document.getElementById('total_class_' + studentId).textContent = totalClass.toFixed(1);
+        document.getElementById('scaled60_' + studentId).textContent = scaled60.toFixed(1);
+        document.getElementById('scaled100_' + studentId).textContent = scaled100.toFixed(1);
+        document.getElementById('overall_' + studentId).textContent = overall.toFixed(1);
+
+        // Color-code overall total
+        var overallCell = document.getElementById('overall_' + studentId);
+        if (overall >= 80) overallCell.style.color = '#27ae60';
+        else if (overall >= 60) overallCell.style.color = '#2e86c1';
+        else if (overall >= 50) overallCell.style.color = '#f39c12';
+        else overallCell.style.color = '#e74c3c';
     }
 
     /**

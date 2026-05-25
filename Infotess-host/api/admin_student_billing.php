@@ -89,8 +89,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_bill'])) {
     try {
         $pdo->beginTransaction();
 
-        // Delete existing bill items
-        $stmt = $pdo->prepare("DELETE FROM student_bill_items WHERE student_id = ? AND academic_year = ? AND term = ?");
+        // Delete existing bill items linked to fee_structures (preserve custom fees)
+        $stmt = $pdo->prepare("DELETE FROM student_bill_items WHERE student_id = ? AND academic_year = ? AND term = ? AND fee_structure_id IS NOT NULL");
         $stmt->execute([$student_id, $filter_year, $filter_term]);
 
         // Insert selected items
@@ -132,6 +132,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_bill'])) {
     }
 }
 
+// Handle custom fee updates (from either main form or breakdown form)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['save_bill']) || isset($_POST['update_custom_fees']))) {
+    if (isset($_POST['update_custom_fees'])) {
+        validate_request_csrf();
+    }
+    // --- Process custom fees (update amounts & removals) ---
+    if (empty($error) && isset($_POST['custom_fee_amount']) && is_array($_POST['custom_fee_amount'])) {
+        try {
+            foreach ($_POST['custom_fee_amount'] as $item_id => $amount) {
+                $item_id = (int)$item_id;
+                $amount = (float)$amount;
+                // Remove if marked for deletion or amount is zero
+                if (isset($_POST['custom_fee_remove'][$item_id]) || $amount <= 0) {
+                    $stmt = $pdo->prepare("DELETE FROM student_bill_items WHERE id = ? AND student_id = ? AND fee_structure_id IS NULL");
+                    $stmt->execute([$item_id, $student_id]);
+                } else {
+                    $stmt = $pdo->prepare("UPDATE student_bill_items SET amount = ? WHERE id = ? AND student_id = ? AND fee_structure_id IS NULL");
+                    $stmt->execute([$amount, $item_id, $student_id]);
+                }
+            }
+        } catch (Exception $e) {
+            $error = "Error updating custom fees: " . $e->getMessage();
+        }
+    }
+
+    // --- Add new custom fee ---
+    if (empty($error) && isset($_POST['add_custom_fee']) && !empty(trim($_POST['new_custom_title'] ?? ''))) {
+        $new_title = sanitize(trim($_POST['new_custom_title']));
+        $new_amount = (float)($_POST['new_custom_amount'] ?? 0);
+        $new_type = sanitize(trim($_POST['new_custom_type'] ?? 'Custom Fee'));
+        if ($new_amount > 0) {
+            try {
+                $stmt = $pdo->prepare("INSERT INTO student_bill_items (student_id, fee_structure_id, academic_year, term, title, amount, fee_type, is_optional, created_by) VALUES (?, NULL, ?, ?, ?, ?, ?, 1, ?)");
+                $user_id = $_SESSION['user_id'] ?? 0;
+                $stmtStaff = $pdo->prepare("SELECT id FROM staff WHERE user_id = ?");
+                $stmtStaff->execute([$user_id]);
+                $staffRow = $stmtStaff->fetch();
+                $stmt->execute([$student_id, $filter_year, $filter_term, $new_title, $new_amount, $new_type, $staffRow ? (int)$staffRow['id'] : null]);
+                $message = ($message ? $message . ' ' : '') . "Custom fee \"$new_title\" added.";
+            } catch (Exception $e) {
+                $error = "Error adding custom fee: " . $e->getMessage();
+            }
+        }
+    }
+}
+
 // Re-fetch existing items after save
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
@@ -149,6 +195,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Calculate totals from existing bill items
 $billed_total = array_sum(array_column($existing_items, 'amount'));
+
+// Check if any custom fees exist (for breakdown edit controls)
+$has_custom_fees = false;
+foreach ($existing_items as $ei) {
+    if (empty($ei['fee_structure_id'])) {
+        $has_custom_fees = true;
+        break;
+    }
+}
 
 // Auto-check logic:
 function isAutoChecked($fee, $is_new_student) {
@@ -295,6 +350,28 @@ function isAutoChecked($fee, $is_new_student) {
                     <?php endforeach; ?>
                 <?php endif; ?>
 
+                <!-- Custom Fee Section -->
+                <div style="background:#fef9e7;border:1px solid #f9e79f;border-radius:8px;padding:16px;margin-top:16px;">
+                    <h4 style="margin:0 0 10px;font-size:14px;color:#7d6608;"><i class="fas fa-plus-circle"></i> Add Custom Fee</h4>
+                    <div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap;">
+                        <div>
+                            <label style="font-size:11px;color:#888;">Title</label>
+                            <input type="text" name="new_custom_title" class="form-control" style="width:180px;" placeholder="e.g. Arrears, Sports Fee">
+                        </div>
+                        <div>
+                            <label style="font-size:11px;color:#888;">Type</label>
+                            <input type="text" name="new_custom_type" class="form-control" style="width:120px;" value="Custom Fee" placeholder="Fee type">
+                        </div>
+                        <div>
+                            <label style="font-size:11px;color:#888;">Amount (GHS)</label>
+                            <input type="number" step="0.01" min="0" name="new_custom_amount" class="form-control" style="width:110px;" placeholder="0.00">
+                        </div>
+                        <button type="submit" name="add_custom_fee" value="1" style="padding:8px 16px;background:#e8a317;color:white;border:none;border-radius:5px;cursor:pointer;font-size:13px;font-weight:600;">
+                            <i class="fas fa-plus"></i> Add Fee
+                        </button>
+                    </div>
+                </div>
+
                 <!-- Summary -->
                 <div class="summary-bar">
                     <div>
@@ -309,18 +386,41 @@ function isAutoChecked($fee, $is_new_student) {
             <?php if (!empty($existing_items)): ?>
             <div class="bill-card">
                 <h4 style="margin:0 0 12px;font-size:15px;">Current Bill Breakdown</h4>
+                <form method="POST" style="display:contents;">
+                <?php csrf_field(); ?>
                 <table style="width:100%;border-collapse:collapse;font-size:13px;">
                     <thead><tr style="border-bottom:2px solid #e9ecef;">
                         <th style="text-align:left;padding:8px 4px;">Item</th>
                         <th style="text-align:left;padding:8px 4px;">Type</th>
                         <th style="text-align:right;padding:8px 4px;">Amount</th>
+                        <?php if ($has_custom_fees): ?>
+                        <th style="text-align:center;padding:8px 4px;width:50px;">Remove</th>
+                        <?php endif; ?>
                     </tr></thead>
                     <tbody>
-                    <?php foreach ($existing_items as $ei): ?>
-                        <tr style="border-bottom:1px solid #f0f0f0;">
-                            <td style="padding:8px 4px;"><?php echo htmlspecialchars($ei['title']); ?></td>
+                    <?php foreach ($existing_items as $ei): 
+                        $is_custom = empty($ei['fee_structure_id']);
+                    ?>
+                        <tr style="border-bottom:1px solid #f0f0f0;<?php echo $is_custom ? 'background:#fef9e7;' : ''; ?>">
+                            <td style="padding:8px 4px;">
+                                <?php echo htmlspecialchars($ei['title']); ?>
+                                <?php if ($is_custom): ?><span style="font-size:10px;color:#e8a317;margin-left:4px;">(custom)</span><?php endif; ?>
+                            </td>
                             <td style="padding:8px 4px;color:#888;"><?php echo htmlspecialchars($ei['fee_type']); ?></td>
-                            <td style="padding:8px 4px;text-align:right;font-weight:600;">GHS <?php echo number_format((float)$ei['amount'], 2); ?></td>
+                            <td style="padding:8px 4px;text-align:right;font-weight:600;">
+                                <?php if ($is_custom): ?>
+                                    <input type="number" step="0.01" min="0" name="custom_fee_amount[<?php echo (int)$ei['id']; ?>]" value="<?php echo number_format((float)$ei['amount'], 2); ?>" style="width:90px;text-align:right;font-weight:600;padding:4px;border:1px solid #f9e79f;border-radius:4px;">
+                                <?php else: ?>
+                                    GHS <?php echo number_format((float)$ei['amount'], 2); ?>
+                                <?php endif; ?>
+                            </td>
+                            <?php if ($is_custom): ?>
+                            <td style="padding:8px 4px;text-align:center;">
+                                <input type="checkbox" name="custom_fee_remove[<?php echo (int)$ei['id']; ?>]" value="1" title="Remove this custom fee">
+                            </td>
+                            <?php elseif ($has_custom_fees): ?>
+                            <td></td>
+                            <?php endif; ?>
                         </tr>
                     <?php endforeach; ?>
                     </tbody>
@@ -328,8 +428,13 @@ function isAutoChecked($fee, $is_new_student) {
                         <td style="padding:8px 4px;font-weight:700;">Total</td>
                         <td></td>
                         <td style="padding:8px 4px;text-align:right;font-weight:700;font-size:16px;">GHS <?php echo number_format($billed_total, 2); ?></td>
+                        <td></td>
                     </tr></tfoot>
                 </table>
+                <div style="margin-top:8px;text-align:right;">
+                    <button type="submit" name="update_custom_fees" value="1" class="btn-save" style="padding:6px 16px;font-size:12px;"><i class="fas fa-save"></i> Update Custom Fees</button>
+                </div>
+                </form>
             </div>
             <?php endif; ?>
         </div>

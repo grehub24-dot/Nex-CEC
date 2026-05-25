@@ -279,6 +279,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
+// Per-class SBA lock settings (JSON: {"class_id":"1"|"0"})
+$sba_class_lock = [];
+try {
+    $raw = $settings['sba_class_lock'] ?? '{}';
+    $decoded = json_decode($raw, true);
+    if (is_array($decoded)) {
+        $sba_class_lock = $decoded;
+    }
+} catch (Exception $e) {}
+$sba_class_lock_default = '1'; // classes not listed default to locked
+
+// Handle per-class lock toggle
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'toggle_class_lock') {
+    validate_request_csrf();
+    $class_id = (int)($_POST['class_id'] ?? 0);
+    if ($class_id > 0) {
+        $current = $sba_class_lock[(string)$class_id] ?? $sba_class_lock_default;
+        $sba_class_lock[(string)$class_id] = $current === '1' ? '0' : '1';
+        try {
+            $json = json_encode($sba_class_lock);
+            $stmt = $pdo->prepare("SELECT setting_key FROM system_settings WHERE setting_key = ?");
+            $stmt->execute(['sba_class_lock']);
+            if ($stmt->fetch()) {
+                $pdo->prepare("UPDATE system_settings SET setting_value = ? WHERE setting_key = ?")->execute([$json, 'sba_class_lock']);
+            } else {
+                $pdo->prepare("INSERT INTO system_settings (setting_key, setting_value) VALUES (?, ?)")->execute(['sba_class_lock', $json]);
+            }
+            $message = 'Class lock status updated.';
+        } catch (Exception $e) {
+            $error = "Error updating class lock: " . $e->getMessage();
+        }
+    }
+}
+
+// Determine if the currently selected class is locked
+$current_class_locked = false; // no class selected — irrelevant
+if ($selected_class) {
+    $current_class_locked = ($sba_class_lock[(string)$selected_class] ?? $sba_class_lock_default) === '1';
+}
+$sba_disabled = $current_class_locked ? 'disabled' : '';
+
 // Get existing scores for bulk view
 $existing_scores = [];
 if ($selected_class && $selected_term && $selected_subject) {
@@ -372,19 +413,33 @@ if (!empty($students)) {
 
             <?php if (!$selected_class): ?>
             <!-- Class Cards Grid (default view) -->
-            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:35px;margin-bottom:30px;">
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-bottom:30px;">
                 <?php foreach ($classes as $c):
                     $cname = $c['name'] ?? '';
                     $count = $students_per_class[$cname] ?? 0;
+                    $clid = (string)$c['id'];
+                    $is_locked = ($sba_class_lock[$clid] ?? $sba_class_lock_default) === '1';
                 ?>
-                <a href="?class_id=<?php echo $c['id']; ?>" class="card class-card" style="display:block;text-decoration:none;color:inherit;transition:transform 0.15s,box-shadow 0.15s;border:2px solid transparent;">
-                    <div class="card-content" style="text-align:center;padding:24px 16px;">
-                        <div style="font-size:1.5rem;font-weight:700;color:#2c3e50;margin-bottom:6px;"><?php echo htmlspecialchars($cname); ?></div>
-                        <div style="font-size:0.85rem;color:#7f8c8d;">
-                            <i class="fas fa-user-graduate"></i> <?php echo $count; ?> student<?php echo $count !== 1 ? 's' : ''; ?>
+                <div class="card class-card" style="position:relative;border:2px solid <?php echo $is_locked ? '#e74c3c' : '#27ae60'; ?>;">
+                    <a href="?class_id=<?php echo $c['id']; ?>" style="display:block;text-decoration:none;color:inherit;">
+                        <div class="card-content" style="text-align:center;padding:20px 16px 12px;">
+                            <div style="font-size:1.5rem;font-weight:700;color:#2c3e50;margin-bottom:6px;"><?php echo htmlspecialchars($cname); ?></div>
+                            <div style="font-size:0.85rem;color:#7f8c8d;">
+                                <i class="fas fa-user-graduate"></i> <?php echo $count; ?> student<?php echo $count !== 1 ? 's' : ''; ?>
+                            </div>
                         </div>
-                    </div>
-                </a>
+                    </a>
+                    <!-- Per-class lock toggle -->
+                    <form method="POST" action="grades.php" style="display:flex;justify-content:center;padding:0 16px 14px;">
+                        <?php csrf_field(); ?>
+                        <input type="hidden" name="action" value="toggle_class_lock">
+                        <input type="hidden" name="class_id" value="<?php echo $c['id']; ?>">
+                        <button type="submit" style="border:none;background:none;cursor:pointer;color:<?php echo $is_locked ? '#e74c3c' : '#27ae60'; ?>;font-size:0.85rem;display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:4px;">
+                            <i class="fas <?php echo $is_locked ? 'fa-lock' : 'fa-unlock-alt'; ?>"></i>
+                            <?php echo $is_locked ? 'Locked' : 'Open'; ?>
+                        </button>
+                    </form>
+                </div>
                 <?php endforeach; ?>
             </div>
             <?php else: ?>
@@ -431,9 +486,14 @@ if (!empty($students)) {
                     
                     <div class="alert alert-info" style="margin-top: 15px; font-size: 0.9rem;display:flex;align-items:center;justify-content:space-between;">
                         <span><i class="fas fa-info-circle"></i> <strong>Ghana SBA Scoring:</strong> Individual Test (30) + Class Test (30) = Total Class Score (60) → scaled to 50%. End of Term Exams (100) → scaled to 50%. Overall = Scaled Class Score + Scaled Exams.</span>
-                        <button type="button" id="toggleEditBtn" style="white-space:nowrap;flex-shrink:0;margin-left:12px;padding:6px 14px;border:1px solid #bdc3c7;border-radius:4px;background:#fff;color:#2c3e50;cursor:pointer;font-size:0.85rem;" onclick="toggleEditMode()">
-                            <i class="fas fa-lock"></i> Enable Editing
-                        </button>
+                        <form method="POST" action="grades.php?class_id=<?php echo $selected_class; ?>" style="display:inline;margin:0;">
+                            <?php csrf_field(); ?>
+                            <input type="hidden" name="action" value="toggle_class_lock">
+                            <input type="hidden" name="class_id" value="<?php echo $selected_class; ?>">
+                            <button type="submit" id="toggleEditBtn" style="white-space:nowrap;flex-shrink:0;margin-left:12px;padding:6px 14px;border:1px solid <?php echo $current_class_locked ? '#e74c3c' : '#27ae60'; ?>;border-radius:4px;background:<?php echo $current_class_locked ? '#e74c3c' : '#fff'; ?>;color:<?php echo $current_class_locked ? '#fff' : '#2c3e50'; ?>;cursor:pointer;font-size:0.85rem;">
+                                <i class="fas <?php echo $current_class_locked ? 'fa-lock' : 'fa-unlock-alt'; ?>"></i> <?php echo $current_class_locked ? 'Locked — Click to Open' : 'Open — Click to Lock'; ?>
+                            </button>
+                        </form>
                     </div>
 
                     <form method="POST" action="grades.php">
@@ -469,16 +529,16 @@ if (!empty($students)) {
                                     <tr>
                                         <td><?php echo $i + 1; ?></td>
                                         <td><strong><?php echo htmlspecialchars($student['full_name'] ?? ''); ?></strong></td>
-                                        <td><input type="number" step="0.5" min="0" max="30" name="scores[<?php echo $student['id']; ?>][individual_test]" class="form-control score-input" data-student="<?php echo $student['id']; ?>" value="<?php echo $db ? htmlspecialchars($db['class_test'] ?? 0) : '0'; ?>" style="width: 60px;"></td>
-                                        <td><input type="number" step="0.5" min="0" max="30" name="scores[<?php echo $student['id']; ?>][class_test]" class="form-control score-input" data-student="<?php echo $student['id']; ?>" value="<?php echo $db ? htmlspecialchars($db['mid_term'] ?? 0) : '0'; ?>" style="width: 60px;"></td>
+                                        <td><input type="number" step="0.5" min="0" max="30" name="scores[<?php echo $student['id']; ?>][individual_test]" class="form-control score-input" data-student="<?php echo $student['id']; ?>" value="<?php echo $db ? htmlspecialchars($db['class_test'] ?? 0) : '0'; ?>" style="width: 60px;" <?php echo $sba_disabled; ?>></td>
+                                        <td><input type="number" step="0.5" min="0" max="30" name="scores[<?php echo $student['id']; ?>][class_test]" class="form-control score-input" data-student="<?php echo $student['id']; ?>" value="<?php echo $db ? htmlspecialchars($db['mid_term'] ?? 0) : '0'; ?>" style="width: 60px;" <?php echo $sba_disabled; ?>></td>
                                         <td class="calc-cell" id="total_class_<?php echo $student['id']; ?>"><?php echo $calc ? number_format($calc['total_class_score'], 1) : '0.0'; ?></td>
                                         <td class="calc-cell" id="scaled60_<?php echo $student['id']; ?>"><?php echo $calc ? number_format($calc['scaled_60'], 1) : '0.0'; ?></td>
-                                        <td><input type="number" step="0.5" min="0" max="100" name="scores[<?php echo $student['id']; ?>][end_term]" class="form-control score-input" data-student="<?php echo $student['id']; ?>" value="<?php echo $db ? htmlspecialchars($db['end_term'] ?? 0) : '0'; ?>" style="width: 60px;"></td>
+                                        <td><input type="number" step="0.5" min="0" max="100" name="scores[<?php echo $student['id']; ?>][end_term]" class="form-control score-input" data-student="<?php echo $student['id']; ?>" value="<?php echo $db ? htmlspecialchars($db['end_term'] ?? 0) : '0'; ?>" style="width: 60px;" <?php echo $sba_disabled; ?>></td>
                                         <td class="calc-cell" id="scaled100_<?php echo $student['id']; ?>"><?php echo $calc ? number_format($calc['scaled_100'], 1) : '0.0'; ?></td>
                                         <td class="calc-cell" id="overall_<?php echo $student['id']; ?>" style="font-weight:bold;"><?php echo $calc ? number_format($calc['overall_total'], 1) : '0.0'; ?></td>
                                         <td class="calc-cell" id="pos_<?php echo $student['id']; ?>"><?php echo $calc ? $calc['position'] : '-'; ?></td>
                                         <td>
-                                                <select name="scores[<?php echo $student['id']; ?>][attitude]" class="form-control sba-select" style="width: 80px;">
+                                                <select name="scores[<?php echo $student['id']; ?>][attitude]" class="form-control sba-select" style="width: 80px;" <?php echo $sba_disabled; ?>>
                                                     <option value="">--</option>
                                                     <option value="Excellent" <?php echo ($db && $db['attitude'] === 'Excellent') ? 'selected' : ''; ?>>Excellent</option>
                                                     <option value="Good" <?php echo ($db && $db['attitude'] === 'Good') ? 'selected' : ''; ?>>Good</option>
@@ -487,7 +547,7 @@ if (!empty($students)) {
                                                 </select>
                                             </td>
                                             <td>
-                                                <select name="scores[<?php echo $student['id']; ?>][interest]" class="form-control sba-select" style="width: 80px;">
+                                                <select name="scores[<?php echo $student['id']; ?>][interest]" class="form-control sba-select" style="width: 80px;" <?php echo $sba_disabled; ?>>
                                                     <option value="">--</option>
                                                     <option value="Excellent" <?php echo ($db && $db['interest'] === 'Excellent') ? 'selected' : ''; ?>>Excellent</option>
                                                     <option value="Good" <?php echo ($db && $db['interest'] === 'Good') ? 'selected' : ''; ?>>Good</option>
@@ -501,7 +561,7 @@ if (!empty($students)) {
                             </table>
                         </div>
                         
-                        <button type="submit" id="saveScoresBtn" class="btn-primary" style="margin-top: 20px; width: 100%;"><i class="fas fa-save"></i> Save All Scores</button>
+                        <button type="submit" id="saveScoresBtn" class="btn-primary" style="margin-top: 20px; width: 100%; <?php echo $current_class_locked ? 'display:none;' : ''; ?>"><i class="fas fa-save"></i> Save All Scores</button>
                     </form>
                 </div>
             </div>
@@ -538,49 +598,25 @@ if (!empty($students)) {
         else overallCell.style.color = '#e74c3c';
     }
 
-    /**
-     * Toggle between locked (view-only) and editable mode.
-     * In locked mode, all inputs and selects are disabled;
-     * the Save button is hidden.
-     */
-    var editMode = false;
-
-    function toggleEditMode() {
-        editMode = !editMode;
-        var inputs = document.querySelectorAll('.score-input');
-        var selects = document.querySelectorAll('.sba-select');
-        var saveBtn = document.getElementById('saveScoresBtn');
-        var toggleBtn = document.getElementById('toggleEditBtn');
-
-        inputs.forEach(function(inp) { inp.disabled = !editMode; });
-        selects.forEach(function(sel) { sel.disabled = !editMode; });
-        if (saveBtn) saveBtn.style.display = editMode ? '' : 'none';
-
-        if (editMode) {
-            toggleBtn.innerHTML = '<i class="fas fa-unlock-alt"></i> Lock &amp; View Only';
-            toggleBtn.style.background = '#27ae60';
-            toggleBtn.style.color = '#fff';
-            toggleBtn.style.borderColor = '#27ae60';
-        } else {
-            toggleBtn.innerHTML = '<i class="fas fa-lock"></i> Enable Editing';
-            toggleBtn.style.background = '#fff';
-            toggleBtn.style.color = '#2c3e50';
-            toggleBtn.style.borderColor = '#bdc3c7';
-        }
-    }
-
     // Attach event listeners and recalc all on page load
+    // Input enable/disable is controlled server-side via per-class lock
     document.addEventListener('DOMContentLoaded', function() {
+        <?php if ($current_class_locked): ?>
+        // Class is locked — keep inputs disabled per server setting
+        <?php else: ?>
+        // Class is unlocked — enable all inputs
+        document.querySelectorAll('.score-input').forEach(function(inp) { inp.disabled = false; });
+        document.querySelectorAll('.sba-select').forEach(function(sel) { sel.disabled = false; });
+        var saveBtn = document.getElementById('saveScoresBtn');
+        if (saveBtn) saveBtn.style.display = '';
+        <?php endif; ?>
+
         document.querySelectorAll('.score-input').forEach(function(inp) {
             var sid = inp.getAttribute('data-student');
             inp.addEventListener('input', function() { recalcStudent(sid); });
             // Trigger initial calculation
             recalcStudent(sid);
         });
-
-        // Always start in locked (view-only) mode
-        editMode = true;  // force toggle to false
-        toggleEditMode();
     });
     </script>
 </body>

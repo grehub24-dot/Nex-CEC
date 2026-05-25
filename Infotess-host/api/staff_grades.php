@@ -8,6 +8,17 @@ if (!isLoggedIn() || !isTeacher()) {
 $settings = fetchSettings($pdo);
 $school_name = $settings['school_name'] ?? 'Nex CEC';
 
+// Per-class SBA lock
+$sba_class_lock = [];
+try {
+    $raw = $settings['sba_class_lock'] ?? '{}';
+    $decoded = json_decode($raw, true);
+    if (is_array($decoded)) {
+        $sba_class_lock = $decoded;
+    }
+} catch (Exception $e) {}
+$sba_class_lock_default = '1';
+
 $user_id = $_SESSION['user_id'];
 
 // Fetch staff record
@@ -181,6 +192,7 @@ if (empty($subject_category_mapping)) {
 $selected_class = $_GET['class_id'] ?? '';
 $selected_term = $_GET['term_id'] ?? '';
 $selected_subject = $_GET['subject_id'] ?? '';
+$current_class_locked = ($sba_class_lock[(string)$selected_class] ?? $sba_class_lock_default) === '1';
 
 $class_name = '';
 if ($selected_class) {
@@ -231,6 +243,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $subject_id = (int)$_POST['subject_id'];
     $term_id = (int)$_POST['term_id'];
     $class_name_raw = sanitize($_POST['class_name']);
+
+    // Look up class_id from class_name for lock check
+    $class_stmt = $pdo->prepare("SELECT id FROM classes WHERE name = ?");
+    $class_stmt->execute([$class_name_raw]);
+    $class_row = $class_stmt->fetch();
+    $post_class_id = $class_row ? (int)$class_row['id'] : 0;
+    $post_class_locked = ($sba_class_lock[(string)$post_class_id] ?? $sba_class_lock_default) === '1';
+    if ($post_class_id > 0 && $post_class_locked) {
+        $error = "This class is locked by the admin. Scores cannot be saved.";
+    } else {
     try {
         $pdo->beginTransaction();
         $saved = 0;
@@ -259,7 +281,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $pdo->rollBack();
         $error = "Error: " . $e->getMessage();
     }
-}
+    } // end else (not locked)
 
 // Get existing scores
 $existing_scores = [];
@@ -385,6 +407,11 @@ if (!empty($students)) {
         <div class="card">
             <div class="card-content">
                 <h3>Bulk Entry — <?php echo htmlspecialchars($class_name); ?></h3>
+                <?php if ($current_class_locked): ?>
+                <div class="alert alert-warning" style="margin-top:15px;font-size:0.9rem;">
+                    <i class="fas fa-lock"></i> <strong>This class is locked by the admin.</strong> Scores are view-only.
+                </div>
+                <?php endif; ?>
                 <div class="alert alert-info" style="margin-top:15px;font-size:0.9rem;">
                     <i class="fas fa-info-circle"></i> <strong>Ghana SBA Scoring:</strong> Class Test (30) + Mid-Term (20) + End-Term (30) + Project (20) = Total (100).
                 </div>
@@ -416,13 +443,13 @@ if (!empty($students)) {
                                 <tr>
                                     <td><?php echo $i + 1; ?></td>
                                     <td><strong><?php echo htmlspecialchars($student['full_name'] ?? ''); ?></strong></td>
-                                    <td><input type="number" step="0.5" min="0" max="30" name="scores[<?php echo $student['id']; ?>][class_test]" class="form-control score-input" data-student="<?php echo $student['id']; ?>" value="<?php echo $db ? htmlspecialchars($db['class_test'] ?? 0) : '0'; ?>" style="width:60px;"></td>
-                                    <td><input type="number" step="0.5" min="0" max="20" name="scores[<?php echo $student['id']; ?>][mid_term]" class="form-control score-input" data-student="<?php echo $student['id']; ?>" value="<?php echo $db ? htmlspecialchars($db['mid_term'] ?? 0) : '0'; ?>" style="width:60px;"></td>
-                                    <td><input type="number" step="0.5" min="0" max="30" name="scores[<?php echo $student['id']; ?>][end_term]" class="form-control score-input" data-student="<?php echo $student['id']; ?>" value="<?php echo $db ? htmlspecialchars($db['end_term'] ?? 0) : '0'; ?>" style="width:60px;"></td>
-                                    <td><input type="number" step="0.5" min="0" max="20" name="scores[<?php echo $student['id']; ?>][project]" class="form-control score-input" data-student="<?php echo $student['id']; ?>" value="<?php echo $db ? htmlspecialchars($db['project'] ?? 0) : '0'; ?>" style="width:60px;"></td>
+                                    <td><input type="number" step="0.5" min="0" max="30" name="scores[<?php echo $student['id']; ?>][class_test]" class="form-control score-input" data-student="<?php echo $student['id']; ?>" value="<?php echo $db ? htmlspecialchars($db['class_test'] ?? 0) : '0'; ?>" style="width:60px;" <?php echo $current_class_locked ? 'disabled' : ''; ?>></td>
+                                    <td><input type="number" step="0.5" min="0" max="20" name="scores[<?php echo $student['id']; ?>][mid_term]" class="form-control score-input" data-student="<?php echo $student['id']; ?>" value="<?php echo $db ? htmlspecialchars($db['mid_term'] ?? 0) : '0'; ?>" style="width:60px;" <?php echo $current_class_locked ? 'disabled' : ''; ?>></td>
+                                    <td><input type="number" step="0.5" min="0" max="30" name="scores[<?php echo $student['id']; ?>][end_term]" class="form-control score-input" data-student="<?php echo $student['id']; ?>" value="<?php echo $db ? htmlspecialchars($db['end_term'] ?? 0) : '0'; ?>" style="width:60px;" <?php echo $current_class_locked ? 'disabled' : ''; ?>></td>
+                                    <td><input type="number" step="0.5" min="0" max="20" name="scores[<?php echo $student['id']; ?>][project]" class="form-control score-input" data-student="<?php echo $student['id']; ?>" value="<?php echo $db ? htmlspecialchars($db['project'] ?? 0) : '0'; ?>" style="width:60px;" <?php echo $current_class_locked ? 'disabled' : ''; ?>></td>
                                     <td class="calc-cell" id="total_<?php echo $student['id']; ?>" style="font-weight:bold;"><?php echo $calc ? number_format($calc['total'], 1) : '0.0'; ?></td>
                                     <td>
-                                        <select name="scores[<?php echo $student['id']; ?>][attitude]" class="form-control" style="width:80px;">
+                                        <select name="scores[<?php echo $student['id']; ?>][attitude]" class="form-control" style="width:80px;" <?php echo $current_class_locked ? 'disabled' : ''; ?>>
                                             <option value="">--</option>
                                             <option value="Excellent" <?php echo ($db && $db['attitude'] === 'Excellent') ? 'selected' : ''; ?>>Excellent</option>
                                             <option value="Good" <?php echo ($db && $db['attitude'] === 'Good') ? 'selected' : ''; ?>>Good</option>
@@ -431,7 +458,7 @@ if (!empty($students)) {
                                         </select>
                                     </td>
                                     <td>
-                                        <select name="scores[<?php echo $student['id']; ?>][interest]" class="form-control" style="width:80px;">
+                                        <select name="scores[<?php echo $student['id']; ?>][interest]" class="form-control" style="width:80px;" <?php echo $current_class_locked ? 'disabled' : ''; ?>>
                                             <option value="">--</option>
                                             <option value="Excellent" <?php echo ($db && $db['interest'] === 'Excellent') ? 'selected' : ''; ?>>Excellent</option>
                                             <option value="Good" <?php echo ($db && $db['interest'] === 'Good') ? 'selected' : ''; ?>>Good</option>
@@ -444,7 +471,7 @@ if (!empty($students)) {
                             </tbody>
                         </table>
                     </div>
-                    <button type="submit" class="btn-primary" style="margin-top:20px;width:100%;"><i class="fas fa-save"></i> Save All Scores</button>
+                    <button type="submit" class="btn-primary" style="margin-top:20px;width:100%;<?php echo $current_class_locked ? 'display:none;' : ''; ?>"><i class="fas fa-save"></i> Save All Scores</button>
                 </form>
             </div>
         </div>

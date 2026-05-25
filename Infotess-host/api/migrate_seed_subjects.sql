@@ -8,14 +8,19 @@
 -- ============================================================
 INSERT INTO subjects (name, code)
 SELECT name, code FROM (VALUES
-    ('Literacy',         'LIT'),
-    ('Numeracy',         'NUM'),
-    ('Colouring',        'COL'),
-    ('Pre-writing',      'PRW'),
-    ('OWOP',             'OWOP'),
-    ('History',          'HIST'),
-    ('Asante-Twi',       'ATWI'),
-    ('Science',          'SCI')   -- separate from Integrated Science (id 3)
+    ('Literacy',              'LIT'),
+    ('Numeracy',              'NUM'),
+    ('Colouring',             'COL'),
+    ('Pre-writing',           'PRW'),
+    ('OWOP',                  'OWOP'),
+    ('History',               'HIST'),
+    ('Asante-Twi',           'ATWI'),
+    ('Science',               'SCI'),    -- separate from Integrated Science (id 3)
+    ('Social Studies',        'SST'),
+    ('French',                'FRE'),
+    ('Ghanaian Language',     'GL'),
+    ('Physical Education',    'PE'),
+    ('Career Technology',     'CT')
 ) AS new(name, code)
 WHERE NOT EXISTS (
     SELECT 1 FROM subjects WHERE subjects.name = new.name
@@ -36,7 +41,10 @@ subject_ids AS (
         'Literacy', 'Numeracy', 'Colouring', 'Scribbling',
         'Pre-writing', 'Creative Arts', 'OWOP',
         'English Language', 'Mathematics', 'Science', 'Computing',
-        'History', 'Religious and Moral Education', 'Asante-Twi'
+        'History', 'Religious and Moral Education', 'Asante-Twi',
+        'Integrated Science', 'Social Studies', 'French',
+        'Ghanaian Language', 'Physical Education', 'Career Technology',
+        'Language & Literacy'
     )
 ),
 mapping AS (
@@ -65,6 +73,17 @@ mapping AS (
         ARRAY(
             SELECT id FROM subject_ids
             WHERE name IN ('English Language', 'Mathematics', 'Science', 'Computing', 'History', 'Religious and Moral Education', 'Asante-Twi', 'Creative Arts')
+            ORDER BY id
+        )
+    UNION ALL
+    SELECT 'jhs',
+        ARRAY(
+            SELECT id FROM subject_ids
+            WHERE name IN ('English Language', 'Mathematics', 'Integrated Science',
+                'Social Studies', 'French', 'Ghanaian Language',
+                'Physical Education', 'Career Technology', 'Computing',
+                'Religious and Moral Education', 'Creative Arts',
+                'History', 'Asante-Twi', 'Language & Literacy')
             ORDER BY id
         )
 )

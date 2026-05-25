@@ -49,6 +49,21 @@ $unread_count = count($unread_message_ids);
 
 // Get teacher's assigned class IDs
 $teacher_class_ids = getTeacherClassIds($pdo);
+// Fallback: if getTeacherClassIds returned empty, try class_teachers directly
+if (empty($teacher_class_ids)) {
+    try {
+        $ctStmt = $pdo->prepare("SELECT class_id FROM class_teachers WHERE staff_id = ?");
+        $ctStmt->execute([$staff_id]);
+        $ctRows = $ctStmt->fetchAll();
+        foreach ($ctRows as $ctRow) {
+            $teacher_class_ids[] = (int)$ctRow['class_id'];
+        }
+        $teacher_class_ids = array_unique(array_filter($teacher_class_ids));
+        error_log("staff_grades.php FALLBACK: found class_teachers for staff_id=$staff_id: " . json_encode($teacher_class_ids));
+    } catch (Exception $e) {
+        error_log("staff_grades.php FALLBACK error: " . $e->getMessage());
+    }
+}
 
 // Get classes, terms, subjects
 $all_classes = $pdo->query("SELECT * FROM classes")->fetchAll();

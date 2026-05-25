@@ -15,8 +15,22 @@ $stmt->execute([$user_id]);
 $staff = $stmt->fetch();
 if (!$staff) { redirect('../logout.php'); }
 
-// Get teacher's assigned class IDs (via subjects table)
+// Get teacher's assigned class IDs (via subjects + class_teachers tables)
 $teacher_class_ids = getTeacherClassIds($pdo);
+// Fallback: query class_teachers directly (bypasses any opcode caching on getTeacherClassIds)
+if (empty($teacher_class_ids) && !empty($staff['id'])) {
+    try {
+        $ctStmt = $pdo->prepare("SELECT class_id FROM class_teachers WHERE staff_id = ?");
+        $ctStmt->execute([(int)$staff['id']]);
+        while ($ctRow = $ctStmt->fetch()) {
+            $teacher_class_ids[] = (int)$ctRow['class_id'];
+        }
+        $teacher_class_ids = array_unique(array_filter($teacher_class_ids));
+        error_log("staff_fees_debt.php FALLBACK: found class_teachers for staff_id={$staff['id']}: " . json_encode($teacher_class_ids));
+    } catch (Exception $e) {
+        error_log("staff_fees_debt.php FALLBACK error: " . $e->getMessage());
+    }
+}
 
 // Fetch classes (only teacher's classes)
 $all_classes = $pdo->query("SELECT * FROM classes")->fetchAll();

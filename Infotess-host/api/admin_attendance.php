@@ -19,6 +19,25 @@ usort($all_classes, fn($a, $b) => ((int)($a['sort_order'] ?? 0)) - ((int)($b['so
 // Teacher scope: if logged in as teacher, only show assigned classes
 if (isTeacher()) {
     $teacher_class_ids = getTeacherClassIds($pdo);
+    // Fallback: query class_teachers directly (bypasses any opcode caching on getTeacherClassIds)
+    if (empty($teacher_class_ids)) {
+        try {
+            $staffSt = $pdo->prepare("SELECT id FROM staff WHERE user_id = ?");
+            $staffSt->execute([$_SESSION['user_id'] ?? 0]);
+            $staffRow = $staffSt->fetch();
+            if ($staffRow) {
+                $ctStmt = $pdo->prepare("SELECT class_id FROM class_teachers WHERE staff_id = ?");
+                $ctStmt->execute([(int)$staffRow['id']]);
+                while ($ctRow = $ctStmt->fetch()) {
+                    $teacher_class_ids[] = (int)$ctRow['class_id'];
+                }
+                $teacher_class_ids = array_unique(array_filter($teacher_class_ids));
+                error_log("admin_attendance.php FALLBACK: found class_teachers: " . json_encode($teacher_class_ids));
+            }
+        } catch (Exception $e) {
+            error_log("admin_attendance.php FALLBACK error: " . $e->getMessage());
+        }
+    }
     $classes = array_filter($all_classes, function($c) use ($teacher_class_ids) {
         return in_array((int)$c['id'], $teacher_class_ids);
     });

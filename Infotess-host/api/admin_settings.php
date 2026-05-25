@@ -18,7 +18,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             'school_name', 'school_motto', 'school_address', 'school_email', 'school_phone',
             'current_academic_year', 'current_term', 'annual_dues_amount',
             'payment_modes', 'fee_types',
-            'admission_fee', 'prospectus_fee', 'enrollment_form_fee'
+            'admission_fee', 'prospectus_fee', 'enrollment_form_fee',
+            'staff_child_discount', 'sibling_discount_amount'
         ];
 
         // Bridge doesn't support ON CONFLICT — use separate update/insert per key
@@ -138,7 +139,9 @@ $defaults = [
     'payment_modes' => 'Cash,Mobile Money,Bank Transfer',
     'admission_fee' => '150.00',
     'prospectus_fee' => '50.00',
-    'enrollment_form_fee' => '20.00'
+    'enrollment_form_fee' => '20.00',
+    'staff_child_discount' => '150.00',
+    'sibling_discount_amount' => '150.00'
 ];
 $settings = array_merge($defaults, $settings);
 ?>
@@ -272,6 +275,14 @@ $settings = array_merge($defaults, $settings);
                                 <span class="setting-label">Enrollment Form Fee</span>
                                 <span class="setting-value">GHS <?php echo htmlspecialchars($settings['enrollment_form_fee'] ?? '20.00'); ?></span>
                             </div>
+                            <div class="setting-item" style="border-left-color: #8e44ad;">
+                                <span class="setting-label">Staff Child Discount</span>
+                                <span class="setting-value">GHS <?php echo htmlspecialchars($settings['staff_child_discount'] ?? '150.00'); ?></span>
+                            </div>
+                            <div class="setting-item" style="border-left-color: #8e44ad;">
+                                <span class="setting-label">Sibling Discount (3rd+ Child)</span>
+                                <span class="setting-value">GHS <?php echo htmlspecialchars($settings['sibling_discount_amount'] ?? '150.00'); ?></span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -401,6 +412,20 @@ $settings = array_merge($defaults, $settings);
                         <label>Fee Types (Comma separated)</label>
                         <input type="text" name="fee_types" class="form-control" value="<?php echo htmlspecialchars($settings['fee_types'] ?? 'Tuition,PTA Levy,Sports & Culture,ICT,Examination,Development,Feeding,Transport,Uniform,Books & Materials'); ?>" placeholder="e.g. Tuition,PTA Levy,Sports,ICT,Examination">
                         <small style="color: #666;">These are the fee categories that will appear on the student dashboard.</small>
+                    </div>
+                </div>
+
+                <h4 style="margin: 20px 0 15px 0; color: #8e44ad; border-top: 1px solid #eee; padding-top: 15px;">Discount Settings</h4>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom: 20px;">
+                    <div class="form-group">
+                        <label>Staff Child Discount (GHS)</label>
+                        <input type="number" step="0.01" name="staff_child_discount" class="form-control" value="<?php echo htmlspecialchars($settings['staff_child_discount'] ?? '150.00'); ?>" placeholder="e.g. 150.00">
+                        <small style="color: #666;">Auto-applied when a guardian matches active staff</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Sibling Discount (GHS) — 3rd+ Child</label>
+                        <input type="number" step="0.01" name="sibling_discount_amount" class="form-control" value="<?php echo htmlspecialchars($settings['sibling_discount_amount'] ?? '150.00'); ?>" placeholder="e.g. 150.00">
+                        <small style="color: #666;">Auto-applied to 3rd+ child sharing same guardian</small>
                     </div>
                 </div>
 

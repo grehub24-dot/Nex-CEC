@@ -20,20 +20,6 @@ if (file_exists(__DIR__ . '/../.env')) {
 
 define('BASE_PATH', '');
 
-// Enforce HTTPS (honors proxy-forwarded protocol for Cloudflare/AWS)
-if (empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'on'
-    && (!isset($_SERVER['HTTP_X_FORWARDED_PROTO']) || $_SERVER['HTTP_X_FORWARDED_PROTO'] !== 'https')) {
-    $host = $_SERVER['HTTP_HOST'] ?? '';
-    // Validate HTTP_HOST to prevent host header injection
-    $allowedHost = parse_url(getenv('APP_URL') ?: 'https://nex-cec.vercel.app', PHP_URL_HOST);
-    if ($allowedHost && $host !== $allowedHost) {
-        $host = $allowedHost;
-    }
-    $redirect = 'https://' . $host . ($_SERVER['REQUEST_URI'] ?? '');
-    header("Location: $redirect", true, 301);
-    exit;
-}
-
 // Security headers
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: SAMEORIGIN');

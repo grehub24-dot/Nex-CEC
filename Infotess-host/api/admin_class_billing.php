@@ -78,7 +78,103 @@ if ($filter_class) {
         $stmt->execute([$filter_year, $filter_term]);
         $available_fees = array_merge($available_fees, $stmt->fetchAll());
     } catch (Exception $e) {}
-    
+
+    // --- Staff child detection ---
+    $staff_map = []; // Maps staff full_name => true and staff phone => true
+    try {
+        $stmt = $pdo->query("SELECT full_name, phone, email FROM staff WHERE status = 'active'");
+        $active_staff = $stmt->fetchAll();
+        foreach ($active_staff as $st) {
+            $name = trim($st['full_name'] ?? '');
+            $phone = trim($st['phone'] ?? '');
+            if ($name !== '') $staff_map[$name] = true;
+            if ($phone !== '') $staff_map[$phone] = true;
+        }
+    } catch (Exception $e) {}
+
+    // --- Sibling grouping (by guardian phone/email) ---
+    // Count students per guardian in this class, mark 3rd+
+    $guardian_groups = []; // [guardian_key => [student_ids...]]
+    $sibling_student_ids = []; // student_id => true for 3rd+ child
+    foreach ($students_in_class as $s) {
+        $key = trim($s['guardian_phone_primary'] ?? '') ?: trim($s['guardian_email'] ?? '');
+        if ($key === '') continue;
+        if (!isset($guardian_groups[$key])) $guardian_groups[$key] = [];
+        $guardian_groups[$key][] = (int)$s['id'];
+    }
+    foreach ($guardian_groups as $gkey => $sids) {
+        if (count($sids) >= 3) {
+            // Sort by student name to keep order deterministic
+            $sid_name_map = [];
+            foreach ($students_in_class as $s) {
+                if (in_array((int)$s['id'], $sids)) {
+                    $sid_name_map[(int)$s['id']] = $s['full_name'] ?? '';
+                }
+            }
+            asort($sid_name_map);
+            $sorted_sids = array_keys($sid_name_map);
+            // 3rd+ children get sibling discount
+            for ($i = 2; $i < count($sorted_sids); $i++) {
+                $sibling_student_ids[$sorted_sids[$i]] = true;
+            }
+        }
+    }
+
+    // --- Arrears: sum of bill items from previous years/terms minus payments ---
+    $arrears_map = []; // student_id => arrears amount
+    if (!empty($students_in_class)) {
+        $sid_list = array_map(fn($s) => (int)$s['id'], $students_in_class);
+        $ph = implode(',', array_fill(0, count($sid_list), '?'));
+        try {
+            // Fetch bill items not in current year/term
+            $stmt = $pdo->prepare("SELECT student_id, amount FROM student_bill_items 
+                WHERE student_id IN ($ph) 
+                AND (academic_year != ? OR term != ?)");
+            $stmt->execute(array_merge($sid_list, [$filter_year, $filter_term]));
+            foreach ($stmt->fetchAll() as $bt) {
+                $sid = (int)$bt['student_id'];
+                if (!isset($arrears_map[$sid])) $arrears_map[$sid] = 0;
+                $arrears_map[$sid] += (float)($bt['amount'] ?? 0);
+            }
+        } catch (Exception $e) {
+            error_log("admin_class_billing: arrears bill_items query failed: " . $e->getMessage());
+        }
+        try {
+            // Subtract payments made for those previous periods
+            // payments table: student_id, academic_year, term, amount_paid
+            $stmt = $pdo->prepare("SELECT student_id, amount_paid FROM payments 
+                WHERE student_id IN ($ph) 
+                AND (academic_year != ? OR term != ?)");
+            $stmt->execute(array_merge($sid_list, [$filter_year, $filter_term]));
+            foreach ($stmt->fetchAll() as $pmt) {
+                $sid = (int)$pmt['student_id'];
+                if (isset($arrears_map[$sid])) {
+                    $arrears_map[$sid] -= (float)($pmt['amount_paid'] ?? 0);
+                }
+            }
+        } catch (Exception $e) {
+            error_log("admin_class_billing: arrears payments query failed: " . $e->getMessage());
+        }
+        // Floor arrears at 0 (no negative arrears)
+        foreach ($arrears_map as $sid => $amt) {
+            if ($amt < 0) $arrears_map[$sid] = 0;
+        }
+    }
+}
+
+// Extract discount settings
+$staff_discount = (float)($settings['staff_child_discount'] ?? 150.00);
+$sibling_discount = (float)($settings['sibling_discount_amount'] ?? 150.00);
+
+// Build per-student flags
+$is_staff_child = []; // student_id => true
+foreach ($students_in_class as $s) {
+    $gname = trim($s['guardian_name'] ?? '');
+    $gphone = trim($s['guardian_phone_primary'] ?? '');
+    $gemail = trim($s['guardian_email'] ?? '');
+    if (isset($staff_map[$gname]) || isset($staff_map[$gphone]) || isset($staff_map[$gemail])) {
+        $is_staff_child[(int)$s['id']] = true;
+    }
 }
 
 // Handle bulk apply
@@ -100,6 +196,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['apply_bill']) && $fil
         $students_in_class = $stmt->fetchAll();
     } catch (Exception $e) {
         $students_in_class = [];
+    }
+
+    // Rebuild discount flags with fresh student data
+    $is_staff_child = [];
+    foreach ($students_in_class as $s) {
+        $sid = (int)$s['id'];
+        $gname = trim($s['guardian_name'] ?? '');
+        $gphone = trim($s['guardian_phone_primary'] ?? '');
+        $gemail = trim($s['guardian_email'] ?? '');
+        if (isset($staff_map[$gname]) || isset($staff_map[$gphone]) || isset($staff_map[$gemail])) {
+            $is_staff_child[$sid] = true;
+        }
+    }
+    $guardian_groups = [];
+    $sibling_student_ids = [];
+    foreach ($students_in_class as $s) {
+        $key = trim($s['guardian_phone_primary'] ?? '') ?: trim($s['guardian_email'] ?? '');
+        if ($key === '') continue;
+        if (!isset($guardian_groups[$key])) $guardian_groups[$key] = [];
+        $guardian_groups[$key][] = (int)$s['id'];
+    }
+    foreach ($guardian_groups as $gkey => $sids) {
+        if (count($sids) >= 3) {
+            $sid_name_map = [];
+            foreach ($students_in_class as $s) {
+                if (in_array((int)$s['id'], $sids)) {
+                    $sid_name_map[(int)$s['id']] = $s['full_name'] ?? '';
+                }
+            }
+            asort($sid_name_map);
+            $sorted_sids = array_keys($sid_name_map);
+            for ($i = 2; $i < count($sorted_sids); $i++) {
+                $sibling_student_ids[$sorted_sids[$i]] = true;
+            }
+        }
     }
 
     try {
@@ -165,6 +296,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['apply_bill']) && $fil
                 }
             }
 
+            // --- Auto-apply Staff Child Discount ---
+            if (isset($is_staff_child[$sid]) && $staff_discount > 0) {
+                $discount_title = 'Staff Child Discount';
+                // Check if already applied (to avoid duplicates on re-apply)
+                $checkStmt = $pdo->prepare("SELECT id FROM student_bill_items WHERE student_id = ? AND academic_year = ? AND term = ? AND title = ?");
+                $checkStmt->execute([$sid, $filter_year, $filter_term, $discount_title]);
+                if (!$checkStmt->fetch()) {
+                    try {
+                        $insStmt->execute([
+                            $sid, null, $filter_year, $filter_term,
+                            $discount_title, (-1 * $staff_discount), 'Discount',
+                            0, $staff_id
+                        ]);
+                    } catch (Exception $e) {
+                        if (strpos($e->getMessage(), '409') === false && strpos($e->getMessage(), '23505') === false) throw $e;
+                    }
+                }
+            }
+
+            // --- Auto-apply Sibling Discount (3rd+ child) ---
+            if (isset($sibling_student_ids[$sid]) && $sibling_discount > 0) {
+                $discount_title = 'Sibling Discount (3rd Child)';
+                $checkStmt = $pdo->prepare("SELECT id FROM student_bill_items WHERE student_id = ? AND academic_year = ? AND term = ? AND title = ?");
+                $checkStmt->execute([$sid, $filter_year, $filter_term, $discount_title]);
+                if (!$checkStmt->fetch()) {
+                    try {
+                        $insStmt->execute([
+                            $sid, null, $filter_year, $filter_term,
+                            $discount_title, (-1 * $sibling_discount), 'Discount',
+                            0, $staff_id
+                        ]);
+                    } catch (Exception $e) {
+                        if (strpos($e->getMessage(), '409') === false && strpos($e->getMessage(), '23505') === false) throw $e;
+                    }
+                }
+            }
+
             $processed++;
         }
 
@@ -179,6 +347,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['apply_bill']) && $fil
     } catch (Exception $e) {
         $pdo->rollBack();
         $error = "Error: " . $e->getMessage();
+    }
+}
+
+// Handle custom fee billing
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['custom_fee']) && $filter_class) {
+    if (!isAdmin() && !empty($teacher_class_names) && !in_array($filter_class, $teacher_class_names)) {
+        $error = "Access denied: you are not authorized to bill this class.";
+        goto render_page;
+    }
+    validate_request_csrf();
+    $cf_title = trim(sanitize($_POST['custom_fee_title'] ?? ''));
+    $cf_amount = (float)($_POST['custom_fee_amount'] ?? 0);
+    $cf_students = $_POST['custom_fee_students'] ?? [];
+    $cf_type = trim(sanitize($_POST['custom_fee_type'] ?? 'Custom Fee'));
+
+    if ($cf_title === '' || $cf_amount <= 0 || empty($cf_students)) {
+        $error = "Please provide a fee title, amount (>0), and select at least one student.";
+        goto render_page;
+    }
+
+    try {
+        $pdo->beginTransaction();
+        $user_id = $_SESSION['user_id'];
+        $stmtStaff = $pdo->prepare("SELECT id FROM staff WHERE user_id = ?");
+        $stmtStaff->execute([$user_id]);
+        $staffRow = $stmtStaff->fetch();
+        $staff_id = $staffRow ? (int)$staffRow['id'] : null;
+
+        $insStmt = $pdo->prepare("INSERT INTO student_bill_items (student_id, fee_structure_id, academic_year, term, title, amount, fee_type, is_optional, created_by) VALUES (?, NULL, ?, ?, ?, ?, ?, 1, ?)");
+        $applied = 0;
+        foreach ($cf_students as $cfsid) {
+            $cfsid_int = (int)$cfsid;
+            if ($cfsid_int <= 0) continue;
+            try {
+                $insStmt->execute([$cfsid_int, $filter_year, $filter_term, $cf_title, $cf_amount, $cf_type, $staff_id]);
+                $applied++;
+            } catch (Exception $e) {
+                if (strpos($e->getMessage(), '409') === false && strpos($e->getMessage(), '23505') === false) throw $e;
+            }
+        }
+        $pdo->commit();
+        $message = "Custom fee \"$cf_title\" (GHS " . number_format($cf_amount, 2) . ") applied to $applied student(s).";
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        $error = "Error applying custom fee: " . $e->getMessage();
     }
 }
 
@@ -258,6 +471,11 @@ render_page:
         .btn-back:hover { background: #7f8c8d; }
         .summary-bar { display: flex; justify-content: space-between; align-items: center; background: #1a5276; color: white; padding: 14px 20px; border-radius: 8px; margin-top: 16px; }
         .summary-bar .total { font-size: 20px; font-weight: 700; }
+        .form-group { display: flex; flex-direction: column; }
+        .form-group label { font-size: 12px; font-weight: 600; color: #555; margin-bottom: 4px; }
+        .form-group select, .form-group input { width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; box-sizing: border-box; }
+        .btn-secondary { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; font-size: 12px; }
+        .btn-secondary:hover { background: #d5dbdb !important; }
     </style>
 </head>
 <body>
@@ -402,15 +620,17 @@ render_page:
 
                 <!-- Student List with Bill Status -->
                 <div class="card">
-                    <h4 style="margin:0 0 12px;">Students <span style="font-weight:400;color:#888;font-size:13px;">(bill status)</span></h4>
+                    <h4 style="margin:0 0 12px;">Students <span style="font-weight:400;color:#888;font-size:13px;">(bill status & discounts)</span></h4>
                     <div style="overflow-x:auto;">
                         <table style="width:100%;border-collapse:collapse;font-size:13px;">
                             <thead><tr style="border-bottom:2px solid #e9ecef;">
                                 <th style="text-align:left;padding:8px 6px;">#</th>
                                 <th style="text-align:left;padding:8px 6px;">Student</th>
-                                <th style="text-align:center;padding:8px 6px;">Admitted (Year/Term)</th>
+                                <th style="text-align:center;padding:8px 6px;">Admitted</th>
                                 <th style="text-align:center;padding:8px 6px;">Status</th>
                                 <th style="text-align:right;padding:8px 6px;">Bill Total</th>
+                                <th style="text-align:right;padding:8px 6px;">Arrears</th>
+                                <th style="text-align:center;padding:8px 6px;">Custom Fee</th>
                                 <th style="text-align:center;padding:8px 6px;">Actions</th>
                             </tr></thead>
                             <tbody>
@@ -438,10 +658,21 @@ render_page:
                                 $sid = (int)$s['id'];
                                 $is_new = ($s['academic_year'] ?? '') === $filter_year && (string)($s['admission_term'] ?? '1') === (string)$filter_term;
                                 $bt = $bill_totals[$sid] ?? 0;
+                                $arr = $arrears_map[$sid] ?? 0;
+                                $staff_flag = isset($is_staff_child[$sid]);
+                                $sibling_flag = isset($sibling_student_ids[$sid]);
                             ?>
                                 <tr style="border-bottom:1px solid #f0f0f0;">
                                     <td style="padding:8px 6px;"><?php echo $i; ?></td>
-                                    <td style="padding:8px 6px;"><strong><?php echo htmlspecialchars($s['full_name'] ?? ''); ?></strong></td>
+                                    <td style="padding:8px 6px;">
+                                        <strong><?php echo htmlspecialchars($s['full_name'] ?? ''); ?></strong>
+                                        <?php if ($staff_flag): ?>
+                                            <br><span style="display:inline-block;background:#f4ecf7;color:#8e44ad;padding:1px 6px;border-radius:8px;font-size:10px;font-weight:600;margin-top:2px;"><i class="fas fa-id-badge"></i> Staff Child</span>
+                                        <?php endif; ?>
+                                        <?php if ($sibling_flag): ?>
+                                            <br><span style="display:inline-block;background:#fef9e7;color:#b7950b;padding:1px 6px;border-radius:8px;font-size:10px;font-weight:600;margin-top:2px;"><i class="fas fa-users"></i> 3rd Child</span>
+                                        <?php endif; ?>
+                                    </td>
                                     <td style="padding:8px 6px;text-align:center;font-size:12px;">
                                         <?php echo htmlspecialchars($s['academic_year'] ?? '-'); ?> / T<?php echo htmlspecialchars($s['admission_term'] ?? '1'); ?>
                                         <?php if ($is_new): ?><span style="display:inline-block;background:#d5f5e3;color:#1e8449;padding:1px 6px;border-radius:8px;font-size:10px;font-weight:600;margin-left:4px;">NEW</span><?php endif; ?>
@@ -454,6 +685,16 @@ render_page:
                                         <?php endif; ?>
                                     </td>
                                     <td style="padding:8px 6px;text-align:right;font-weight:600;">GHS <?php echo number_format($bt, 2); ?></td>
+                                    <td style="padding:8px 6px;text-align:right;font-weight:600;color:<?php echo $arr > 0 ? '#e74c3c' : '#27ae60'; ?>;">
+                                        <?php if ($arr > 0): ?>
+                                            GHS <?php echo number_format($arr, 2); ?>
+                                        <?php else: ?>
+                                            <span style="color:#bbb;">—</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td style="padding:8px 6px;text-align:center;">
+                                        <input type="checkbox" name="custom_fee_students[]" value="<?php echo $sid; ?>" form="customFeeForm" style="width:16px;height:16px;cursor:pointer;">
+                                    </td>
                                     <td style="padding:8px 6px;text-align:center;">
                                         <a href="student_billing.php?student_id=<?php echo $sid; ?>&year=<?php echo urlencode($filter_year); ?>&term=<?php echo urlencode($filter_term); ?>&redirect=class_billing.php?class=<?php echo urlencode($filter_class); ?>" style="font-size:12px;color:#2980b9;text-decoration:none;">
                                             <i class="fas fa-edit"></i> Edit Bill
@@ -464,6 +705,54 @@ render_page:
                             </tbody>
                         </table>
                     </div>
+                </div>
+
+                <!-- Custom Fee Form -->
+                <div class="card" id="customFeeSection">
+                    <h4 style="margin:0 0 12px;"><i class="fas fa-plus-circle" style="color:#f39c12;"></i> Apply Custom Fee <span style="font-weight:400;color:#888;font-size:13px;">(per-student or bulk)</span></h4>
+                    <form method="POST" id="customFeeForm">
+                        <?php csrf_field(); ?>
+                        <input type="hidden" name="custom_fee" value="1">
+                        <input type="hidden" name="class_name" value="<?php echo htmlspecialchars($filter_class); ?>">
+                        <input type="hidden" name="year" value="<?php echo htmlspecialchars($filter_year); ?>">
+                        <input type="hidden" name="term" value="<?php echo htmlspecialchars($filter_term); ?>">
+                        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:end;">
+                            <div class="form-group" style="flex:2;min-width:180px;">
+                                <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:4px;">Fee Title</label>
+                                <input type="text" name="custom_fee_title" class="form-control" required placeholder="e.g. Excursion Fee" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px;">
+                            </div>
+                            <div class="form-group" style="flex:1;min-width:100px;">
+                                <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:4px;">Amount (GHS)</label>
+                                <input type="number" step="0.01" name="custom_fee_amount" class="form-control" required min="0.01" placeholder="0.00" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px;">
+                            </div>
+                            <div class="form-group" style="flex:1;min-width:120px;">
+                                <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:4px;">Fee Type</label>
+                                <select name="custom_fee_type" class="form-control" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px;">
+                                    <option value="Custom Fee">Custom Fee</option>
+                                    <option value="Tuition">Tuition</option>
+                                    <option value="PTA Levy">PTA Levy</option>
+                                    <option value="Sports & Culture">Sports & Culture</option>
+                                    <option value="ICT">ICT</option>
+                                    <option value="Examination">Examination</option>
+                                    <option value="Development">Development</option>
+                                    <option value="Feeding">Feeding</option>
+                                    <option value="Transport">Transport</option>
+                                    <option value="Uniform">Uniform</option>
+                                    <option value="Books & Materials">Books & Materials</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="flex:0;">
+                                <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:4px;">&nbsp;</label>
+                                <button type="button" onclick="selectAllCustomFee(true)" class="btn-secondary" style="padding:8px 12px;background:#ecf0f1;border:1px solid #ddd;border-radius:6px;cursor:pointer;font-size:12px;"><i class="fas fa-check-double"></i> Select All</button>
+                                <button type="button" onclick="selectAllCustomFee(false)" class="btn-secondary" style="padding:8px 12px;background:#ecf0f1;border:1px solid #ddd;border-radius:6px;cursor:pointer;font-size:12px;"><i class="fas fa-times"></i> Clear</button>
+                            </div>
+                        </div>
+                        <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;">
+                            <button type="submit" class="btn-warning" onclick="return confirm('Apply this custom fee to the selected students?');"><i class="fas fa-plus"></i> Apply Custom Fee to Selected</button>
+                            <button type="submit" class="btn-primary" onclick="document.querySelectorAll('input[name=\'custom_fee_students[]\']').forEach(cb=>cb.checked=true);return confirm('Apply this custom fee to ALL <?php echo count($students_in_class); ?> students?');"><i class="fas fa-users"></i> Apply to All Students</button>
+                        </div>
+                        <p style="font-size:11px;color:#999;margin:8px 0 0;"><i class="fas fa-info-circle"></i> Check students individually in the table (Custom Fee column), or use Select All then choose per-student or bulk.</p>
+                    </form>
                 </div>
 
             <?php elseif ($filter_class): ?>
@@ -481,6 +770,13 @@ function toggleAll(checked) {
     var boxes = document.querySelectorAll('input[name="fee_items[]"]');
     for (var i = 0; i < boxes.length; i++) {
         if (boxes[i].getAttribute('onclick') === 'return false;') continue;
+        boxes[i].checked = checked;
+    }
+}
+
+function selectAllCustomFee(checked) {
+    var boxes = document.querySelectorAll('input[name="custom_fee_students[]"]');
+    for (var i = 0; i < boxes.length; i++) {
         boxes[i].checked = checked;
     }
 }

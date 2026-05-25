@@ -15,6 +15,47 @@ $school_name = $settings['school_name'] ?? 'Nex CEC';
 $message = '';
 $error = '';
 
+// --- Auto-create class_teachers table (resilient) ---
+try {
+    require_once __DIR__ . '/lib/Supabase.php';
+    $supabase = new SupabaseClient();
+    $supabase->executeSql("
+        CREATE TABLE IF NOT EXISTS class_teachers (
+            id           BIGSERIAL    PRIMARY KEY,
+            staff_id     BIGINT       NOT NULL UNIQUE REFERENCES staff(id) ON DELETE CASCADE,
+            class_id     BIGINT       NOT NULL       REFERENCES classes(id) ON DELETE CASCADE,
+            assigned_at  TIMESTAMPTZ  DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_class_teachers_class ON class_teachers(class_id);
+        CREATE INDEX IF NOT EXISTS idx_class_teachers_staff ON class_teachers(staff_id);
+    ");
+} catch (Exception $e) {
+    // Table may have been created manually, or executeSql unavailable.
+    // Either way, the PG bridge queries below still work if the table exists.
+    error_log("class_teachers auto-create skipped: " . $e->getMessage());
+}
+
+// --- Fetch all classes for the Class Teacher assignment dropdown ---
+$allClasses = [];
+try {
+    $stmt = $pdo->query("SELECT id, name FROM classes ORDER BY sort_order, name");
+    $allClasses = $stmt->fetchAll();
+} catch (Exception $e) {
+    $error = "Error fetching classes: " . $e->getMessage();
+}
+
+// --- Fetch class_teachers assignments (staff_id => class_id) ---
+$classTeacherMap = [];
+try {
+    $stmt = $pdo->query("SELECT staff_id, class_id FROM class_teachers");
+    foreach ($stmt->fetchAll() as $ctRow) {
+        $classTeacherMap[(int)$ctRow['staff_id']] = (int)$ctRow['class_id'];
+    }
+} catch (Exception $e) {
+    // Table may not exist yet — that's OK
+    error_log("class_teachers fetch skipped: " . $e->getMessage());
+}
+
 // Handle bulk role update
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_role') {
     validate_request_csrf();
@@ -85,6 +126,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 if ($new_position !== $position) {
                     $stmt = $pdo->prepare("UPDATE staff SET position = ? WHERE id = ?");
                     $stmt->execute([$new_position, $staff_id]);
+                }
+
+                // Handle class_teachers assignment
+                if ($new_access === 'teacher') {
+                    $class_id = (int)($_POST['class_id'] ?? 0);
+                    if ($class_id > 0) {
+                        // Upsert: remove any existing assignment, then insert
+                        $pdo->prepare("DELETE FROM class_teachers WHERE staff_id = ?")->execute([$staff_id]);
+                        $pdo->prepare("INSERT INTO class_teachers (staff_id, class_id) VALUES (?, ?)")->execute([$staff_id, $class_id]);
+                        $message = "Role updated to Class Teacher. Assigned to class #{$class_id}.";
+                    } else {
+                        // No class selected — just remove any previous assignment
+                        $pdo->prepare("DELETE FROM class_teachers WHERE staff_id = ?")->execute([$staff_id]);
+                        $message = "Role updated to Class Teacher. No class assigned yet.";
+                    }
+                } else {
+                    // Not a teacher anymore — remove class_teacher assignment
+                    $pdo->prepare("DELETE FROM class_teachers WHERE staff_id = ?")->execute([$staff_id]);
                 }
 
                 // Log the change
@@ -544,12 +603,27 @@ function levelIcon($level) {
                                                 <input type="hidden" name="staff_id" value="<?php echo $staff['id']; ?>">
                                                 <input type="hidden" name="page" value="<?php echo $staff_page; ?>">
                                                 <?php csrf_field(); ?>
-                                                <select name="access_level" class="level-select <?php echo strtolower($level); ?>" onchange="highlightSelect(this)">
+                                                <select name="access_level" class="level-select <?php echo strtolower($level); ?>" onchange="highlightSelect(this); toggleClassSelect(this, 'class-select-<?php echo $staff['id']; ?>')">
                                                     <option value="staff" <?php echo $level === 'Staff' ? 'selected' : ''; ?>>Staff</option>
                                                     <option value="teacher" <?php echo $level === 'Teacher' ? 'selected' : ''; ?>>Class Teacher</option>
                                                     <option value="bursar" <?php echo $level === 'Bursar' ? 'selected' : ''; ?>>Bursar</option>
                                                     <option value="admin" <?php echo $level === 'Admin' ? 'selected' : ''; ?>>Admin</option>
                                                 </select>
+
+                                                <?php
+                                                $currentClassId = $classTeacherMap[(int)$staff['id']] ?? 0;
+                                                $isTeacherLevel = ($level === 'Teacher');
+                                                ?>
+                                                <select name="class_id" class="class-select class-select-<?php echo $staff['id']; ?> level-select"
+                                                        style="<?php echo $isTeacherLevel ? '' : 'display:none;'; ?>">
+                                                    <option value="">— No class —</option>
+                                                    <?php foreach ($allClasses as $c): ?>
+                                                        <option value="<?php echo $c['id']; ?>" <?php echo ((int)$c['id'] === $currentClassId) ? 'selected' : ''; ?>>
+                                                            <?php echo htmlspecialchars($c['name']); ?>
+                                                        </option>
+                                                    <?php endforeach; ?>
+                                                </select>
+
                                                 <button type="submit" class="update-btn"><i class="fas fa-check"></i></button>
                                             </form>
                                         <?php else: ?>
@@ -642,6 +716,16 @@ function levelIcon($level) {
     <script>
         function highlightSelect(select) {
             select.className = 'level-select ' + select.value;
+        }
+
+        function toggleClassSelect(levelSelect, classSelectClass) {
+            var classSelect = document.querySelector('.' + classSelectClass);
+            if (!classSelect) return;
+            if (levelSelect.value === 'teacher') {
+                classSelect.style.display = '';
+            } else {
+                classSelect.style.display = 'none';
+            }
         }
     </script>
 </body>

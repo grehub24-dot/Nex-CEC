@@ -167,11 +167,26 @@ function getTeacherClassIds($pdo) {
         if (!$staff) return [];
         $staff_id = (int)$staff['id'];
         
-        // Find subjects where this teacher is assigned, extract unique class IDs
+        // 1. Find subjects where this teacher is assigned, extract unique class IDs
         $stmt = $pdo->prepare("SELECT DISTINCT class_id FROM subjects WHERE teacher_id = ? AND class_id IS NOT NULL");
         $stmt->execute([$staff_id]);
         $rows = $stmt->fetchAll();
         $class_ids = array_map(fn($r) => (int)$r['class_id'], $rows);
+        
+        // 2. Also check the class_teachers table for direct class assignments
+        //    (used when a staff member is set as "Class Teacher" for a specific class)
+        try {
+            $ctStmt = $pdo->prepare("SELECT class_id FROM class_teachers WHERE staff_id = ?");
+            $ctStmt->execute([$staff_id]);
+            $ctRows = $ctStmt->fetchAll();
+            foreach ($ctRows as $ctRow) {
+                $class_ids[] = (int)$ctRow['class_id'];
+            }
+        } catch (Exception $e) {
+            // class_teachers table might not exist yet — ignore silently
+            error_log("getTeacherClassIds: class_teachers table not accessible: " . $e->getMessage());
+        }
+        
         return array_unique(array_filter($class_ids));
     } catch (Exception $e) {
         error_log("getTeacherClassIds error: " . $e->getMessage());

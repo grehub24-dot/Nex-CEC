@@ -145,6 +145,25 @@ if (!empty($student_ids)) {
     } catch (Exception $e) { $bill_items_by_student = []; }
 }
 
+// Fetch payment_allocations for all students on this page
+$allocations_by_payment = [];
+if (!empty($student_ids)) {
+    try {
+        $placeholders = implode(',', array_fill(0, count($student_ids), '?'));
+        $stmt = $pdo->prepare("SELECT pa.*, p.student_id FROM payment_allocations pa 
+            JOIN payments p ON pa.payment_id = p.id 
+            WHERE p.student_id IN ($placeholders) AND p.academic_year = ? AND p.term = ?");
+        $stmt->execute(array_merge($student_ids, [$filter_year, $filter_term]));
+        foreach ($stmt->fetchAll() as $a) {
+            $pid = (int)$a['payment_id'];
+            if (!isset($allocations_by_payment[$pid])) $allocations_by_payment[$pid] = [];
+            $allocations_by_payment[$pid][] = $a;
+        }
+    } catch (Exception $e) {
+        error_log("allocations query error: " . $e->getMessage());
+    }
+}
+
 // Fetch fee_exemptions (bridge drops parenthesized OR clauses, so do two separate queries)
 $exemptions = [];
 if (!empty($student_ids)) {
@@ -192,14 +211,28 @@ foreach ($all_students as $s) {
     // Calculate paid amount
     $paid = 0;
     if (isset($payments_by_student[$sid])) {
-        // Group by fee_type and cap per type (same as student_fees.php logic)
         $paid_by_type = [];
+
         foreach ($payments_by_student[$sid] as $p) {
-            $type = $p['fee_type'] ?? 'General';
-            if (!isset($paid_by_type[$type])) $paid_by_type[$type] = 0;
-            $paid_by_type[$type] += (float)$p['amount'];
+            $pid = (int)$p['id'];
+
+            // Check if this payment has allocations (new-style)
+            if (isset($allocations_by_payment[$pid]) && !empty($allocations_by_payment[$pid])) {
+                // Use allocation amounts per fee type
+                foreach ($allocations_by_payment[$pid] as $a) {
+                    $type = $a['fee_type'] ?? 'General';
+                    if (!isset($paid_by_type[$type])) $paid_by_type[$type] = 0;
+                    $paid_by_type[$type] += (float)$a['amount'];
+                }
+            } else {
+                // Legacy payment — use the old per-payment fee_type + amount
+                $type = $p['fee_type'] ?? 'General';
+                if (!isset($paid_by_type[$type])) $paid_by_type[$type] = 0;
+                $paid_by_type[$type] += (float)$p['amount'];
+            }
         }
-        // Cap per fee type
+
+        // Cap per fee type (same as before)
         $type_fee_map = [];
         foreach ($all_fees as $f) {
             $ft = $f['fee_type'] ?? 'General';

@@ -32,7 +32,8 @@ try {
     $stmt = $pdo->prepare("SELECT sbi.*, s.full_name, s.class_name FROM student_bill_items sbi JOIN students s ON sbi.student_id = s.id WHERE sbi.academic_year = ? AND sbi.term = ?");
     $stmt->execute([$current_academic_year, $current_term]);
     $all_bill_items = $stmt->fetchAll();
-} catch (Exception $e) {
+} catch (\Throwable $e) {
+    error_log("admin_payments.php bill_items query error: " . $e->getMessage());
     $all_bill_items = [];
 }
 
@@ -258,9 +259,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             header("Location: payments.php?msg=" . urlencode($msg));
             exit;
 
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             $pdo->rollBack();
             $error = "Error: " . $e->getMessage();
+            error_log("admin_payments.php record_payment error: " . $e->getMessage() . " | File: " . $e->getFile() . ":" . $e->getLine());
         }
     }
 }

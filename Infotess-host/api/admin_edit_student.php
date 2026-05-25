@@ -325,6 +325,10 @@ if (!$student) {
                         <input type="text" name="previous_class" class="form-control" value="<?php echo htmlspecialchars($student['previous_class'] ?? ''); ?>">
                     </div>
                     <div class="form-group">
+                        <label>Admission Date</label>
+                        <input type="date" name="admission_date" class="form-control" value="<?php echo htmlspecialchars($student['admission_date'] ?? ''); ?>">
+                    </div>
+                    <div class="form-group">
                         <label>Academic Year</label>
                         <select name="academic_year" class="form-control">
                             <?php

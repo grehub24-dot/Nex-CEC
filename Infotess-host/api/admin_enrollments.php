@@ -534,6 +534,7 @@ $enrollments = array_slice($enrollments, $offset, $limit);
                                 <th>Admission #</th>
                                 <th>Student Name</th>
                                 <th>Class</th>
+                                <th>DOB</th>
                                 <th>Guardian</th>
                                 <th>Phone</th>
                                 <th>Date</th>
@@ -543,13 +544,14 @@ $enrollments = array_slice($enrollments, $offset, $limit);
                         </thead>
                         <tbody>
                             <?php if (empty($enrollments)): ?>
-                                <tr><td colspan="8" style="text-align:center; padding: 30px; color: #888;">No enrollments found.</td></tr>
+                                <tr><td colspan="9" style="text-align:center; padding: 30px; color: #888;">No enrollments found.</td></tr>
                             <?php else: ?>
                                 <?php foreach ($enrollments as $en): ?>
                                 <tr>
                                     <td><strong><?php echo htmlspecialchars($en['admission_number'] ?? '-'); ?></strong></td>
                                     <td><?php echo htmlspecialchars($en['full_name']); ?></td>
                                     <td><?php echo htmlspecialchars($en['class_name'] ?? '-'); ?></td>
+                                    <td><?php echo $en['date_of_birth'] ? date('n/j/Y', strtotime($en['date_of_birth'])) : '-'; ?></td>
                                     <td><?php echo htmlspecialchars($en['guardian_name'] ?? '-'); ?></td>
                                     <td><?php echo htmlspecialchars($en['guardian_phone_primary'] ?? '-'); ?></td>
                                     <td><?php echo $en['admission_date'] ? date('n/j/Y', strtotime($en['admission_date'])) : '-'; ?></td>

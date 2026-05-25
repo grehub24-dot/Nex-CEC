@@ -25,11 +25,10 @@ $staff_id = (int)$staff['id'];
 $selected_month = $_GET['month'] ?? date('m');
 $selected_year = $_GET['year'] ?? date('Y');
 
-// Fetch all attendance records for this staff
-$all_attendance = $pdo->query("SELECT * FROM staff_attendance")->fetchAll();
-$my_attendance = array_filter($all_attendance, function($a) use ($staff_id) {
-    return (int)$a['staff_id'] === $staff_id;
-});
+// Fetch attendance records for this staff only (filter at SQL level)
+$stmt = $pdo->prepare("SELECT * FROM staff_attendance WHERE staff_id = ?");
+$stmt->execute([$staff_id]);
+$my_attendance = $stmt->fetchAll();
 
 // Filter by selected month/year
 $filtered_attendance = array_filter($my_attendance, function($a) use ($selected_month, $selected_year) {

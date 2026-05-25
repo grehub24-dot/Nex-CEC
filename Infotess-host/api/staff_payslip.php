@@ -24,11 +24,10 @@ if (!$staff) {
 
 $staff_id = (int)$staff['id'];
 
-// Get all payroll records for this staff
-$all_payroll = $pdo->query("SELECT * FROM payroll")->fetchAll();
-$payroll_records = array_filter($all_payroll, function($p) use ($staff_id) {
-    return (int)$p['staff_id'] === $staff_id;
-});
+// Get payroll records for this staff only (filter at SQL level)
+$stmt = $pdo->prepare("SELECT * FROM payroll WHERE staff_id = ?");
+$stmt->execute([$staff_id]);
+$payroll_records = $stmt->fetchAll();
 usort($payroll_records, function($a, $b) {
     $a_ts = mktime(0,0,0,(int)$a['month'],1,(int)$a['year']);
     $b_ts = mktime(0,0,0,(int)$b['month'],1,(int)$b['year']);

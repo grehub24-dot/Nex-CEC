@@ -29,15 +29,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $subject = sanitize($_POST['subject']);
     $content = sanitize($_POST['content']);
 
-    // Find the first admin user
+    // Find an admin user (filter at SQL level)
     $admin_id = null;
-    $allUsers = $pdo->query("SELECT * FROM users")->fetchAll();
-    foreach ($allUsers as $u) {
-        if (isset($u['role']) && $u['role'] === 'admin') {
-            $admin_id = $u['id'];
-            break;
-        }
-    }
+    $stmt = $pdo->prepare("SELECT id FROM users WHERE role = ?");
+    $stmt->execute(['admin']);
+    $admin = $stmt->fetch();
+    if ($admin) { $admin_id = (int)$admin['id']; }
 
     if ($admin_id) {
         $stmt = $pdo->prepare("INSERT INTO messages (sender_id, receiver_id, title, content, is_broadcast) VALUES (?, ?, ?, ?, ?)");

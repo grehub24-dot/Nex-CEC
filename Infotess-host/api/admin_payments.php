@@ -26,6 +26,16 @@ $all_classes = $pdo->query("SELECT id, name FROM classes")->fetchAll();
 $all_students = $pdo->query("SELECT id, full_name, admission_number, class_name FROM students")->fetchAll();
 $all_fee_structures = $pdo->query("SELECT id, fee_type, title, amount, class_id, academic_year, term FROM fee_structures")->fetchAll();
 
+// Fetch student_bill_items for bill breakdown in payment form
+$all_bill_items = [];
+try {
+    $stmt = $pdo->prepare("SELECT sbi.*, s.full_name, s.class_name FROM student_bill_items sbi JOIN students s ON sbi.student_id = s.id WHERE sbi.academic_year = ? AND sbi.term = ?");
+    $stmt->execute([$current_academic_year, $current_term]);
+    $all_bill_items = $stmt->fetchAll();
+} catch (Exception $e) {
+    $all_bill_items = [];
+}
+
 $message = '';
 $error = '';
 
@@ -488,6 +498,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         var CLASSES = <?php echo json_encode($all_classes); ?>;
         var STUDENTS = <?php echo json_encode($all_students); ?>;
         var FEE_STRUCTURES = <?php echo json_encode($all_fee_structures); ?>;
+        var BILL_ITEMS = <?php echo json_encode($all_bill_items); ?>;
 
         // ====== DOM refs ======
         var modal = document.getElementById("paymentModal");

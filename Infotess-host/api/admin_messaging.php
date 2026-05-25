@@ -141,11 +141,77 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } catch (Exception $e) {
             $error = "Error sending SMS: " . $e->getMessage();
         }
+    } elseif ($action === 'save_birthday_settings') {
+        $birthday_enabled = isset($_POST['birthday_enabled']) ? '1' : '0';
+        $birthday_template = sanitize($_POST['birthday_template'] ?? '');
+        $birthday_sms = isset($_POST['birthday_sms']) ? '1' : '0';
+        $birthday_email = isset($_POST['birthday_email']) ? '1' : '0';
+
+        $birthday_settings = [
+            'birthday_greeting_enabled' => $birthday_enabled,
+            'birthday_greeting_template' => $birthday_template,
+            'birthday_sms_enabled' => $birthday_sms,
+            'birthday_email_enabled' => $birthday_email
+        ];
+
+        try {
+            foreach ($birthday_settings as $key => $value) {
+                $existing = $pdo->prepare("SELECT setting_key FROM system_settings WHERE setting_key = ?");
+                $existing->execute([$key]);
+                if ($existing->fetch()) {
+                    $stmt = $pdo->prepare("UPDATE system_settings SET setting_value = ? WHERE setting_key = ?");
+                    $stmt->execute([$value, $key]);
+                } else {
+                    $stmt = $pdo->prepare("INSERT INTO system_settings (setting_key, setting_value) VALUES (?, ?)");
+                    $stmt->execute([$key, $value]);
+                }
+            }
+            $settings['birthday_greeting_enabled'] = $birthday_enabled;
+            $settings['birthday_greeting_template'] = $birthday_template;
+            $settings['birthday_sms_enabled'] = $birthday_sms;
+            $settings['birthday_email_enabled'] = $birthday_email;
+            $message = "Birthday greeting settings saved successfully.";
+        } catch (Exception $e) {
+            $error = "Error saving birthday settings: " . $e->getMessage();
+        }
     }
 }
 
 // Fetch all students for the dropdown
 $all_students = $pdo->query("SELECT id, full_name, admission_number FROM students ORDER BY full_name ASC")->fetchAll();
+
+// Upcoming Birthdays (within next 4 weeks)
+$upcoming_birthdays = [];
+try {
+    $all_with_dob = $pdo->query("SELECT id, full_name, date_of_birth, class_name, guardian_phone_primary, guardian_phone_emergency, guardian_name FROM students WHERE date_of_birth IS NOT NULL AND date_of_birth != ''")->fetchAll();
+    $today_ts = time();
+    $four_weeks_ts = strtotime('+4 weeks');
+    $today_year = (int)date('Y');
+
+    foreach ($all_with_dob as $s) {
+        $dob_ts = strtotime($s['date_of_birth']);
+        if (!$dob_ts) continue;
+        $md = date('m-d', $dob_ts);
+        $bday_this_year = strtotime($today_year . '-' . $md);
+        // If birthday already passed this year, use next year
+        if ($bday_this_year < $today_ts) {
+            $bday_this_year = strtotime(($today_year + 1) . '-' . $md);
+        }
+        if ($bday_this_year <= $four_weeks_ts) {
+            $age_turning = (int)date('Y', $bday_this_year) - (int)date('Y', $dob_ts);
+            $s['next_birthday_ts'] = $bday_this_year;
+            $s['next_birthday'] = date('Y-m-d', $bday_this_year);
+            $s['turning_age'] = $age_turning;
+            $upcoming_birthdays[] = $s;
+        }
+    }
+
+    usort($upcoming_birthdays, function($a, $b) {
+        return strcmp($a['next_birthday'], $b['next_birthday']);
+    });
+} catch (Exception $e) {
+    $upcoming_birthdays = [];
+}
 ?>
 
 <!DOCTYPE html>
@@ -348,6 +414,84 @@ $all_students = $pdo->query("SELECT id, full_name, admission_number FROM student
                             </tbody>
                         </table>
                     <?php endif; ?>
+                </div>
+            </div>
+
+            <!-- Upcoming Birthdays -->
+            <div class="section">
+                <div class="card">
+                    <h3><i class="fas fa-birthday-cake"></i> Upcoming Birthdays (Next 4 Weeks)</h3>
+                    <?php if (empty($upcoming_birthdays)): ?>
+                        <p style="text-align:center; padding: 20px; color: #888;">No birthdays in the next 4 weeks.</p>
+                    <?php else: ?>
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Student</th>
+                                    <th>Class</th>
+                                    <th>Birthday</th>
+                                    <th>Age Turning</th>
+                                    <th>Parent/Guardian</th>
+                                    <th>Phone</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($upcoming_birthdays as $b): ?>
+                                <tr>
+                                    <td><strong><?php echo htmlspecialchars($b['full_name']); ?></strong></td>
+                                    <td><?php echo htmlspecialchars($b['class_name'] ?? '-'); ?></td>
+                                    <td><?php echo date('M j', strtotime($b['next_birthday'])); ?></td>
+                                    <td><?php echo (int)$b['turning_age']; ?></td>
+                                    <td><?php echo htmlspecialchars($b['guardian_name'] ?? '-'); ?></td>
+                                    <td><?php echo htmlspecialchars($b['guardian_phone_primary'] ?: ($b['guardian_phone_emergency'] ?? '-')); ?></td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <!-- Birthday Greetings Settings -->
+            <div class="section">
+                <div class="card">
+                    <h3><i class="fas fa-gift"></i> Birthday Greetings Auto-Send</h3>
+                    <p style="font-size:13px; color:#666; margin-bottom:15px;">
+                        Automatically send birthday wishes to parents when it's their child's birthday.
+                        Requires a cron job hitting <code>cron_birthday.php</code> daily.
+                    </p>
+                    <form method="POST" action="">
+                        <?php csrf_field(); ?>
+                        <input type="hidden" name="action" value="save_birthday_settings">
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+                            <div class="form-group">
+                                <label style="display:flex; align-items:center; gap:10px;">
+                                    <input type="checkbox" name="birthday_enabled" value="1" <?php echo ($settings['birthday_greeting_enabled'] ?? '0') === '1' ? 'checked' : ''; ?>>
+                                    <strong>Enable Birthday Greetings</strong>
+                                </label>
+                            </div>
+                            <div style="display:flex; gap:15px;">
+                                <label style="display:flex; align-items:center; gap:5px;">
+                                    <input type="checkbox" name="birthday_sms" value="1" <?php echo ($settings['birthday_sms_enabled'] ?? '1') === '1' ? 'checked' : ''; ?>>
+                                    Send SMS
+                                </label>
+                                <label style="display:flex; align-items:center; gap:5px;">
+                                    <input type="checkbox" name="birthday_email" value="1" <?php echo ($settings['birthday_email_enabled'] ?? '1') === '1' ? 'checked' : ''; ?>>
+                                    Send Email
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-top:10px;">
+                            <label>SMS/Email Template</label>
+                            <textarea name="birthday_template" class="form-control" rows="3" style="font-size:13px;"><?php echo htmlspecialchars($settings['birthday_greeting_template'] ?? 'Dear {parent_name}, we wish your child {student_name} a very happy birthday! They are turning {age} today. - {school_name}'); ?></textarea>
+                            <small style="color:#888; font-size:12px;">
+                                Available placeholders: <code>{student_name}</code>, <code>{parent_name}</code>, <code>{age}</code>, <code>{class_name}</code>, <code>{school_name}</code>
+                            </small>
+                        </div>
+                        <button type="submit" class="btn-primary" style="margin-top:10px; padding:10px 20px;">
+                            <i class="fas fa-save"></i> Save Birthday Settings
+                        </button>
+                    </form>
                 </div>
             </div>
         </main>

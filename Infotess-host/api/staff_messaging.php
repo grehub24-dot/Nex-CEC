@@ -118,6 +118,38 @@ foreach ($messages as &$m) {
     if (!$is_read) $unread_count++;
 }
 unset($m);
+
+// Upcoming Birthdays (within next 4 weeks)
+$staff_upcoming_birthdays = [];
+try {
+    $all_with_dob = $pdo->query("SELECT id, full_name, date_of_birth, class_name, guardian_phone_primary, guardian_phone_emergency, guardian_name FROM students WHERE date_of_birth IS NOT NULL AND date_of_birth != ''")->fetchAll();
+    $today_ts = time();
+    $four_weeks_ts = strtotime('+4 weeks');
+    $today_year = (int)date('Y');
+
+    foreach ($all_with_dob as $s) {
+        $dob_ts = strtotime($s['date_of_birth']);
+        if (!$dob_ts) continue;
+        $md = date('m-d', $dob_ts);
+        $bday_this_year = strtotime($today_year . '-' . $md);
+        if ($bday_this_year < $today_ts) {
+            $bday_this_year = strtotime(($today_year + 1) . '-' . $md);
+        }
+        if ($bday_this_year <= $four_weeks_ts) {
+            $age_turning = (int)date('Y', $bday_this_year) - (int)date('Y', $dob_ts);
+            $s['next_birthday_ts'] = $bday_this_year;
+            $s['next_birthday'] = date('Y-m-d', $bday_this_year);
+            $s['turning_age'] = $age_turning;
+            $staff_upcoming_birthdays[] = $s;
+        }
+    }
+
+    usort($staff_upcoming_birthdays, function($a, $b) {
+        return strcmp($a['next_birthday'], $b['next_birthday']);
+    });
+} catch (Exception $e) {
+    $staff_upcoming_birthdays = [];
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -303,6 +335,41 @@ unset($m);
                 </div>
             <?php endforeach; ?>
         <?php endif; ?>
+
+        <!-- Upcoming Birthdays -->
+        <div class="card" style="background:white; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.06); padding:20px; margin-top:20px;">
+        <h3 style="font-size:16px; color:#1a5276; margin:0 0 15px; display:flex; align-items:center; gap:8px;">
+            <i class="fas fa-birthday-cake" style="color:#e74c3c;"></i> Upcoming Birthdays (Next 4 Weeks)
+        </h3>
+        <?php if (empty($staff_upcoming_birthdays)): ?>
+            <p style="text-align:center; padding:20px; color:#888;">No birthdays in the next 4 weeks.</p>
+        <?php else: ?>
+            <div style="overflow-x:auto;">
+            <table class="table" style="width:100%; border-collapse:collapse; font-size:14px;">
+                <thead>
+                    <tr style="background:#f8f9fa;">
+                        <th style="padding:10px 12px; text-align:left; border-bottom:2px solid #dee2e6;">Student</th>
+                        <th style="padding:10px 12px; text-align:left; border-bottom:2px solid #dee2e6;">Class</th>
+                        <th style="padding:10px 12px; text-align:left; border-bottom:2px solid #dee2e6;">Birthday</th>
+                        <th style="padding:10px 12px; text-align:left; border-bottom:2px solid #dee2e6;">Age</th>
+                        <th style="padding:10px 12px; text-align:left; border-bottom:2px solid #dee2e6;">Parent/Guardian</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($staff_upcoming_birthdays as $b): ?>
+                    <tr>
+                        <td style="padding:10px 12px; border-bottom:1px solid #eee;"><strong><?php echo htmlspecialchars($b['full_name']); ?></strong></td>
+                        <td style="padding:10px 12px; border-bottom:1px solid #eee;"><?php echo htmlspecialchars($b['class_name'] ?? '-'); ?></td>
+                        <td style="padding:10px 12px; border-bottom:1px solid #eee;"><?php echo date('M j', strtotime($b['next_birthday'])); ?></td>
+                        <td style="padding:10px 12px; border-bottom:1px solid #eee;"><?php echo (int)$b['turning_age']; ?></td>
+                        <td style="padding:10px 12px; border-bottom:1px solid #eee;"><?php echo htmlspecialchars($b['guardian_name'] ?? '-'); ?></td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+            </div>
+        <?php endif; ?>
+    </div>
     </div>
 
     <!-- Send Message Modal -->

@@ -4,11 +4,11 @@
 -- Run this in Supabase Dashboard SQL Editor before deploying code changes.
 
 CREATE TABLE IF NOT EXISTS payment_allocations (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     payment_id INT NOT NULL,
     fee_type VARCHAR(100) NOT NULL,
     fee_title VARCHAR(200) DEFAULT '',
-    amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    amount NUMERIC(10,2) NOT NULL DEFAULT 0.00,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (payment_id) REFERENCES payments(id) ON DELETE CASCADE
 );

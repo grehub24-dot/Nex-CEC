@@ -282,6 +282,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $error = "Error: " . $e->getMessage();
     }
     } // end else (not locked)
+} // end outer if (save_bulk_sba)
 
 // Get existing scores
 $existing_scores = [];

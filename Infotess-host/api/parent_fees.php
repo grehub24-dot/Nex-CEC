@@ -78,7 +78,35 @@ try {
     $stmt->execute([$student_id]);
     $payments = $stmt->fetchAll();
 } catch (Exception $e) {}
-$total_paid = array_sum(array_map(fn($p) => (float)($p['amount'] ?? 0), $payments));
+
+// Fetch payment_allocations for allocation-aware totals
+$allocations_by_payment = [];
+if (!empty($payments)) {
+    $payment_ids = array_map(fn($p) => (int)$p['id'], $payments);
+    try {
+        $placeholders = implode(',', array_fill(0, count($payment_ids), '?'));
+        $stmt = $pdo->prepare("SELECT * FROM payment_allocations WHERE payment_id IN ($placeholders)");
+        $stmt->execute($payment_ids);
+        foreach ($stmt->fetchAll() as $a) {
+            $pid = (int)$a['payment_id'];
+            if (!isset($allocations_by_payment[$pid])) $allocations_by_payment[$pid] = [];
+            $allocations_by_payment[$pid][] = $a;
+        }
+    } catch (Exception $e) {}
+}
+
+// Use allocations for total paid (legacy fallback for old payments)
+$total_paid = 0;
+foreach ($payments as $p) {
+    $pid = (int)$p['id'];
+    if (isset($allocations_by_payment[$pid]) && !empty($allocations_by_payment[$pid])) {
+        foreach ($allocations_by_payment[$pid] as $a) {
+            $total_paid += (float)$a['amount'];
+        }
+    } else {
+        $total_paid += (float)($p['amount'] ?? 0);
+    }
+}
 
 // Fetch fee structure for the student's class (two-step: bridge cannot handle subqueries)
 $fee_structure = [];

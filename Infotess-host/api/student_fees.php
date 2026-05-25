@@ -68,12 +68,37 @@ try {
     $payments = $stmt->fetchAll();
 } catch (Exception $e) { $payments = []; }
 
-// Group payments by fee type
+// Fetch payment_allocations for allocation-aware totals
+$allocations_by_payment = [];
+if (!empty($payments)) {
+    $payment_ids = array_map(fn($p) => (int)$p['id'], $payments);
+    try {
+        $placeholders = implode(',', array_fill(0, count($payment_ids), '?'));
+        $stmt = $pdo->prepare("SELECT * FROM payment_allocations WHERE payment_id IN ($placeholders)");
+        $stmt->execute($payment_ids);
+        foreach ($stmt->fetchAll() as $a) {
+            $pid = (int)$a['payment_id'];
+            if (!isset($allocations_by_payment[$pid])) $allocations_by_payment[$pid] = [];
+            $allocations_by_payment[$pid][] = $a;
+        }
+    } catch (Exception $e) {}
+}
+
+// Group payments by fee type using allocations (with legacy fallback)
 $paid_by_type = [];
 foreach ($payments as $p) {
-    $type = $p['fee_type'] ?? 'General';
-    if (!isset($paid_by_type[$type])) $paid_by_type[$type] = 0;
-    $paid_by_type[$type] += $p['amount'];
+    $pid = (int)$p['id'];
+    if (isset($allocations_by_payment[$pid]) && !empty($allocations_by_payment[$pid])) {
+        foreach ($allocations_by_payment[$pid] as $a) {
+            $type = $a['fee_type'] ?? 'General';
+            if (!isset($paid_by_type[$type])) $paid_by_type[$type] = 0;
+            $paid_by_type[$type] += (float)$a['amount'];
+        }
+    } else {
+        $type = $p['fee_type'] ?? 'General';
+        if (!isset($paid_by_type[$type])) $paid_by_type[$type] = 0;
+        $paid_by_type[$type] += (float)$p['amount'];
+    }
 }
 
 $total_expected = 0;

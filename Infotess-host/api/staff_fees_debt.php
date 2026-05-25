@@ -65,33 +65,44 @@ foreach ($all_fees as $f) {
     }
 }
 
-// Count total students (for pagination)
+// Fetch all active students in teacher's classes (bridge drops literal 'active', uses '?' placeholder, can't COUNT/ORDER/LIMIT)
 $total_students = 0;
 $all_students = [];
 if (!empty($teacher_class_names)) {
     try {
         $placeholders = implode(',', array_fill(0, count($teacher_class_names), '?'));
-        $stmt = $pdo->prepare("SELECT COUNT(*) FROM students WHERE status = 'active' AND class_name IN ($placeholders)");
-        $stmt->execute($teacher_class_names);
-        $total_students = (int)$stmt->fetchColumn();
-
-        $stmt = $pdo->prepare("SELECT * FROM students WHERE status = 'active' AND class_name IN ($placeholders) ORDER BY class_name, full_name ASC LIMIT $per_page OFFSET $offset");
-        $stmt->execute($teacher_class_names);
-        $all_students = $stmt->fetchAll();
-    } catch (Exception $e) { $all_students = []; }
+        // Fetch all matching rows (bridge can't COUNT(*), ORDER BY, or LIMIT/OFFSET natively)
+        $stmt = $pdo->prepare("SELECT * FROM students WHERE status = ? AND class_name IN ($placeholders)");
+        $stmt->execute(array_merge(['active'], $teacher_class_names));
+        $all_rows = $stmt->fetchAll();
+        // Sort in PHP (bridge drops ORDER BY)
+        usort($all_rows, function($a, $b) {
+            $cmp = strcmp($a['class_name'] ?? '', $b['class_name'] ?? '');
+            return $cmp !== 0 ? $cmp : strcmp($a['full_name'] ?? '', $b['full_name'] ?? '');
+        });
+        $total_students = count($all_rows);
+        // Paginate in PHP
+        $all_students = array_slice($all_rows, $offset, $per_page);
+    } catch (Exception $e) {
+        error_log("staff_fees_debt student query error: " . $e->getMessage());
+        $all_students = [];
+    }
 }
 
 $student_ids = array_map(fn($s) => (int)$s['id'], $all_students);
 
-// Fetch payments
+// Fetch payments (bridge drops literal 'completed', use ? placeholder)
 $all_payments = [];
 if (!empty($student_ids)) {
     try {
         $placeholders = implode(',', array_fill(0, count($student_ids), '?'));
-        $stmt = $pdo->prepare("SELECT * FROM payments WHERE student_id IN ($placeholders) AND academic_year = ? AND term = ? AND status = 'completed'");
-        $stmt->execute(array_merge($student_ids, [$filter_year, $filter_term]));
+        $stmt = $pdo->prepare("SELECT * FROM payments WHERE student_id IN ($placeholders) AND academic_year = ? AND term = ? AND status = ?");
+        $stmt->execute(array_merge($student_ids, [$filter_year, $filter_term, 'completed']));
         $all_payments = $stmt->fetchAll();
-    } catch (Exception $e) { $all_payments = []; }
+    } catch (Exception $e) {
+        error_log("staff_fees_debt payments query error: " . $e->getMessage());
+        $all_payments = [];
+    }
 }
 
 $payments_by_student = [];
@@ -116,13 +127,20 @@ if (!empty($student_ids)) {
     } catch (Exception $e) { $bill_items_by_student = []; }
 }
 
-// Fetch exemptions (filtered by student_ids)
+// Fetch exemptions (bridge drops parenthesized OR clauses, so do two separate queries)
 $exemptions = [];
 if (!empty($student_ids)) {
+    $placeholders_es = implode(',', array_fill(0, count($student_ids), '?'));
     try {
-        $placeholders_es = implode(',', array_fill(0, count($student_ids), '?'));
-        $stmt = $pdo->prepare("SELECT * FROM fee_exemptions WHERE academic_year = ? AND (term = ? OR term IS NULL) AND student_id IN ($placeholders_es)");
+        $stmt = $pdo->prepare("SELECT * FROM fee_exemptions WHERE academic_year = ? AND term = ? AND student_id IN ($placeholders_es)");
         $stmt->execute(array_merge([$filter_year, $filter_term], $student_ids));
+        foreach ($stmt->fetchAll() as $e) {
+            $exemptions[(int)$e['student_id']] = $e;
+        }
+    } catch (Exception $e) {}
+    try {
+        $stmt = $pdo->prepare("SELECT * FROM fee_exemptions WHERE academic_year = ? AND term IS NULL AND student_id IN ($placeholders_es)");
+        $stmt->execute(array_merge([$filter_year], $student_ids));
         foreach ($stmt->fetchAll() as $e) {
             $exemptions[(int)$e['student_id']] = $e;
         }

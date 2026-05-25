@@ -68,15 +68,12 @@ foreach ($all_fees as $f) {
 $total_students = 0;
 $all_students = [];
 try {
-    $countSql = "SELECT COUNT(*) FROM students WHERE status = 'active'";
-    $countParams = [];
-    $sql = "SELECT * FROM students WHERE status = 'active'";
-    $params = [];
+    // Build query with ? placeholder for 'active' (bridge drops literals)
+    $baseSql = "SELECT * FROM students WHERE status = ?";
+    $baseParams = ['active'];
     if ($filter_class !== '') {
-        $countSql .= " AND class_name = ?";
-        $countParams[] = $filter_class;
-        $sql .= " AND class_name = ?";
-        $params[] = $filter_class;
+        $baseSql .= " AND class_name = ?";
+        $baseParams[] = $filter_class;
     }
     // Teacher restriction: only show students in their classes
     if (!empty($teacher_class_ids)) {
@@ -88,35 +85,41 @@ try {
         $teacher_class_names = array_unique($teacher_class_names);
         if (!empty($teacher_class_names)) {
             $placeholders = implode(',', array_fill(0, count($teacher_class_names), '?'));
-            $countSql .= " AND class_name IN ($placeholders)";
-            $countParams = array_merge($countParams, $teacher_class_names);
-            $sql .= " AND class_name IN ($placeholders)";
-            $params = array_merge($params, $teacher_class_names);
+            $baseSql .= " AND class_name IN ($placeholders)";
+            $baseParams = array_merge($baseParams, $teacher_class_names);
         }
     }
-    // Get total count for pagination
-    $stmt = $pdo->prepare($countSql);
-    $stmt->execute($countParams);
-    $total_students = (int)$stmt->fetchColumn();
-
-    // Fetch page with LIMIT/OFFSET
-    $sql .= " ORDER BY class_name, full_name ASC LIMIT $per_page OFFSET $offset";
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute($params);
-    $all_students = $stmt->fetchAll();
-} catch (Exception $e) { $all_students = []; }
+    // Fetch ALL matching rows (bridge can't COUNT(*) or ORDER BY natively)
+    $stmt = $pdo->prepare($baseSql);
+    $stmt->execute($baseParams);
+    $all_rows = $stmt->fetchAll();
+    // Sort in PHP (bridge drops ORDER BY)
+    usort($all_rows, function($a, $b) {
+        $cmp = strcmp($a['class_name'] ?? '', $b['class_name'] ?? '');
+        return $cmp !== 0 ? $cmp : strcmp($a['full_name'] ?? '', $b['full_name'] ?? '');
+    });
+    $total_students = count($all_rows);
+    // Paginate in PHP
+    $all_students = array_slice($all_rows, $offset, $per_page);
+} catch (Exception $e) {
+    error_log("admin_fees_debt student query error: " . $e->getMessage());
+    $all_students = [];
+}
 
 $student_ids = array_map(fn($s) => (int)$s['id'], $all_students);
 
-// Fetch all payments for this year/term
+// Fetch all payments for this year/term (bridge drops literal 'completed', use ? placeholder)
 $all_payments = [];
 if (!empty($student_ids)) {
     try {
         $placeholders = implode(',', array_fill(0, count($student_ids), '?'));
-        $stmt = $pdo->prepare("SELECT * FROM payments WHERE student_id IN ($placeholders) AND academic_year = ? AND term = ? AND status = 'completed'");
-        $stmt->execute(array_merge($student_ids, [$filter_year, $filter_term]));
+        $stmt = $pdo->prepare("SELECT * FROM payments WHERE student_id IN ($placeholders) AND academic_year = ? AND term = ? AND status = ?");
+        $stmt->execute(array_merge($student_ids, [$filter_year, $filter_term, 'completed']));
         $all_payments = $stmt->fetchAll();
-    } catch (Exception $e) { $all_payments = []; }
+    } catch (Exception $e) {
+        error_log("admin_fees_debt payments query error: " . $e->getMessage());
+        $all_payments = [];
+    }
 }
 
 // Group payments by student_id
@@ -142,18 +145,24 @@ if (!empty($student_ids)) {
     } catch (Exception $e) { $bill_items_by_student = []; }
 }
 
-// Fetch fee_exemptions for this year/term (filtered by student_ids for pagination)
+// Fetch fee_exemptions (bridge drops parenthesized OR clauses, so do two separate queries)
 $exemptions = [];
 if (!empty($student_ids)) {
+    $placeholders_es = implode(',', array_fill(0, count($student_ids), '?'));
     try {
-        $placeholders_es = implode(',', array_fill(0, count($student_ids), '?'));
-        $stmt = $pdo->prepare("SELECT * FROM fee_exemptions WHERE academic_year = ? AND (term = ? OR term IS NULL) AND student_id IN ($placeholders_es)");
+        $stmt = $pdo->prepare("SELECT * FROM fee_exemptions WHERE academic_year = ? AND term = ? AND student_id IN ($placeholders_es)");
         $stmt->execute(array_merge([$filter_year, $filter_term], $student_ids));
-        $exemptions_raw = $stmt->fetchAll();
-        foreach ($exemptions_raw as $e) {
+        foreach ($stmt->fetchAll() as $e) {
             $exemptions[(int)$e['student_id']] = $e;
         }
-    } catch (Exception $e) { $exemptions = []; }
+    } catch (Exception $e) {}
+    try {
+        $stmt = $pdo->prepare("SELECT * FROM fee_exemptions WHERE academic_year = ? AND term IS NULL AND student_id IN ($placeholders_es)");
+        $stmt->execute(array_merge([$filter_year], $student_ids));
+        foreach ($stmt->fetchAll() as $e) {
+            $exemptions[(int)$e['student_id']] = $e;
+        }
+    } catch (Exception $e) {}
 }
 
 // Process each student → fee status
@@ -268,9 +277,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     if ($_POST['action'] === 'exempt' && $student_id) {
         $reason = sanitize($_POST['reason'] ?? 'Fee exemption');
         try {
-            // Upsert: delete existing first then insert (pg-bridge friendly)
-            $stmt = $pdo->prepare("DELETE FROM fee_exemptions WHERE student_id = ? AND academic_year = ? AND (term = ? OR term IS NULL)");
+            // Delete existing: do two DELETEs (bridge drops parenthesized OR clause)
+            $stmt = $pdo->prepare("DELETE FROM fee_exemptions WHERE student_id = ? AND academic_year = ? AND term = ?");
             $stmt->execute([$student_id, $filter_year, $filter_term]);
+            $stmt = $pdo->prepare("DELETE FROM fee_exemptions WHERE student_id = ? AND academic_year = ? AND term IS NULL");
+            $stmt->execute([$student_id, $filter_year]);
             $stmt = $pdo->prepare("INSERT INTO fee_exemptions (student_id, academic_year, term, reason, exempted_by) VALUES (?, ?, ?, ?, ?)");
             $stmt->execute([$student_id, $filter_year, $filter_term, $reason, $_SESSION['user_id']]);
             $message = "Student exempted from fees.";
@@ -279,8 +290,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         }
     } elseif ($_POST['action'] === 'unexempt' && $student_id) {
         try {
-            $stmt = $pdo->prepare("DELETE FROM fee_exemptions WHERE student_id = ? AND academic_year = ? AND (term = ? OR term IS NULL)");
+            $stmt = $pdo->prepare("DELETE FROM fee_exemptions WHERE student_id = ? AND academic_year = ? AND term = ?");
             $stmt->execute([$student_id, $filter_year, $filter_term]);
+            $stmt = $pdo->prepare("DELETE FROM fee_exemptions WHERE student_id = ? AND academic_year = ? AND term IS NULL");
+            $stmt->execute([$student_id, $filter_year]);
             $message = "Exemption removed.";
         } catch (Exception $e) {
             $error = "Error: " . $e->getMessage();

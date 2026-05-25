@@ -58,14 +58,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $admissionNumberForFile = $admission_number ?: 'student';
     $profile_picture = $_POST['current_picture'] ?? null;
     if (isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] === UPLOAD_ERR_OK) {
-        $ext = pathinfo($_FILES['profile_picture']['name'], PATHINFO_EXTENSION);
-        $filename = $admissionNumberForFile . '_' . time() . '.' . $ext;
-        $newUrl = upload_to_supabase_storage($_FILES['profile_picture'], 'profiles', $filename, $profile_picture ?: 'images/aamusted.jpg');
-        if (strpos($newUrl, 'http') === 0) {
-            $profile_picture = $newUrl;
+        // Reject files over 4MB (Vercel serverless limit is 4.5MB)
+        if ($_FILES['profile_picture']['size'] > 4 * 1024 * 1024) {
+            $error = "Profile picture is too large (max 4MB). Please choose a smaller image.";
+        } else {
+            $ext = pathinfo($_FILES['profile_picture']['name'], PATHINFO_EXTENSION);
+            $filename = $admissionNumberForFile . '_' . time() . '.' . $ext;
+            $newUrl = upload_to_supabase_storage($_FILES['profile_picture'], 'profiles', $filename, $profile_picture ?: 'images/aamusted.jpg');
+            if (strpos($newUrl, 'http') === 0) {
+                $profile_picture = $newUrl;
+            }
         }
     }
 
+    if (empty($error)) {
     try {
         $pdo->beginTransaction();
 
@@ -113,6 +119,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->rollBack();
         $error = "Error updating student: " . $e->getMessage();
     }
+    } // end if (empty($error))
 }
 
 // Fetch Student Data
@@ -342,17 +349,88 @@ if (!$student) {
         const editStudentUpload = document.getElementById('editStudentUpload');
         const editStudentPreview = document.getElementById('editStudentPreview');
         const editStudentUploadName = document.getElementById('editStudentUploadName');
+        const editForm = document.querySelector('form');
+        const MAX_BYTES = 4 * 1024 * 1024; // 4MB
+        const MAX_DIM = 800; // max width/height for compressed image
+
+        // Compress image file to stay under MAX_BYTES
+        function compressImage(file, maxDim, maxBytes) {
+            return new Promise(function(resolve, reject) {
+                var img = new Image();
+                img.onload = function() {
+                    var canvas = document.createElement('canvas');
+                    var w = img.width, h = img.height;
+                    if (w > maxDim || h > maxDim) {
+                        var ratio = Math.min(maxDim / w, maxDim / h);
+                        w = Math.round(w * ratio);
+                        h = Math.round(h * ratio);
+                    }
+                    canvas.width = w;
+                    canvas.height = h;
+                    var ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h);
+                    // Start with high quality, reduce until under limit
+                    var quality = 0.85;
+                    var attempts = 0;
+                    function tryQuality() {
+                        canvas.toBlob(function(blob) {
+                            if (blob && blob.size <= maxBytes) {
+                                resolve(new File([blob], file.name, { type: 'image/jpeg' }));
+                            } else if (quality > 0.1 && attempts < 5) {
+                                quality -= 0.15;
+                                attempts++;
+                                tryQuality();
+                            } else {
+                                // Best effort — resolve anyway, server may reject
+                                resolve(new File([blob], file.name, { type: 'image/jpeg' }));
+                            }
+                        }, 'image/jpeg', quality);
+                    }
+                    tryQuality();
+                };
+                img.onerror = function() { reject(new Error('Failed to load image')); };
+                var reader = new FileReader();
+                reader.onload = function(e) { img.src = e.target.result; };
+                reader.onerror = function() { reject(new Error('Failed to read file')); };
+                reader.readAsDataURL(file);
+            });
+        }
 
         if (editStudentUpload && editStudentPreview && editStudentUploadName) {
             editStudentUpload.addEventListener('change', function() {
-                const file = this.files && this.files[0] ? this.files[0] : null;
-                const defaultSrc = "<?php echo resolve_storage_url($student['profile_picture'] ?? ''); ?>";
+                var file = this.files && this.files[0] ? this.files[0] : null;
+                var defaultSrc = "<?php echo resolve_storage_url($student['profile_picture'] ?? ''); ?>";
                 if (!file) { editStudentPreview.src = defaultSrc; editStudentUploadName.textContent = 'No image selected'; return; }
                 editStudentUploadName.textContent = file.name;
                 if (!file.type.startsWith('image/')) { editStudentPreview.src = defaultSrc; editStudentUploadName.textContent = 'Please select an image file'; this.value = ''; return; }
-                const reader = new FileReader();
+                var reader = new FileReader();
                 reader.onload = function(event) { editStudentPreview.src = event.target.result; };
                 reader.readAsDataURL(file);
+            });
+        }
+
+        // Intercept form submit to compress image if needed
+        if (editForm) {
+            editForm.addEventListener('submit', function(e) {
+                if (!editStudentUpload || !editStudentUpload.files || !editStudentUpload.files[0]) return;
+                var file = editStudentUpload.files[0];
+                if (file.size <= MAX_BYTES && file.type !== 'image/heic' && file.type !== 'image/heif') return; // skip if already small enough
+                e.preventDefault();
+                var origBtn = editForm.querySelector('button[type="submit"]');
+                if (origBtn) { origBtn.disabled = true; origBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Compressing…'; }
+                compressImage(file, MAX_DIM, MAX_BYTES).then(function(compressed) {
+                    // Replace file input with compressed file via DataTransfer
+                    var dt = new DataTransfer();
+                    dt.items.add(compressed);
+                    editStudentUpload.files = dt.files;
+                    editStudentUploadName.textContent = compressed.name + ' (' + Math.round(compressed.size / 1024) + 'KB compressed)';
+                    if (origBtn) { origBtn.disabled = false; origBtn.innerHTML = 'Update Student Details'; }
+                    // Resubmit
+                    editForm.submit();
+                }).catch(function(err) {
+                    if (origBtn) { origBtn.disabled = false; origBtn.innerHTML = 'Update Student Details'; }
+                    alert('Could not compress image: ' + err.message + '. Please choose a smaller file.');
+                });
             });
         }
     </script>

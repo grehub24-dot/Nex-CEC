@@ -253,7 +253,7 @@ $csrf_token = generate_csrf_token();
             <div class="profile-pic-section">
                 <form method="POST" enctype="multipart/form-data" id="pictureForm">
                     <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
-                    <img id="profilePreview" src="<?php echo htmlspecialchars(resolve_storage_url($profile_pic, 'images/aamusted.jpg')); ?>" alt="Profile Picture" style="width:150px;height:150px;border-radius:50%;object-fit:cover;border:3px solid #1a5276;margin-bottom:10px;" onerror="this.src='../images/aamusted.jpg'">
+                    <img id="profilePreview" src="<?php echo htmlspecialchars(resolve_storage_url($profile_pic, 'images/aamusted.jpg')); ?>" alt="Profile Picture" style="width:150px;height:150px;border-radius:50%;object-fit:cover;border:3px solid #1a5276;margin-bottom:10px;" onerror="this.onerror=null;this.src='../images/aamusted.jpg'">
                     <div style="margin-top:8px;">
                         <label for="profile_picture" class="upload-label"><i class="fas fa-camera"></i> Change Picture</label>
                         <input type="file" name="profile_picture" id="profile_picture" style="display:none;" accept="image/*">

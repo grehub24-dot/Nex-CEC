@@ -299,7 +299,7 @@ $settings = array_merge($defaults, $settings);
                                 <img src="<?php echo htmlspecialchars($settings['school_logo_url'] ?? '../images/aamusted.jpg'); ?>" 
                                      alt="School Logo" 
                                      style="max-width: 180px; max-height: 120px; border: 2px solid #ddd; border-radius: 8px; padding: 8px; background: #fff;"
-                                     onerror="this.src='../images/aamusted.jpg'">
+                                     onerror="this.onerror=null;this.src='../images/aamusted.jpg'">
                             </div>
                             <div>
                                 <p style="color: #666; margin-bottom: 10px; font-size: 0.9em;">

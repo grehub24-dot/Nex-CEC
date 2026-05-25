@@ -223,7 +223,7 @@ try {
 
     <!-- Branding -->
     <div class="branding">
-        <img src="<?php echo htmlspecialchars($settings['school_logo_url'] ?? 'images/aamusted.jpg'); ?>" alt="<?php echo htmlspecialchars($school_name); ?> Logo" onerror="this.src='images/aamusted.jpg'">
+        <img src="<?php echo htmlspecialchars($settings['school_logo_url'] ?? 'images/aamusted.jpg'); ?>" alt="<?php echo htmlspecialchars($school_name); ?> Logo" onerror="this.onerror=null;this.src='images/aamusted.jpg'">
         <h1><?php echo htmlspecialchars($school_name); ?></h1>
         <p>Welcome, <?php echo htmlspecialchars($_SESSION['name'] ?? 'User'); ?></p>
     </div>

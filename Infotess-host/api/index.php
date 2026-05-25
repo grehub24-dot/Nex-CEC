@@ -24,11 +24,20 @@ define('BASE_PATH', '');
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: SAMEORIGIN');
 header('Referrer-Policy: strict-origin-when-cross-origin');
+
+// Build CSP — allow Supabase Storage origin for uploaded images (logos, profile pics)
+$supabaseUrl = trim(getenv('SUPABASE_URL'));
+$supabaseImgSrc = '';
+if (!empty($supabaseUrl)) {
+    $parsed = parse_url($supabaseUrl);
+    $origin = ($parsed['scheme'] ?? 'https') . '://' . ($parsed['host'] ?? '');
+    $supabaseImgSrc = ' ' . $origin;
+}
 header("Content-Security-Policy: default-src 'self'; "
     . "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; "
     . "font-src 'self' data: https://cdnjs.cloudflare.com https://fonts.gstatic.com; "
     . "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; "
-    . "img-src 'self' data:; "
+    . "img-src 'self' data:$supabaseImgSrc; "
     . "connect-src 'self'; "
     . "frame-ancestors 'self'; "
     . "base-uri 'self'");

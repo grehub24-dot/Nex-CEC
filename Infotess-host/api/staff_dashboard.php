@@ -5,105 +5,148 @@ if (!isLoggedIn() || (!isStaff() && !isTeacher())) {
     redirect('../login.php');
 }
 
-$settings = fetchSettings($pdo);
-$school_name = $settings['school_name'] ?? 'Nex CEC';
+try {
+    $settings = fetchSettings($pdo);
+    $school_name = $settings['school_name'] ?? 'Nex CEC';
 
-$user_id = $_SESSION['user_id'];
+    $user_id = $_SESSION['user_id'];
 
-// Fetch staff record
-$stmt = $pdo->prepare("SELECT * FROM staff WHERE user_id = ?");
-$stmt->execute([$user_id]);
-$staff = $stmt->fetch();
+    // Fetch staff record
+    $stmt = $pdo->prepare("SELECT * FROM staff WHERE user_id = ?");
+    $stmt->execute([$user_id]);
+    $staff = $stmt->fetch();
 
-if (!$staff) {
-    echo '<div class="container" style="padding:100px 0;text-align:center;"><h2>Staff record not found</h2><a href="../logout.php" class="btn-primary">Logout</a></div>';
-    exit;
-}
-
-$staff_id = (int)$staff['id'];
-
-// Fetch latest payroll record
-$stmt = $pdo->prepare("SELECT * FROM payroll WHERE staff_id = ? ORDER BY created_at DESC LIMIT 1");
-$stmt->execute([$staff_id]);
-$latest_payroll = $stmt->fetch();
-
-// Fetch this month's attendance
-$this_month = date('m');
-$this_year = date('Y');
-$all_attendance = $pdo->query("SELECT * FROM staff_attendance")->fetchAll();
-$monthly_attendance = array_filter($all_attendance, function($a) use ($staff_id, $this_month, $this_year) {
-    return (int)$a['staff_id'] === $staff_id
-        && date('m', strtotime($a['attendance_date'])) === $this_month
-        && date('Y', strtotime($a['attendance_date'])) === $this_year;
-});
-$present_days = count(array_filter($monthly_attendance, fn($a) => ($a['status'] ?? '') === 'present'));
-$absent_days = count(array_filter($monthly_attendance, fn($a) => ($a['status'] ?? '') === 'absent'));
-$late_days = count(array_filter($monthly_attendance, fn($a) => ($a['status'] ?? '') === 'late'));
-
-// Fetch assigned subjects for teachers
-$teacher_subjects = [];
-if (isTeacher()) {
-    $stmt = $pdo->prepare("SELECT s.*, c.name AS class_name FROM subjects s LEFT JOIN classes c ON s.class_id = c.id WHERE s.teacher_id = ?");
-    $stmt->execute([$staff_id]);
-    $teacher_subjects = $stmt->fetchAll();
-}
-
-// Fetch children/wards from parent_students
-$children = [];
-$stmt = $pdo->prepare("SELECT * FROM parent_students WHERE parent_user_id = ?");
-$stmt->execute([$user_id]);
-$parent_records = $stmt->fetchAll();
-if (!empty($parent_records)) {
-    $student_ids = array_map(fn($r) => (int)$r['student_id'], $parent_records);
-    $placeholders = implode(',', array_fill(0, count($student_ids), '?'));
-    $stmt = $pdo->prepare("SELECT * FROM students WHERE id IN ($placeholders)");
-    $stmt->execute($student_ids);
-    $students_list = $stmt->fetchAll();
-    $students_by_id = [];
-    foreach ($students_list as $s) {
-        $students_by_id[(int)$s['id']] = $s;
+    if (!$staff) {
+        echo '<div class="container" style="padding:100px 0;text-align:center;"><h2>Staff record not found</h2><a href="../logout.php" class="btn-primary">Logout</a></div>';
+        exit;
     }
-    foreach ($parent_records as $pr) {
-        $sid = (int)$pr['student_id'];
-        if (isset($students_by_id[$sid])) {
-            $children[] = [
-                'relationship' => $pr['relationship'],
-                'is_primary'   => $pr['is_primary'],
-                'student'      => $students_by_id[$sid]
-            ];
+
+    $staff_id = (int)$staff['id'];
+
+    // Fetch latest payroll record (gracefully handle missing table/record)
+    $latest_payroll = null;
+    try {
+        $stmt = $pdo->prepare("SELECT * FROM payroll WHERE staff_id = ? ORDER BY created_at DESC LIMIT 1");
+        $stmt->execute([$staff_id]);
+        $latest_payroll = $stmt->fetch();
+    } catch (Exception $e) {
+        error_log("Staff Dashboard: payroll query failed: " . $e->getMessage());
+        $latest_payroll = null;
+    }
+
+    // Fetch this month's attendance — filter by staff_id at DB level to reduce data
+    $this_month = date('m');
+    $this_year = date('Y');
+    $present_days = 0;
+    $absent_days = 0;
+    $late_days = 0;
+    try {
+        $stmt = $pdo->prepare("SELECT * FROM staff_attendance WHERE staff_id = ?");
+        $stmt->execute([$staff_id]);
+        $my_attendance = $stmt->fetchAll();
+        $monthly_attendance = array_filter($my_attendance, function($a) use ($this_month, $this_year) {
+            return date('m', strtotime($a['attendance_date'])) === $this_month
+                && date('Y', strtotime($a['attendance_date'])) === $this_year;
+        });
+        $present_days = count(array_filter($monthly_attendance, fn($a) => ($a['status'] ?? '') === 'present'));
+        $absent_days = count(array_filter($monthly_attendance, fn($a) => ($a['status'] ?? '') === 'absent'));
+        $late_days = count(array_filter($monthly_attendance, fn($a) => ($a['status'] ?? '') === 'late'));
+    } catch (Exception $e) {
+        error_log("Staff Dashboard: attendance query failed: " . $e->getMessage());
+        // Defaults are 0 — proceed gracefully
+    }
+
+    // Fetch assigned subjects for teachers (gracefully handle missing tables)
+    $teacher_subjects = [];
+    if (isTeacher()) {
+        try {
+            $stmt = $pdo->prepare("SELECT s.*, c.name AS class_name FROM subjects s LEFT JOIN classes c ON s.class_id = c.id WHERE s.teacher_id = ?");
+            $stmt->execute([$staff_id]);
+            $teacher_subjects = $stmt->fetchAll();
+        } catch (Exception $e) {
+            error_log("Staff Dashboard: teacher subjects query failed: " . $e->getMessage());
         }
     }
-}
 
-// Fetch unread messages
-$stmt = $pdo->prepare("SELECT id FROM messages WHERE receiver_id = ?");
-$stmt->execute([$user_id]);
-$direct_ids = array_map(fn($r) => (int)$r['id'], $stmt->fetchAll());
-$stmt = $pdo->prepare("SELECT id FROM messages WHERE is_broadcast = ?");
-$stmt->execute([1]);
-$broadcast_ids = array_map(fn($r) => (int)$r['id'], $stmt->fetchAll());
-$all_msg_ids = array_unique(array_merge($direct_ids, $broadcast_ids));
-$stmt = $pdo->prepare("SELECT message_id FROM message_reads WHERE user_id = ?");
-$stmt->execute([$user_id]);
-$read_ids = array_map(fn($r) => (int)$r['message_id'], $stmt->fetchAll());
-// Start by counting messages NOT in message_reads table
-$unread_message_ids = [];
-foreach ($all_msg_ids as $mid) {
-    if (!in_array($mid, $read_ids)) {
-        $unread_message_ids[] = $mid;
+    // Fetch children/wards from parent_students (gracefully handle missing tables)
+    $children = [];
+    try {
+        $stmt = $pdo->prepare("SELECT * FROM parent_students WHERE parent_user_id = ?");
+        $stmt->execute([$user_id]);
+        $parent_records = $stmt->fetchAll();
+        if (!empty($parent_records)) {
+            $student_ids = array_map(fn($r) => (int)$r['student_id'], $parent_records);
+            $placeholders = implode(',', array_fill(0, count($student_ids), '?'));
+            $stmt = $pdo->prepare("SELECT * FROM students WHERE id IN ($placeholders)");
+            $stmt->execute($student_ids);
+            $students_list = $stmt->fetchAll();
+            $students_by_id = [];
+            foreach ($students_list as $s) {
+                $students_by_id[(int)$s['id']] = $s;
+            }
+            foreach ($parent_records as $pr) {
+                $sid = (int)$pr['student_id'];
+                if (isset($students_by_id[$sid])) {
+                    $children[] = [
+                        'relationship' => $pr['relationship'],
+                        'is_primary'   => $pr['is_primary'],
+                        'student'      => $students_by_id[$sid]
+                    ];
+                }
+            }
+        }
+    } catch (Exception $e) {
+        error_log("Staff Dashboard: parent/child query failed: " . $e->getMessage());
     }
-}
-// Remove legacy-read messages (read_at set but not in message_reads)
-foreach (array_chunk($unread_message_ids, 50) as $chunk) {
-    if (empty($chunk)) continue;
-    $placeholders = implode(',', array_fill(0, count($chunk), '?'));
-    $stmt = $pdo->prepare("SELECT id FROM messages WHERE id IN ($placeholders) AND read_at IS NOT NULL");
-    $stmt->execute($chunk);
-    foreach ($stmt->fetchAll() as $r) {
-        $unread_message_ids = array_diff($unread_message_ids, [(int)$r['id']]);
+
+    // Fetch unread messages (gracefully handle missing tables)
+    $unread_count = 0;
+    try {
+        $stmt = $pdo->prepare("SELECT id FROM messages WHERE receiver_id = ?");
+        $stmt->execute([$user_id]);
+        $direct_ids = array_map(fn($r) => (int)$r['id'], $stmt->fetchAll());
+        $stmt = $pdo->prepare("SELECT id FROM messages WHERE is_broadcast = ?");
+        $stmt->execute([1]);
+        $broadcast_ids = array_map(fn($r) => (int)$r['id'], $stmt->fetchAll());
+        $all_msg_ids = array_unique(array_merge($direct_ids, $broadcast_ids));
+        $stmt = $pdo->prepare("SELECT message_id FROM message_reads WHERE user_id = ?");
+        $stmt->execute([$user_id]);
+        $read_ids = array_map(fn($r) => (int)$r['message_id'], $stmt->fetchAll());
+        // Start by counting messages NOT in message_reads table
+        $unread_message_ids = [];
+        foreach ($all_msg_ids as $mid) {
+            if (!in_array($mid, $read_ids)) {
+                $unread_message_ids[] = $mid;
+            }
+        }
+        // Remove legacy-read messages (read_at set but not in message_reads)
+        foreach (array_chunk($unread_message_ids, 50) as $chunk) {
+            if (empty($chunk)) continue;
+            $placeholders = implode(',', array_fill(0, count($chunk), '?'));
+            $stmt = $pdo->prepare("SELECT id FROM messages WHERE id IN ($placeholders) AND read_at IS NOT NULL");
+            $stmt->execute($chunk);
+            foreach ($stmt->fetchAll() as $r) {
+                $unread_message_ids = array_diff($unread_message_ids, [(int)$r['id']]);
+            }
+        }
+        $unread_count = count($unread_message_ids);
+    } catch (Exception $e) {
+        error_log("Staff Dashboard: messages query failed: " . $e->getMessage());
     }
+} catch (Exception $e) {
+    // Fatal error — log and show friendly error page
+    error_log("Staff Dashboard FATAL: " . $e->getMessage());
+    $school_name = 'Nex CEC';
+    $present_days = $absent_days = $late_days = 0;
+    $unread_count = 0;
+    $latest_payroll = null;
+    $teacher_subjects = [];
+    $children = [];
+    $staff = ['full_name' => 'Staff', 'position' => '', 'department' => 'General', 'staff_id' => 'N/A',
+              'profile_picture' => '', 'email' => '', 'phone' => 'N/A', 'hire_date' => 'N/A', 'status' => 'Active'];
+    $user_id = 0;
+    // Render the page with zeroed data rather than crashing
 }
-$unread_count = count($unread_message_ids);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -190,7 +233,7 @@ $unread_count = count($unread_message_ids);
             <div style="display: flex; align-items: center; gap: 15px;">
                 <?php $ppUrl = getStaffProfilePictureUrl($staff['profile_picture'] ?? '', $user_id); ?>
                 <?php if (!empty($ppUrl)): ?>
-                    <img src="<?php echo htmlspecialchars(resolve_storage_url($ppUrl, 'images/aamusted.jpg')); ?>" alt="Profile" style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:2px solid #1a5276;" onerror="this.src='../images/aamusted.jpg'">
+                    <img src="<?php echo htmlspecialchars(resolve_storage_url($ppUrl, 'images/aamusted.jpg')); ?>" alt="Profile" style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:2px solid #1a5276;" onerror="this.onerror=null;this.src='../images/aamusted.jpg'">
                 <?php endif; ?>
                 <div>
                     <h2>Welcome, <?php echo htmlspecialchars($staff['full_name'] ?? 'Staff'); ?></h2>
@@ -257,7 +300,7 @@ $unread_count = count($unread_message_ids);
                 <a href="../parent/student.php?id=<?php echo (int)$stu['id']; ?>" style="text-decoration:none;color:inherit;display:block;background:#f8f9fa;border-radius:10px;padding:18px;border:1px solid #e9ecef;transition:all 0.2s;" onmouseover="this.style.borderColor='#1a5276';this.style.boxShadow='0 2px 12px rgba(26,82,118,0.12)';" onmouseout="this.style.borderColor='#e9ecef';this.style.boxShadow='none';">
                     <div style="display:flex;align-items:flex-start;gap:12px;">
                         <?php if (!empty($stu['profile_picture'])): ?>
-                            <img src="<?php echo htmlspecialchars(resolve_storage_url($stu['profile_picture'])); ?>" alt="Profile" style="width:48px;height:48px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,0.1);" onerror="var fb=document.getElementById('child-sfb-<?php echo (int)$stu['id']; ?>');if(fb){fb.style.display='flex';}this.style.display='none';">
+                            <img src="<?php echo htmlspecialchars(resolve_storage_url($stu['profile_picture'])); ?>" alt="Profile" style="width:48px;height:48px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,0.1);" onerror="var fb=document.getElementById('child-sfb-<?php echo (int)$stu['id']; ?>');if(fb){fb.style.display='flex';}this.onerror=null;this.style.display='none';">
                             <div style="width:48px;height:48px;border-radius:50%;background:#1a5276;color:white;display:none;align-items:center;justify-content:center;font-size:20px;font-weight:700;flex-shrink:0;" id="child-sfb-<?php echo (int)$stu['id']; ?>">
                                 <?php echo strtoupper(substr($stu['full_name'] ?? '?', 0, 1)); ?>
                             </div>

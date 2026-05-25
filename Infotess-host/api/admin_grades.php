@@ -340,6 +340,18 @@ if (!empty($students)) {
         box-shadow: 0 6px 20px rgba(0,0,0,0.12) !important;
         border-color: #3498db !important;
     }
+    .score-input:disabled, .sba-select:disabled {
+        background: #f8f9fa !important;
+        color: #2c3e50 !important;
+        border: 1px solid #e9ecef !important;
+        cursor: default !important;
+        opacity: 1 !important;
+        -webkit-text-fill-color: #2c3e50 !important;
+    }
+    .sba-select:disabled {
+        -webkit-appearance: none !important;
+        appearance: none !important;
+    }
     </style>
 </head>
 <body>
@@ -360,7 +372,7 @@ if (!empty($students)) {
 
             <?php if (!$selected_class): ?>
             <!-- Class Cards Grid (default view) -->
-            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px;margin-bottom:30px;">
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:35px;margin-bottom:30px;">
                 <?php foreach ($classes as $c):
                     $cname = $c['name'] ?? '';
                     $count = $students_per_class[$cname] ?? 0;
@@ -417,8 +429,11 @@ if (!empty($students)) {
                         foreach ($terms as $t) { if ($t['id'] == $selected_term) { echo htmlspecialchars($t['name']); break; } }
                     ?></h3>
                     
-                    <div class="alert alert-info" style="margin-top: 15px; font-size: 0.9rem;">
-                        <i class="fas fa-info-circle"></i> <strong>Ghana SBA Scoring:</strong> Individual Test (30) + Class Test (30) = Total Class Score (60) → scaled to 50%. End of Term Exams (100) → scaled to 50%. Overall = Scaled Class Score + Scaled Exams.
+                    <div class="alert alert-info" style="margin-top: 15px; font-size: 0.9rem;display:flex;align-items:center;justify-content:space-between;">
+                        <span><i class="fas fa-info-circle"></i> <strong>Ghana SBA Scoring:</strong> Individual Test (30) + Class Test (30) = Total Class Score (60) → scaled to 50%. End of Term Exams (100) → scaled to 50%. Overall = Scaled Class Score + Scaled Exams.</span>
+                        <button type="button" id="toggleEditBtn" style="white-space:nowrap;flex-shrink:0;margin-left:12px;padding:6px 14px;border:1px solid #bdc3c7;border-radius:4px;background:#fff;color:#2c3e50;cursor:pointer;font-size:0.85rem;" onclick="toggleEditMode()">
+                            <i class="fas fa-lock"></i> Enable Editing
+                        </button>
                     </div>
 
                     <form method="POST" action="grades.php">
@@ -463,22 +478,22 @@ if (!empty($students)) {
                                         <td class="calc-cell" id="overall_<?php echo $student['id']; ?>" style="font-weight:bold;"><?php echo $calc ? number_format($calc['overall_total'], 1) : '0.0'; ?></td>
                                         <td class="calc-cell" id="pos_<?php echo $student['id']; ?>"><?php echo $calc ? $calc['position'] : '-'; ?></td>
                                         <td>
-                                            <select name="scores[<?php echo $student['id']; ?>][attitude]" class="form-control" style="width: 80px;">
-                                                <option value="">--</option>
-                                                <option value="Excellent" <?php echo ($db && $db['attitude'] === 'Excellent') ? 'selected' : ''; ?>>Excellent</option>
-                                                <option value="Good" <?php echo ($db && $db['attitude'] === 'Good') ? 'selected' : ''; ?>>Good</option>
-                                                <option value="Satisfactory" <?php echo ($db && $db['attitude'] === 'Satisfactory') ? 'selected' : ''; ?>>Satisfactory</option>
-                                                <option value="Needs Improvement" <?php echo ($db && $db['attitude'] === 'Needs Improvement') ? 'selected' : ''; ?>>Needs Imp.</option>
-                                            </select>
-                                        </td>
-                                        <td>
-                                            <select name="scores[<?php echo $student['id']; ?>][interest]" class="form-control" style="width: 80px;">
-                                                <option value="">--</option>
-                                                <option value="Excellent" <?php echo ($db && $db['interest'] === 'Excellent') ? 'selected' : ''; ?>>Excellent</option>
-                                                <option value="Good" <?php echo ($db && $db['interest'] === 'Good') ? 'selected' : ''; ?>>Good</option>
-                                                <option value="Satisfactory" <?php echo ($db && $db['interest'] === 'Satisfactory') ? 'selected' : ''; ?>>Satisfactory</option>
-                                                <option value="Needs Improvement" <?php echo ($db && $db['interest'] === 'Needs Improvement') ? 'selected' : ''; ?>>Needs Imp.</option>
-                                            </select>
+                                                <select name="scores[<?php echo $student['id']; ?>][attitude]" class="form-control sba-select" style="width: 80px;">
+                                                    <option value="">--</option>
+                                                    <option value="Excellent" <?php echo ($db && $db['attitude'] === 'Excellent') ? 'selected' : ''; ?>>Excellent</option>
+                                                    <option value="Good" <?php echo ($db && $db['attitude'] === 'Good') ? 'selected' : ''; ?>>Good</option>
+                                                    <option value="Satisfactory" <?php echo ($db && $db['attitude'] === 'Satisfactory') ? 'selected' : ''; ?>>Satisfactory</option>
+                                                    <option value="Needs Improvement" <?php echo ($db && $db['attitude'] === 'Needs Improvement') ? 'selected' : ''; ?>>Needs Imp.</option>
+                                                </select>
+                                            </td>
+                                            <td>
+                                                <select name="scores[<?php echo $student['id']; ?>][interest]" class="form-control sba-select" style="width: 80px;">
+                                                    <option value="">--</option>
+                                                    <option value="Excellent" <?php echo ($db && $db['interest'] === 'Excellent') ? 'selected' : ''; ?>>Excellent</option>
+                                                    <option value="Good" <?php echo ($db && $db['interest'] === 'Good') ? 'selected' : ''; ?>>Good</option>
+                                                    <option value="Satisfactory" <?php echo ($db && $db['interest'] === 'Satisfactory') ? 'selected' : ''; ?>>Satisfactory</option>
+                                                    <option value="Needs Improvement" <?php echo ($db && $db['interest'] === 'Needs Improvement') ? 'selected' : ''; ?>>Needs Imp.</option>
+                                                </select>
                                         </td>
                                     </tr>
                                     <?php endforeach; ?>
@@ -486,7 +501,7 @@ if (!empty($students)) {
                             </table>
                         </div>
                         
-                        <button type="submit" class="btn-primary" style="margin-top: 20px; width: 100%;"><i class="fas fa-save"></i> Save All Scores</button>
+                        <button type="submit" id="saveScoresBtn" class="btn-primary" style="margin-top: 20px; width: 100%;"><i class="fas fa-save"></i> Save All Scores</button>
                     </form>
                 </div>
             </div>
@@ -523,6 +538,37 @@ if (!empty($students)) {
         else overallCell.style.color = '#e74c3c';
     }
 
+    /**
+     * Toggle between locked (view-only) and editable mode.
+     * In locked mode, all inputs and selects are disabled;
+     * the Save button is hidden.
+     */
+    var editMode = false;
+
+    function toggleEditMode() {
+        editMode = !editMode;
+        var inputs = document.querySelectorAll('.score-input');
+        var selects = document.querySelectorAll('.sba-select');
+        var saveBtn = document.getElementById('saveScoresBtn');
+        var toggleBtn = document.getElementById('toggleEditBtn');
+
+        inputs.forEach(function(inp) { inp.disabled = !editMode; });
+        selects.forEach(function(sel) { sel.disabled = !editMode; });
+        if (saveBtn) saveBtn.style.display = editMode ? '' : 'none';
+
+        if (editMode) {
+            toggleBtn.innerHTML = '<i class="fas fa-unlock-alt"></i> Lock &amp; View Only';
+            toggleBtn.style.background = '#27ae60';
+            toggleBtn.style.color = '#fff';
+            toggleBtn.style.borderColor = '#27ae60';
+        } else {
+            toggleBtn.innerHTML = '<i class="fas fa-lock"></i> Enable Editing';
+            toggleBtn.style.background = '#fff';
+            toggleBtn.style.color = '#2c3e50';
+            toggleBtn.style.borderColor = '#bdc3c7';
+        }
+    }
+
     // Attach event listeners and recalc all on page load
     document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('.score-input').forEach(function(inp) {
@@ -531,6 +577,10 @@ if (!empty($students)) {
             // Trigger initial calculation
             recalcStudent(sid);
         });
+
+        // Always start in locked (view-only) mode
+        editMode = true;  // force toggle to false
+        toggleEditMode();
     });
     </script>
 </body>

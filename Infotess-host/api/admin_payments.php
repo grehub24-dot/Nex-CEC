@@ -50,7 +50,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $amount = floatval($_POST['amount']);
     $year = sanitize($_POST['academic_year']);
     $term = sanitize($_POST['term']);
-    $fee_type = sanitize($_POST['fee_type']);
+    $payment_type = sanitize($_POST['payment_type'] ?? 'full');
+    $fee_type = ($payment_type === 'partial') ? 'Partial Payment' : 'Full Payment';
     $method = sanitize($_POST['payment_method']);
     $date = sanitize($_POST['payment_date']);
 
@@ -86,6 +87,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $stmt = $pdo->prepare("INSERT INTO payments (student_id, amount, academic_year, term, payment_method, payment_date, receipt_number, recorded_by, fee_type, transaction_reference) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
             $stmt->execute([$student['id'], $amount, $year, $term, $method, $date, $receipt_number, $_SESSION['user_id'], $fee_type, $transaction_reference]);
             $payment_id = $pdo->lastInsertId();
+
+            // Insert payment allocations
+            $fee_items_json = $_POST['fee_items_json'] ?? '';
+            $fee_items = $fee_items_json ? json_decode($fee_items_json, true) : [];
+            if (empty($fee_items)) {
+                // Fallback: one allocation for the payment amount
+                $fee_items = [['fee_type' => $fee_type, 'fee_title' => $fee_type, 'amount' => $amount]];
+            }
+            $allocStmt = $pdo->prepare("INSERT INTO payment_allocations (payment_id, fee_type, fee_title, amount) VALUES (?, ?, ?, ?)");
+            foreach ($fee_items as $item) {
+                $allocStmt->execute([
+                    $payment_id,
+                    $item['fee_type'] ?? 'General',
+                    $item['fee_title'] ?? $item['fee_type'] ?? 'General',
+                    (float)($item['amount'] ?? 0)
+                ]);
+            }
 
             // Generate Receipt
             $generator = new ReceiptGenerator();
@@ -347,7 +365,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                             <tr>
                                 <th>Receipt #</th>
                                 <th>Student</th>
-                                <th>Fee Type</th>
+                                <th>Status</th>
                                 <th>Trans. Ref</th>
                                 <th>Amount (GHS)</th>
                                 <th>Balance (GHS)</th>
@@ -366,7 +384,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                                     <?php echo htmlspecialchars($payment['full_name']); ?><br>
                                     <small><?php echo htmlspecialchars($payment['admission_number']); ?></small>
                                 </td>
-                                <td><?php echo htmlspecialchars($payment['fee_type'] ?? 'General'); ?></td>
+                                <td>
+                                    <?php
+                                    $status_balance = max(0, $required_dues - (float)$payment['total_paid']);
+                                    if ($status_balance <= 0): ?>
+                                        <span style="display:inline-block;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:600;background:#d5f5e3;color:#1e8449;">PAID</span>
+                                    <?php else: ?>
+                                        <span style="display:inline-block;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:600;background:#fef9e7;color:#b7950b;">PARTIAL</span>
+                                    <?php endif; ?>
+                                </td>
                                 <td><small style="color:#666;"><?php echo htmlspecialchars($payment['transaction_reference'] ?? '-'); ?></small></td>
                                 <td><?php echo number_format($payment['amount'], 2); ?></td>
                                 <td>

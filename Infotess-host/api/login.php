@@ -193,7 +193,7 @@ require_once 'includes/header.php';
 <div class="login-page">
     <div class="login-card">
         <div class="login-logo">
-            <img src="<?php echo htmlspecialchars($school_logo); ?>" alt="School Logo" onerror="this.src='images/aamusted.jpg'">
+            <img src="<?php echo htmlspecialchars($school_logo); ?>" alt="School Logo" onerror="this.onerror=null;this.src='images/chariot-logo.svg'">
             <h2><?php echo htmlspecialchars($school_name); ?></h2>
             <p>Sign in to your portal account</p>
         </div>

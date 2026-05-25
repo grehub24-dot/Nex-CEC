@@ -6,7 +6,7 @@
             <div class="footer-content">
                 <!-- School Info -->
                 <div class="footer-section footer-brand">
-                    <img src="<?php echo htmlspecialchars($school_logo); ?>" alt="<?php echo htmlspecialchars($school_name); ?> Logo" height="50" class="footer-logo" onerror="this.src='<?php echo $base_url; ?>images/logo.png'">
+                    <img src="<?php echo htmlspecialchars($school_logo); ?>" alt="<?php echo htmlspecialchars($school_name); ?> Logo" height="50" class="footer-logo" onerror="this.onerror=null;this.src='<?php echo $base_url; ?>images/chariot-logo.svg'">
                     <h3><?php echo htmlspecialchars($school_name); ?></h3>
                     <p><?php echo htmlspecialchars($school_motto); ?></p>
                     <p class="footer-description">Providing quality basic education from Creche through JHS — building strong academic foundations, character development, and holistic growth for every child.</p>

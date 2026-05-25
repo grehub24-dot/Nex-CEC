@@ -65,7 +65,7 @@
     <nav class="navbar" role="navigation" aria-label="Main navigation">
         <div class="container">
             <a href="<?php echo $base_url; ?>index.php" class="logo" aria-label="<?php echo htmlspecialchars($school_name); ?> Home">
-                <img src="<?php echo htmlspecialchars($school_logo); ?>" alt="<?php echo htmlspecialchars($school_name); ?> Logo" height="40" onerror="this.src='<?php echo $base_url; ?>images/logo.png'">
+                <img src="<?php echo htmlspecialchars($school_logo); ?>" alt="<?php echo htmlspecialchars($school_name); ?> Logo" height="40" onerror="this.onerror=null;this.src='<?php echo $base_url; ?>images/chariot-logo.svg'">
                 <span class="logo-text"><?php echo htmlspecialchars($school_name); ?></span>
             </a>
 

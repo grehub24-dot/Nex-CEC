@@ -168,6 +168,35 @@ try {
         .table td .desc { font-size: 12px; color: #888; display: block; margin-top: 2px; }
         .download-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 18px; background: #1a5276; color: white; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 600; transition: background 0.2s; }
         .download-btn:hover { background: #154360; color: white; }
+        /* Staff layout — fixed sidebar + content */
+        .staff-sidebar {
+            width: 250px; background: #1a5276; color: white; position: fixed;
+            top: 0; left: 0; height: 100vh; overflow-y: auto; z-index: 100;
+        }
+        .staff-sidebar .sidebar-header { padding: 25px 15px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .staff-sidebar .sidebar-header h3 { font-size: 15px; margin: 0; }
+        .staff-sidebar .sidebar-header p { font-size: 12px; opacity: 0.8; margin: 5px 0 0; }
+        .staff-sidebar ul { list-style: none; padding: 0; margin: 0; }
+        .staff-sidebar ul li { border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .staff-sidebar ul li a { display: block; padding: 14px 20px; color: rgba(255,255,255,0.85); text-decoration: none; font-size: 14px; transition: all 0.2s; position: relative; }
+        .staff-sidebar ul li a:hover, .staff-sidebar ul li a.active { background: rgba(255,255,255,0.1); color: white; padding-left: 25px; }
+        .staff-sidebar ul li a i { width: 22px; text-align: center; margin-right: 8px; }
+        .staff-main { flex: 1; padding: 30px; background: #f4f6f9; margin-left: 250px; }
+        .top-bar { background: white; padding: 20px 30px; border-radius: 10px; margin-bottom: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); display: flex; align-items: center; justify-content: space-between; }
+        .top-bar h2 { font-size: 20px; margin: 0; color: #1a5276; }
+        .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 90; }
+        .sidebar-overlay.active { display: block; }
+        .hamburger-menu { display: none; position: fixed; top: 15px; left: 15px; z-index: 200;
+            background: #1a5276; color: white; border: none; width: 40px; height: 40px;
+            border-radius: 8px; font-size: 18px; cursor: pointer;
+        }
+        @media (max-width: 768px) {
+            .staff-sidebar { left: -250px; transition: left 0.3s; }
+            .staff-sidebar.open { left: 0; }
+            .staff-main { margin-left: 0; padding: 20px; }
+            .top-bar { flex-direction: column; text-align: center; }
+            .hamburger-menu { display: block; }
+        }
     </style>
 </head>
 <body>

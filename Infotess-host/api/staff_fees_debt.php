@@ -346,13 +346,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         }
         .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 90; }
         .sidebar-overlay.active { display: block; }
+        .staff-main { flex: 1; padding: 30px; background: #f4f6f9; margin-left: 250px; }
+        .top-bar { background: white; padding: 20px 30px; border-radius: 10px; margin-bottom: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); display: flex; align-items: center; justify-content: space-between; }
+        .top-bar h2 { font-size: 20px; margin: 0; color: #1a5276; }
         @media (max-width: 768px) {
             .staff-sidebar { left: -250px; transition: left 0.3s; }
             .staff-sidebar.open { left: 0; }
             .staff-main { margin-left: 0; padding: 20px; }
+            .top-bar { flex-direction: column; text-align: center; }
             .hamburger-menu { display: block; }
         }
-        .staff-main { flex:1; padding:20px; margin-left:250px; }
         .stat-cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; margin-bottom:20px; }
         .stat-card { background:white; border-radius:10px; padding:16px; text-align:center; box-shadow:0 2px 6px rgba(0,0,0,.08); }
         .stat-card h3 { font-size:26px; margin:0 0 4px; }
@@ -384,7 +387,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 <body>
     <?php echo renderStaffSidebar('fees_debt', $school_name, $unread_count, $staff['profile_picture'] ?? '', $staff['full_name'] ?? ''); ?>
     <div class="staff-main">
-        <div class="top-bar" style="padding:0 0 12px 0;">
+        <div class="top-bar">
             <h2><i class="fas fa-file-invoice"></i> Fee Debt — My Classes</h2>
             <span style="font-size:13px;color:#666;"><?php echo htmlspecialchars(implode(', ', $teacher_class_names)); ?> | <?php echo htmlspecialchars($filter_year); ?> Term <?php echo htmlspecialchars($filter_term); ?></span>
         </div>

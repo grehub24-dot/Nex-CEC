@@ -92,17 +92,26 @@ $deductions = $stmt->fetchAll();
         .signature-line { border-top: 1px solid #333; padding-top: 5px; text-align: center; margin-top: 60px; }
         .payroll-selector { margin-bottom: 20px; }
         @media print { .no-print { display: none; } .payslip { border: none; margin: 0; padding: 20px; } }
-        @media (max-width: 768px) {
-            .staff-sidebar { left: -250px; transition: left 0.3s; }
-            .staff-sidebar.open { left: 0; }
-            .staff-main { margin-left: 0; padding: 20px; }
-            .top-bar { flex-direction: column; text-align: center; }
-        }
         .hamburger-menu { display: none; position: fixed; top: 15px; left: 15px; z-index: 200;
             background: #1a5276; color: white; border: none; width: 40px; height: 40px;
             border-radius: 8px; font-size: 18px; cursor: pointer;
         }
-        @media (max-width: 768px) { .hamburger-menu { display: block; } }
+        @media (max-width: 768px) {
+            .staff-sidebar { left: -250px; transition: left 0.3s; }
+            .staff-sidebar.open { left: 0; }
+            .staff-main { margin-left: 0; padding: 15px; }
+            .top-bar { flex-direction: column; text-align: center; }
+            .hamburger-menu { display: block; }
+            .payslip { padding: 15px; }
+            .payslip-info { grid-template-columns: 1fr; }
+            .payslip-footer { grid-template-columns: 1fr; gap: 20px; }
+            .payslip-table { font-size: 12px; }
+            .payslip-table th,
+            .payslip-table td { padding: 8px 6px; }
+            .payslip-header h1 { font-size: 1.1rem; }
+            .payslip-header h2 { font-size: 0.95rem; }
+            .payroll-selector select { width: 100% !important; }
+        }
     </style>
 </head>
 <body>

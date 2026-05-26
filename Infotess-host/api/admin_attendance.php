@@ -8,6 +8,8 @@ $settings = [];
 $stmt = $pdo->query("SELECT setting_key, setting_value FROM system_settings");
 while ($row = $stmt->fetch()) { $settings[$row['setting_key']] = $row['setting_value']; }
 $school_name = $settings['school_name'] ?? 'Nex CEC';
+$cal_start = $settings['academic_calendar_start'] ?? null;
+$cal_end = $settings['academic_calendar_end'] ?? null;
 
 $message = '';
 $error = '';
@@ -89,6 +91,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     validate_request_csrf();
     $class_id = (int)$_POST['class_id'];
     $attendance_date = sanitize($_POST['attendance_date']);
+
+    // Validate date is within academic calendar period
+    if ($cal_start && $attendance_date < $cal_start) {
+        throw new \Exception("Attendance date cannot be before the academic calendar start date ($cal_start).");
+    }
+    if ($cal_end && $attendance_date > $cal_end) {
+        throw new \Exception("Attendance date cannot be after the academic calendar end date ($cal_end).");
+    }
     
     try {
         $pdo->beginTransaction();
@@ -271,6 +281,18 @@ if ($selected_class) {
                 <div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
             <?php endif; ?>
 
+            <?php if ($cal_start && $cal_end): ?>
+                <?php
+                $today = date('Y-m-d');
+                $is_outside = ($today < $cal_start || $today > $cal_end);
+                ?>
+                <?php if ($is_outside): ?>
+                    <div class="alert alert-warning" style="background: #fff3cd; border: 1px solid #ffc107; color: #856404; padding: 12px 15px; border-radius: 6px; margin-bottom: 15px;">
+                        <i class="fas fa-clock"></i> <strong>Outside Academic Calendar Period.</strong> The current date is outside the set academic calendar period (<?php echo htmlspecialchars($cal_start); ?> — <?php echo htmlspecialchars($cal_end); ?>). Attendance can only be recorded within this range.
+                    </div>
+                <?php endif; ?>
+            <?php endif; ?>
+
             <!-- Selection -->
             <div class="card" style="margin-bottom: 30px;">
                 <div class="card-content">
@@ -286,7 +308,7 @@ if ($selected_class) {
                         </div>
                         <div>
                             <label><strong>Date</strong></label>
-                            <input type="date" name="date" class="form-control" value="<?php echo htmlspecialchars($selected_date); ?>" style="width: 180px;" required>
+                            <input type="date" name="date" class="form-control" value="<?php echo htmlspecialchars($selected_date); ?>" <?php echo $cal_start ? 'min="'.htmlspecialchars($cal_start).'"' : ''; ?> <?php echo $cal_end ? 'max="'.htmlspecialchars($cal_end).'"' : ''; ?> style="width: 180px;" required>
                         </div>
                         <button type="submit" class="btn-primary"><i class="fas fa-search"></i> Load Students</button>
                     </form>

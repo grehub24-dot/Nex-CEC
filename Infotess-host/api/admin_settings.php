@@ -19,7 +19,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             'current_academic_year', 'current_term', 'annual_dues_amount',
             'payment_modes', 'fee_types',
             'admission_fee', 'prospectus_fee', 'enrollment_form_fee',
-            'staff_child_discount', 'sibling_discount_amount'
+            'staff_child_discount', 'sibling_discount_amount',
+            'academic_calendar_start', 'academic_calendar_end', 'calendar_term_label'
         ];
 
         // Bridge doesn't support ON CONFLICT — use separate update/insert per key
@@ -394,6 +395,25 @@ $settings = array_merge($defaults, $settings);
                             <option value="3" <?php echo ($settings['current_term'] ?? '1') == '3' ? 'selected' : ''; ?>>Term 3</option>
                         </select>
                     </div>
+                    </div>
+
+                <h4 style="margin: 20px 0 15px 0; color: #27ae60; border-top: 1px solid #eee; padding-top: 15px;">Academic Calendar Period</h4>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:5px;">
+                    <div class="form-group">
+                        <label>Calendar Start Date</label>
+                        <input type="date" name="academic_calendar_start" class="form-control" value="<?php echo htmlspecialchars($settings['academic_calendar_start'] ?? date('Y-m-d')); ?>">
+                        <small style="color: #666;">First day of the term/academic period. Used to filter attendance records.</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Calendar End Date</label>
+                        <input type="date" name="academic_calendar_end" class="form-control" value="<?php echo htmlspecialchars($settings['academic_calendar_end'] ?? date('Y-m-d')); ?>">
+                        <small style="color: #666;">Last day of the term/academic period.</small>
+                    </div>
+                </div>
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label>Calendar Term Label (display heading)</label>
+                    <input type="text" name="calendar_term_label" class="form-control" value="<?php echo htmlspecialchars($settings['calendar_term_label'] ?? '3rd Term — 2025/2026 Academic Year'); ?>" placeholder="e.g. 1st Term — 2025/2026">
+                    <small style="color: #666;">Shown as the heading on academic calendar pages.</small>
                 </div>
 
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">

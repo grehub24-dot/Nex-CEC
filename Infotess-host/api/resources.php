@@ -94,8 +94,29 @@ foreach ($resources as $r) {
                 <div class="card-body">
                     <div style="font-size:2rem;margin-bottom:12px;">📅</div>
                     <h3 class="card-title">Academic Calendar</h3>
-                    <p class="card-text">View and download the term dates, holidays, examination schedules, and school events calendar.</p>
-                    <span class="badge-pill badge-navy">Coming Soon</span>
+                    <p class="card-text">View the term dates, holidays, examination schedules, and school events calendar.</p>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <a href="/academic_calendar.php" class="btn-primary" style="padding: 6px 14px; font-size: 0.85rem; text-decoration: none; display: inline-block;">
+                            <i class="fas fa-calendar-alt"></i> View Calendar
+                        </a>
+                        <?php
+                        // Check if a calendar file exists in resources
+                        $cal_file = '';
+                        try {
+                            $stmt_cal = $pdo->prepare("SELECT file_url FROM resources WHERE category = ? ORDER BY id DESC LIMIT 1");
+                            $stmt_cal->execute(['Academic']);
+                            $row_cal = $stmt_cal->fetch();
+                            if ($row_cal && !empty($row_cal['file_url'])) {
+                                $cal_file = $row_cal['file_url'];
+                            }
+                        } catch (Exception $e) {}
+                        ?>
+                        <?php if ($cal_file): ?>
+                            <a href="<?php echo htmlspecialchars($cal_file); ?>" class="btn-secondary" style="padding: 6px 14px; font-size: 0.85rem; text-decoration: none; display: inline-block;" target="_blank" rel="noopener">
+                                <i class="fas fa-download"></i> Download
+                            </a>
+                        <?php endif; ?>
+                    </div>
                 </div>
             </div>
             <div class="card-premium">

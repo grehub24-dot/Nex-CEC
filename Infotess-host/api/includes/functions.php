@@ -285,6 +285,7 @@ function getSidebarMenu($currentPage = '') {
     if ($isFullAdmin) {
         $allItems[] = ['href' => 'module_settings.php', 'icon' => 'fas fa-cogs', 'label' => 'Module Settings', 'acl' => 'module_settings'];
         $allItems[] = ['href' => 'subjects.php', 'icon' => 'fas fa-book', 'label' => 'Subjects', 'acl' => 'subjects'];
+        $allItems[] = ['href' => 'academic_calendar.php', 'icon' => 'fas fa-calendar-alt', 'label' => 'Academic Calendar', 'acl' => 'settings'];
         $allItems[] = ['href' => 'settings.php', 'icon' => 'fas fa-tools', 'label' => 'System Settings', 'acl' => 'settings'];
     }
     
@@ -426,6 +427,7 @@ function renderStaffSidebar($currentPage = '', $schoolName = 'Nex CEC', $unreadC
         ['href' => '../staff/messaging.php', 'icon' => 'fas fa-envelope',    'label' => 'Messages',          'key' => 'messaging',   'badge' => $unreadCount],
         ['href' => '../staff/student_attendance.php','icon' => 'fas fa-user-check', 'label' => 'Student Attendance','key' => 'student_attendance', 'teacherOnly' => true],
         ['href' => '../staff/fees_debt.php', 'icon' => 'fas fa-file-invoice', 'label' => 'Fee Debt', 'key' => 'fees_debt', 'teacherOnly' => true],
+        ['href' => '../staff/academic_calendar.php', 'icon' => 'fas fa-calendar-alt', 'label' => 'Academic Calendar', 'key' => 'academic_calendar'],
     ];
     
     // Add Parent Portal link for dual-role staff (staff + parent)

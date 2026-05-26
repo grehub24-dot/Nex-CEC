@@ -75,7 +75,7 @@ foreach ($publicPages as $page) {
 }
 
 // Public informational pages
-$publicInfoPages = ['about', 'contact', 'gallery', 'news', 'events', 'activities', 'alumni', 'resources', 'department', 'executives', 'fees', 'membership', 'projects'];
+$publicInfoPages = ['about', 'contact', 'gallery', 'news', 'events', 'activities', 'alumni', 'resources', 'department', 'executives', 'fees', 'membership', 'projects', 'academic_calendar'];
 foreach ($publicInfoPages as $page) {
     $routes["$page.php"] = "$page.php";
 }
@@ -89,7 +89,7 @@ $routes['forgot-password.php'] = 'forgot-password.php';
 $routes['route_selector.php'] = 'route_selector.php';
 
 // Admin routes
-$adminPages = ['dashboard','students','staff','edit_staff','payments','fees','fees_debt','student_billing','class_billing','payroll','pay_slip','salary','grades','attendance','staff_attendance','reports','settings','users','edit_student','inbox','messaging','module_settings','subjects','verify','bulk_import','enrollments','role_permissions'];
+$adminPages = ['dashboard','students','staff','edit_staff','payments','fees','fees_debt','student_billing','class_billing','payroll','pay_slip','salary','grades','attendance','staff_attendance','reports','settings','users','edit_student','inbox','messaging','module_settings','subjects','verify','bulk_import','enrollments','role_permissions','academic_calendar'];
 foreach ($adminPages as $page) {
     $routes["admin/$page.php"] = "admin_$page.php";
 }
@@ -107,7 +107,7 @@ $routes['ajax_get_subjects_by_class.php'] = 'ajax_get_subjects_by_class.php';
 $routes['admin/view_receipt.php'] = 'view_receipt.php';
 
 // Staff routes
-$staffPages = ['dashboard', 'payslip', 'attendance', 'grades', 'fees_debt', 'profile', 'messaging'];
+$staffPages = ['dashboard', 'payslip', 'attendance', 'grades', 'fees_debt', 'profile', 'messaging', 'academic_calendar'];
 foreach ($staffPages as $page) {
     $routes["staff/$page.php"] = "staff_$page.php";
 }

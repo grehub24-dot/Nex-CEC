@@ -18,6 +18,30 @@ foreach ($resources as $r) {
     $cat = !empty($r['category']) ? $r['category'] : 'General';
     $grouped[$cat][] = $r;
 }
+
+// Fetch upcoming calendar events
+$upcoming_events = [];
+try {
+    $stmt_ev = $pdo->query("SELECT id, title, description, event_date, end_date, event_type, location, color FROM academic_calendar_events WHERE event_date >= CURDATE() ORDER BY event_date ASC LIMIT 6");
+    if ($stmt_ev && $stmt_ev->rowCount() > 0) {
+        $upcoming_events = $stmt_ev->fetchAll(PDO::FETCH_ASSOC);
+    }
+} catch (Exception $e) {}
+
+$event_type_labels = [
+    'event'    => 'Event',
+    'holiday'  => 'Holiday',
+    'exam'     => 'Exam',
+    'training' => 'Training',
+    'break'    => 'Break',
+];
+$event_type_colors = [
+    'event'    => '#3498db',
+    'holiday'  => '#e74c3c',
+    'exam'     => '#e67e22',
+    'training' => '#1abc9c',
+    'break'    => '#95a5a6',
+];
 ?>
 
 <!-- Hero Inner -->
@@ -43,15 +67,23 @@ foreach ($resources as $r) {
             </h2>
             <p style="color: #888; font-size: 0.88rem; margin-bottom: 16px;"><?php echo count($items); ?> resource(s) available</p>
             <div style="display:flex;flex-direction:column;gap:12px;">
-                <?php foreach ($items as $res): ?>
-                <a href="<?php echo htmlspecialchars($res['file_url']); ?>" class="resource-card" target="_blank" rel="noopener">
-                    <div class="resource-icon">
-                        <?php
-                        $ext = strtolower(pathinfo($res['file_url'], PATHINFO_EXTENSION));
-                        $icons = ['pdf' => '📄', 'doc' => '📝', 'docx' => '📝', 'xls' => '📊', 'xlsx' => '📊', 'jpg' => '🖼️', 'png' => '🖼️', 'mp4' => '🎬', 'mp3' => '🎵'];
-                        echo $icons[$ext] ?? '📄';
-                        ?>
-                    </div>
+                <?php foreach ($items as $res):
+                    $res_url = !empty($res['file_url']) ? trim($res['file_url']) : '';
+                    // Fallback: calendar resource with no uploaded file → link to academic calendar page
+                    if (empty($res_url) && stripos($res['title'], 'calendar') !== false) {
+                        $res_url = '/academic_calendar.php';
+                    }
+                    $has_link = !empty($res_url);
+                    $ext = !empty($res['file_url']) ? strtolower(pathinfo($res['file_url'], PATHINFO_EXTENSION)) : '';
+                    $icon_map = ['pdf' => '📄', 'doc' => '📝', 'docx' => '📝', 'xls' => '📊', 'xlsx' => '📊', 'jpg' => '🖼️', 'png' => '🖼️', 'mp4' => '🎬', 'mp3' => '🎵'];
+                    $icon = $ext && isset($icon_map[$ext]) ? $icon_map[$ext] : (stripos($res['title'], 'calendar') !== false ? '📅' : '📄');
+                ?>
+                <?php if ($has_link): ?>
+                <a href="<?php echo htmlspecialchars($res_url); ?>" class="resource-card" target="_blank" rel="noopener">
+                <?php else: ?>
+                <div class="resource-card">
+                <?php endif; ?>
+                    <div class="resource-icon"><?php echo $icon; ?></div>
                     <div class="resource-info">
                         <h4><?php echo htmlspecialchars($res['title']); ?></h4>
                         <?php if (!empty($res['description'])): ?>
@@ -59,7 +91,11 @@ foreach ($resources as $r) {
                         <?php endif; ?>
                     </div>
                     <div class="resource-download">⬇</div>
+                <?php if ($has_link): ?>
                 </a>
+                <?php else: ?>
+                </div>
+                <?php endif; ?>
                 <?php endforeach; ?>
             </div>
         </div>
@@ -147,6 +183,157 @@ foreach ($resources as $r) {
         <?php endif; ?>
     </div>
 </section>
+
+<?php if (!empty($upcoming_events)): ?>
+<!-- Upcoming Events -->
+<section class="section" style="padding-top: 0;">
+    <div class="container">
+        <div class="animate-on-scroll">
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px;">
+                <div>
+                    <span class="badge-pill badge-gold" style="margin-bottom:8px;display:inline-block;">Stay Informed</span>
+                    <h2 style="color:#003366;font-size:1.8rem;margin:0;display:flex;align-items:center;gap:10px;">
+                        <i class="fas fa-calendar-alt" style="color:#ffcc00;"></i> Upcoming Events
+                    </h2>
+                    <p style="color:#888;margin:4px 0 0 0;">Events you won't want to miss this term.</p>
+                </div>
+                <a href="/academic_calendar.php" class="btn-primary" style="padding:8px 20px;text-decoration:none;font-size:0.9rem;display:inline-flex;align-items:center;gap:8px;">
+                    <i class="fas fa-calendar-alt"></i> Full Calendar
+                </a>
+            </div>
+
+            <div class="upcoming-events-grid">
+                <?php foreach ($upcoming_events as $ev):
+                    $ev_color = $ev['color'] ?? '#3498db';
+                    $ev_type_label = $event_type_labels[$ev['event_type']] ?? ucfirst($ev['event_type']);
+                    $ev_type_color = $event_type_colors[$ev['event_type']] ?? '#3498db';
+                    $start_day = date('d', strtotime($ev['event_date']));
+                    $start_month = date('M', strtotime($ev['event_date']));
+                    $is_multi = !empty($ev['end_date']) && $ev['end_date'] !== $ev['event_date'];
+                ?>
+                <div class="upcoming-event-card" style="border-left-color: <?php echo htmlspecialchars($ev_color); ?>;">
+                    <div class="ue-date-box" style="background: <?php echo $ev_type_color; ?>;">
+                        <div class="ue-date-day"><?php echo $start_day; ?></div>
+                        <div class="ue-date-month"><?php echo $start_month; ?></div>
+                        <?php if ($is_multi): ?>
+                            <div class="ue-date-to">—</div>
+                            <div class="ue-date-day"><?php echo date('d', strtotime($ev['end_date'])); ?></div>
+                        <?php endif; ?>
+                    </div>
+                    <div class="ue-body">
+                        <span class="ue-type-badge" style="background:<?php echo $ev_type_color; ?>;"><?php echo htmlspecialchars($ev_type_label); ?></span>
+                        <h4><?php echo htmlspecialchars($ev['title']); ?></h4>
+                        <?php if (!empty($ev['description'])): ?>
+                            <p><?php echo htmlspecialchars($ev['description']); ?></p>
+                        <?php endif; ?>
+                        <?php if (!empty($ev['location'])): ?>
+                            <div class="ue-location"><i class="fas fa-map-marker-alt"></i> <?php echo htmlspecialchars($ev['location']); ?></div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </div>
+</section>
+<?php endif; ?>
+
+<style>
+.upcoming-events-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+.upcoming-event-card {
+    display: flex;
+    gap: 18px;
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 22px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    border-left: 4px solid #3498db;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+.upcoming-event-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+}
+.ue-date-box {
+    flex-shrink: 0;
+    text-align: center;
+    border-radius: 10px;
+    padding: 10px 16px;
+    min-width: 60px;
+    color: #fff;
+}
+.ue-date-day {
+    font-size: 1.5rem;
+    font-weight: 800;
+    line-height: 1.1;
+}
+.ue-date-month {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    opacity: 0.9;
+}
+.ue-date-to {
+    font-size: 0.75rem;
+    opacity: 0.7;
+    line-height: 1;
+    margin: 2px 0;
+}
+.ue-body {
+    flex: 1;
+    min-width: 0;
+}
+.ue-body h4 {
+    font-size: 1rem;
+    margin: 0 0 4px 0;
+    color: #003366;
+}
+.ue-body p {
+    font-size: 0.85rem;
+    color: #666;
+    margin: 0 0 6px 0;
+}
+.ue-type-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 10px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 6px;
+}
+.ue-location {
+    font-size: 0.8rem;
+    color: #888;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.ue-location i {
+    color: #e74c3c;
+}
+@media (max-width: 768px) {
+    .upcoming-event-card {
+        flex-direction: column;
+        gap: 12px;
+    }
+    .ue-date-box {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 14px;
+        min-width: unset;
+        align-self: flex-start;
+    }
+    .ue-date-day { font-size: 1rem; }
+    .ue-date-month { font-size: 0.6rem; }
+    .ue-date-to { font-size: 0.65rem; margin: 0; }
+}
+</style>
 
 <script>
 (function() {

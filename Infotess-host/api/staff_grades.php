@@ -5,8 +5,14 @@ if (!isLoggedIn() || !isTeacher()) {
     redirect('../login.php');
 }
 
+// Top-level error handler to diagnose 500 errors
+$__grades_error = null;
+try {
+error_log("staff_grades.php: START execution");
+
 $settings = fetchSettings($pdo);
 $school_name = $settings['school_name'] ?? 'Nex CEC';
+error_log("staff_grades.php: settings loaded, school=" . $school_name);
 
 // Per-class SBA lock
 $sba_class_lock = [];
@@ -57,6 +63,7 @@ foreach (array_chunk($unread_message_ids, 50) as $chunk) {
     }
 }
 $unread_count = count($unread_message_ids);
+error_log("staff_grades.php: messages counted, unread=" . $unread_count);
 
 // Get teacher's assigned class IDs
 $teacher_class_ids = getTeacherClassIds($pdo);
@@ -75,6 +82,7 @@ if (empty($teacher_class_ids)) {
         error_log("staff_grades.php FALLBACK error: " . $e->getMessage());
     }
 }
+error_log("staff_grades.php: teacher_class_ids=" . json_encode($teacher_class_ids));
 
 // Get classes, terms, subjects
 $all_classes = $pdo->query("SELECT * FROM classes")->fetchAll();
@@ -84,6 +92,7 @@ $classes = array_filter($all_classes, function($c) use ($teacher_class_ids) {
 });
 
 $terms = $pdo->query("SELECT * FROM terms")->fetchAll();
+error_log("staff_grades.php: loaded classes=" . count($all_classes) . " terms=" . count($terms));
 
 $class_category_map = [
     'Creche'  => 'creche', 'Nursery 1' => 'nursery', 'Nursery 2' => 'nursery',
@@ -106,8 +115,7 @@ try {
 
 // Auto-seed subject_categories if empty (same logic as admin_grades.php)
 if (empty($subject_category_mapping)) {
-    $all_subjects_for_seed = $pdo->query("SELECT * FROM subjects");
-    $all_subjects_for_seed = $all_subjects_for_seed ? $all_subjects_for_seed->fetchAll() : [];
+    $all_subjects_for_seed = $pdo->query("SELECT * FROM subjects")->fetchAll();
     if (!empty($all_subjects_for_seed)) {
         $category_matchers = [
             'creche'       => [
@@ -202,11 +210,14 @@ if ($selected_class) {
     $class_name = $classRow ? ($classRow['name'] ?? '') : '';
 }
 
+error_log("staff_grades.php: loading teacher subjects for staff_id=" . $staff_id);
+
 // Get subjects assigned to this teacher
 $stmt = $pdo->prepare("SELECT * FROM subjects WHERE teacher_id = ?");
 $stmt->execute([$staff_id]);
 $teacher_subjects = $stmt->fetchAll();
 usort($teacher_subjects, fn($a, $b) => strcmp($a['name'] ?? '', $b['name'] ?? ''));
+error_log("staff_grades.php: loaded " . count($teacher_subjects) . " teacher subjects");
 
 // Filter subjects by class
 $subjects = $teacher_subjects;
@@ -234,6 +245,7 @@ if ($selected_class && $class_name) {
     $students = $stmt->fetchAll();
     usort($students, fn($a, $b) => strcmp($a['full_name'] ?? '', $b['full_name'] ?? ''));
 }
+error_log("staff_grades.php: loaded " . count($students) . " students for class=" . ($class_name ?? 'none'));
 
 $message = '';
 $error = '';
@@ -326,13 +338,20 @@ if (!empty($students)) {
         $rank++;
     }
 }
+
+error_log("staff_grades.php: END execution (no exception)");
+
+} catch (Exception $__e) {
+    $__grades_error = $__e->getMessage();
+    error_log("staff_grades.php FATAL: " . $__e->getMessage());
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SBA / Grades — <?php echo htmlspecialchars($school_name); ?></title>
+    <title>SBA / Grades — <?php echo htmlspecialchars($school_name ?? 'Nex CEC'); ?></title>
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -386,6 +405,15 @@ if (!empty($students)) {
         <?php endif; ?>
         <?php if ($error): ?>
             <div class="alert alert-danger"><?php echo $error; ?></div>
+        <?php endif; ?>
+        <?php if ($__grades_error): ?>
+            <div class="alert alert-danger" style="background:#fff3f3;border:1px solid #e74c3c;">
+                <strong><i class="fas fa-exclamation-triangle"></i> System Error:</strong>
+                <?php echo htmlspecialchars($__grades_error); ?>
+                <p style="margin:8px 0 0 0;font-size:0.85rem;color:#888;">
+                    Please report this to the system administrator.
+                </p>
+            </div>
         <?php endif; ?>
 
         <div class="card" style="margin-bottom:30px;">

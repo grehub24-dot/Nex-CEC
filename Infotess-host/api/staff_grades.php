@@ -240,12 +240,26 @@ if ($selected_class && $class_name) {
 // Get students in selected class
 $students = [];
 if ($selected_class && $class_name) {
+    error_log("staff_grades.php: querying students with class_name='$class_name'");
     $stmt = $pdo->prepare("SELECT * FROM students WHERE class_name = ?");
     $stmt->execute([$class_name]);
     $students = $stmt->fetchAll();
     usort($students, fn($a, $b) => strcmp($a['full_name'] ?? '', $b['full_name'] ?? ''));
+    error_log("staff_grades.php: students query returned " . count($students) . " rows for class_name='$class_name'");
+    // If no students found, log some sample class_names from DB to diagnose mismatch
+    if (empty($students)) {
+        try {
+            $sample_stmt = $pdo->query("SELECT DISTINCT class_name FROM students LIMIT 10");
+            $sample_classes = $sample_stmt ? $sample_stmt->fetchAll() : [];
+            $sample_names = array_map(fn($r) => $r['class_name'] ?? '', $sample_classes);
+            error_log("staff_grades.php: sample class_names in students table: " . json_encode($sample_names));
+        } catch (Exception $e) {
+            error_log("staff_grades.php: could not sample student class_names: " . $e->getMessage());
+        }
+    }
+} else {
+    error_log("staff_grades.php: skipping students query — selected_class=" . var_export($selected_class, true) . " class_name=" . var_export($class_name, true));
 }
-error_log("staff_grades.php: loaded " . count($students) . " students for class=" . ($class_name ?? 'none'));
 
 $message = '';
 $error = '';

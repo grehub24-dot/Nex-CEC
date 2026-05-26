@@ -87,17 +87,22 @@ class SupabaseClient {
      *
      * @param string $bucket Bucket name (e.g. 'profiles')
      * @param bool   $public Whether the bucket should be publicly readable (default true)
+     * @param array  $allowedMimeTypes List of allowed MIME types (null = no restriction)
+     * @param int    $fileSizeLimit Max file size in bytes (default 10 MB for non-image buckets)
      * @return array         Decoded JSON response
      * @throws Exception     On creation failure (other than conflict)
      */
-    public function createBucket(string $bucket, bool $public = true): array {
+    public function createBucket(string $bucket, bool $public = true, ?array $allowedMimeTypes = null, int $fileSizeLimit = 10 * 1024 * 1024): array {
         $url = "$this->url/storage/v1/bucket";
-        $body = json_encode([
+        $body = [
             'name' => $bucket,
             'public' => $public,
-            'file_size_limit' => 2 * 1024 * 1024, // 2 MB
-            'allowed_mime_types' => ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-        ]);
+            'file_size_limit' => $fileSizeLimit
+        ];
+        if ($allowedMimeTypes !== null) {
+            $body['allowed_mime_types'] = $allowedMimeTypes;
+        }
+        $body = json_encode($body);
 
         $ch = curl_init();
         $headers = [

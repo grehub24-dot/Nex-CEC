@@ -120,7 +120,7 @@ $routes["staff/register.php"] = "staff_register.php";
 $routes["staff/login.php"] = "login.php";
 
 // Parent routes
-$parentPages = ['dashboard', 'student', 'fees', 'report_card', 'messages', 'profile', 'password-reset'];
+$parentPages = ['dashboard', 'student', 'fees', 'report_card', 'messages', 'profile', 'password-reset', 'academic_calendar'];
 foreach ($parentPages as $page) {
     $routes["parent/$page.php"] = "parent_$page.php";
 }

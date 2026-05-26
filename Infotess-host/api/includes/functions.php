@@ -544,6 +544,10 @@ function renderParentSidebar($currentPage = '', $schoolName = 'Nex CEC', $unread
     }
     $html .= '</a></li>';
     
+    // Academic Calendar
+    $active = ($currentPage === 'academic_calendar') ? ' class="active"' : '';
+    $html .= '<li><a href="../parent/academic_calendar.php"' . $active . '><i class="fas fa-calendar-alt"></i> Academic Calendar</a></li>';
+
     // My Profile
     $active = ($currentPage === 'profile') ? ' class="active"' : '';
     $html .= '<li><a href="../parent/profile.php"' . $active . '><i class="fas fa-user-cog"></i> My Profile</a></li>';

@@ -13,6 +13,330 @@ $message = '';
 $error = '';
 
 // ==========================================
+// Helper: Extract calendar events from DOCX/PDF
+// ==========================================
+/**
+ * Parse a DOCX or PDF file and extract date+event pairs into the DB.
+ * Supports formats like:
+ *   "Monday, 2nd June, 2025 — Reporting"
+ *   "3rd June — 5th August, 2025" (multi-date span)
+ *
+ * @param string $filePath Temporary file path
+ * @param string $ext      File extension ('docx' or 'pdf')
+ * @param PDO    $pdo      Database connection
+ * @return int             Number of events extracted and inserted
+ */
+function extractCalendarEventsFromFile(string $filePath, string $ext, $pdo): int {
+    $text = '';
+
+    // Extract raw text based on file type
+    if ($ext === 'docx') {
+        $text = extractTextFromDocx($filePath);
+    } elseif ($ext === 'pdf') {
+        $text = extractTextFromPdf($filePath);
+    }
+
+    if (empty(trim($text))) {
+        return 0;
+    }
+
+    // Parse events from the extracted text
+    $events = parseCalendarEvents($text);
+    $inserted = 0;
+
+    foreach ($events as $ev) {
+        try {
+            // Skip events that already exist (same title + date)
+            $check = $pdo->prepare("SELECT COUNT(*) FROM academic_calendar_events WHERE title = ? AND event_date = ?");
+            $check->execute([$ev['title'], $ev['event_date']]);
+            if ($check->fetchColumn() > 0) {
+                continue;
+            }
+
+            $stmt = $pdo->prepare(
+                "INSERT INTO academic_calendar_events (title, event_date, end_date, event_type, color, description)
+                 VALUES (?, ?, ?, ?, ?, ?)"
+            );
+            $stmt->execute([
+                $ev['title'],
+                $ev['event_date'],
+                $ev['end_date'],
+                $ev['event_type'],
+                $ev['color'],
+                $ev['description'] ?? ''
+            ]);
+            $inserted++;
+        } catch (Exception $e) {
+            error_log("Calendar event insert skipped: " . $e->getMessage());
+        }
+    }
+
+    return $inserted;
+}
+
+/**
+ * Extract plain text from a DOCX file using ZipArchive.
+ */
+function extractTextFromDocx(string $filePath): string {
+    if (!class_exists('ZipArchive')) {
+        error_log("ZipArchive not available — cannot parse DOCX.");
+        return '';
+    }
+    $zip = new ZipArchive();
+    if ($zip->open($filePath) !== true) {
+        error_log("Failed to open DOCX as ZIP.");
+        return '';
+    }
+    $xml = $zip->getFromName('word/document.xml');
+    $zip->close();
+    if ($xml === false) {
+        error_log("word/document.xml not found in DOCX.");
+        return '';
+    }
+    // Strip XML tags to get raw text, decode HTML entities
+    $text = strip_tags($xml);
+    $text = html_entity_decode($text, ENT_QUOTES, 'UTF-8');
+    // Normalize whitespace
+    $text = preg_replace('/\s+/', ' ', $text);
+    $text = preg_replace('/[^\x20-\x7E\x0A\x0D]/', '', $text);
+    return $text;
+}
+
+/**
+ * Extract plain text from a PDF file.
+ * Tries pdftotext (if available), falls back to basic text extraction.
+ */
+function extractTextFromPdf(string $filePath): string {
+    // Try pdftotext command-line tool
+    $pdftotext = trim(shell_exec('where pdftotext 2>nul || which pdftotext 2>/dev/null'));
+    if (!empty($pdftotext)) {
+        $escaped = escapeshellarg($filePath);
+        $output = shell_exec("pdftotext $escaped - 2>/dev/null");
+        if ($output !== null && strlen(trim($output)) > 50) {
+            return $output;
+        }
+    }
+
+    // Fallback: basic PDF text extraction (reads text objects)
+    $content = file_get_contents($filePath);
+    if ($content === false) return '';
+
+    $text = '';
+    // Match text between parentheses in PDF streams (BT...ET)
+    preg_match_all('/\(([^)]*)\)/s', $content, $matches);
+    if (!empty($matches[1])) {
+        foreach ($matches[1] as $match) {
+            // Unescape PDF escape sequences
+            $unescaped = preg_replace('/\\\\([nrtf\\\\()])/', '$1', $match);
+            $text .= $unescaped . "\n";
+        }
+    }
+    return $text;
+}
+
+/**
+ * Parse structured text into calendar event entries.
+ * Handles multi-date ranges and keyword-based type detection.
+ */
+function parseCalendarEvents(string $text): array {
+    $events = [];
+    $lines = explode("\n", $text);
+
+    // Type mapping based on keywords (ordered by specificity)
+    $typeRules = [
+        'holiday'  => ['holiday', 'public holiday', 'bank holiday', 'eid', 'christmas', 'easter', 'independence', 'festival'],
+        'break'    => ['break', 'vacation', 'mid-term', 'recess', 'half term', 'closed'],
+        'exam'     => ['exam', 'examination', 'test', 'assessment', 'quiz', 'ca test', 'mock', 'bce', 'final exam', 'mid-semester'],
+        'training' => ['training', 'workshop', 'meeting', 'conference', 'seminar', 'orientation', 'inset', 'development'],
+        'event'    => ['reporting', 'opening', 'closing', 'sports', 'games', 'competition', 'speech', 'prize', 'celebr', 'ceremon', 'bash', 'open day', 'visit', 'excursion', 'cultural', 'debate', 'spelling', 'science fair', 'maths week', 'reading day'],
+    ];
+
+    // Date patterns (both ordinal and numeric)
+    $datePatterns = [
+        // "Monday, 2nd June, 2025" or "Monday, 2nd June 2025"
+        '/\b(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),\s+(\d{1,2})(?:st|nd|rd|th)?\s+(\w+),?\s+(\d{4})\b/i',
+        // "2nd June, 2025" (no day name)
+        '/\b(\d{1,2})(?:st|nd|rd|th)?\s+(\w+),?\s+(\d{4})\b/i',
+        // "2025-06-02"
+        '/\b(\d{4})-(\d{2})-(\d{2})\b/',
+        // "June 2, 2025" or "June 2nd, 2025"
+        '/\b(\w+)\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(\d{4})\b/i',
+    ];
+
+    // Multi-date span within a line: "3rd June — 5th August, 2025"
+    $spanPattern = '/^.*?(\d{1,2})(?:st|nd|rd|th)?\s+(\w+)\s*[' . "\x{2013}\x{2014}" . '—-]\s*(\d{1,2})(?:st|nd|rd|th)?\s+(\w+),?\s+(\d{4}).*$/u';
+
+    $monthNames = [
+        'january' => '01', 'february' => '02', 'march' => '03', 'april' => '04',
+        'may' => '05', 'june' => '06', 'july' => '07', 'august' => '08',
+        'september' => '09', 'october' => '10', 'november' => '11', 'december' => '12',
+        'jan' => '01', 'feb' => '02', 'mar' => '03', 'apr' => '04',
+        'jun' => '06', 'jul' => '07', 'aug' => '08', 'sep' => '09',
+        'oct' => '10', 'nov' => '11', 'dec' => '12',
+    ];
+
+    $monthAbbr = [
+        'jan' => 'January', 'feb' => 'February', 'mar' => 'March', 'apr' => 'April',
+        'may' => 'May', 'jun' => 'June', 'jul' => 'July', 'aug' => 'August',
+        'sep' => 'September', 'oct' => 'October', 'nov' => 'November', 'dec' => 'December',
+    ];
+
+    foreach ($lines as $line) {
+        $line = trim($line);
+        if (empty($line)) continue;
+
+        // Skip header/boilerplate lines
+        if (preg_match('/^(term|academic|year|page|tel|email|website|p\.o\.|box|digital address|location|vision|mission|motto|Values|Core Values|school|chariot)/i', $line)) {
+            continue;
+        }
+        // Skip lines that are just numbers or very short
+        if (strlen($line) < 8) continue;
+        if (preg_match('/^\d+$/', $line)) continue;
+
+        // Determine event type by keyword matching on the full line
+        $eventType = 'event';
+        foreach ($typeRules as $type => $keywords) {
+            foreach ($keywords as $kw) {
+                if (stripos($line, $kw) !== false) {
+                    $eventType = $type;
+                    break 2;
+                }
+            }
+        }
+
+        // Color mapping
+        $colorMap = [
+            'holiday'  => '#e74c3c',
+            'break'    => '#95a5a6',
+            'exam'     => '#e67e22',
+            'training' => '#1abc9c',
+            'event'    => '#3498db',
+        ];
+        $color = $colorMap[$eventType] ?? '#3498db';
+
+        // --- Try to match multi-date span first ---
+        // Match: "3rd June — 5th August, 2025"
+        $stdLine = str_replace(['–', '—', '−'], '-', $line);
+        $stdLine = preg_replace('/\s+-\s+/', ' — ', $stdLine);
+
+        if (preg_match('/^.*?(\d{1,2})(?:st|nd|rd|th)?\s+(\w+)\s*[—–-]\s*(\d{1,2})(?:st|nd|rd|th)?\s+(\w+),?\s+(\d{4}).*$/ui', $stdLine, $m)) {
+            $startDay   = str_pad($m[1], 2, '0', STR_PAD_LEFT);
+            $startMonth = strtolower($m[2]);
+            $endDay     = str_pad($m[3], 2, '0', STR_PAD_LEFT);
+            $endMonth   = strtolower($m[4]);
+            $year       = $m[5];
+
+            if (isset($monthNames[$startMonth]) && isset($monthNames[$endMonth])) {
+                $startDate = "$year-{$monthNames[$startMonth]}-$startDay";
+                $endDate   = "$year-{$monthNames[$endMonth]}-$endDay";
+
+                // Extract title: text before the date pattern
+                $title = preg_replace('/\s*[—–-].*$/', '', $line);
+                $title = trim(preg_replace('/\b(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\b/i', '', $title));
+                $title = trim(preg_replace('/^\d{1,2}(?:st|nd|rd|th)?\s+\w+/i', '', $title));
+                $title = trim($title);
+                if (empty($title)) {
+                    $title = substr($line, 0, strpos($line, '—') ?: 40);
+                    $title = trim($title);
+                }
+                if (empty($title)) continue;
+
+                $events[] = [
+                    'title'       => $title,
+                    'event_date'  => $startDate,
+                    'end_date'    => $endDate,
+                    'event_type'  => $eventType,
+                    'color'       => $color,
+                    'description' => '',
+                ];
+                continue;
+            }
+        }
+
+        // --- Single-date matches ---
+        $matched = false;
+
+        // Pattern: "Monday, 2nd June, 2025 — Event Title"
+        if (preg_match('/\b(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),\s+(\d{1,2})(?:st|nd|rd|th)?\s+(\w+),?\s+(\d{4})\b/i', $line, $m)) {
+            $day   = str_pad($m[1], 2, '0', STR_PAD_LEFT);
+            $month = strtolower($m[2]);
+            $year  = $m[3];
+
+            if (isset($monthNames[$month])) {
+                $dateStr = "$year-{$monthNames[$month]}-$day";
+                // Extract title after the date
+                $title = preg_replace('/\b(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),\s+\d{1,2}(?:st|nd|rd|th)?\s+\w+,?\s+\d{4}\s*[—–-]?\s*/i', '', $line);
+                $title = trim($title);
+                if (empty($title)) continue;
+
+                $events[] = [
+                    'title'       => $title,
+                    'event_date'  => $dateStr,
+                    'end_date'    => null,
+                    'event_type'  => $eventType,
+                    'color'       => $color,
+                    'description' => '',
+                ];
+                $matched = true;
+            }
+        }
+
+        if ($matched) continue;
+
+        // Pattern: "2nd June, 2025 — Event Title" (no day name)
+        if (preg_match('/\b(\d{1,2})(?:st|nd|rd|th)?\s+(\w+),?\s+(\d{4})\b/i', $line, $m)) {
+            $day   = str_pad($m[1], 2, '0', STR_PAD_LEFT);
+            $month = strtolower($m[2]);
+            $year  = $m[3];
+
+            if (isset($monthNames[$month])) {
+                $dateStr = "$year-{$monthNames[$month]}-$day";
+                $title = preg_replace('/\b\d{1,2}(?:st|nd|rd|th)?\s+\w+,?\s+\d{4}\s*[—–-]?\s*/i', '', $line);
+                $title = trim($title);
+                if (empty($title)) continue;
+
+                $events[] = [
+                    'title'       => $title,
+                    'event_date'  => $dateStr,
+                    'end_date'    => null,
+                    'event_type'  => $eventType,
+                    'color'       => $color,
+                    'description' => '',
+                ];
+                $matched = true;
+            }
+        }
+
+        if ($matched) continue;
+
+        // Pattern: "June 2, 2025 — Event Title" (month name first)
+        if (preg_match('/\b(\w+)\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(\d{4})\b/i', $line, $m)) {
+            $month = strtolower($m[1]);
+            $day   = str_pad($m[2], 2, '0', STR_PAD_LEFT);
+            $year  = $m[3];
+
+            if (isset($monthNames[$month])) {
+                $dateStr = "$year-{$monthNames[$month]}-$day";
+                $title = preg_replace('/\b\w+\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{4}\s*[—–-]?\s*/i', '', $line);
+                $title = trim($title);
+                if (empty($title)) continue;
+
+                $events[] = [
+                    'title'       => $title,
+                    'event_date'  => $dateStr,
+                    'end_date'    => null,
+                    'event_type'  => $eventType,
+                    'color'       => $color,
+                    'description' => '',
+                ];
+            }
+        }
+    }
+
+    return $events;
+}
+
+// ==========================================
 // Handle POST Actions
 // ==========================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -73,13 +397,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $contentType = $ext === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
                     global $supabase;
+
+                    // Step 1: Ensure the 'resources' bucket exists (idempotent)
+                    try {
+                        $supabase->createBucket('resources', true, null, 20 * 1024 * 1024);
+                    } catch (Exception $bucketErr) {
+                        // Bucket creation failed — still try upload in case it exists
+                        error_log("Bucket creation warning: " . $bucketErr->getMessage());
+                    }
+
+                    // Step 2: Upload the file to Supabase Storage
                     try {
                         $supabase->uploadFile('resources', $filename, $fileData, $contentType);
                         $fileUrl = $supabase->getPublicUrl('resources', $filename);
 
+                        // Step 3: Store file reference in resources table
                         $stmt = $pdo->prepare("INSERT INTO resources (title, description, file_url, category) VALUES (?, ?, ?, ?)");
                         $stmt->execute(['Academic Calendar - 3rd Term 2025/2026', 'Download the full termly planner with all events', $fileUrl, 'Academic']);
                         $message = 'Calendar file uploaded successfully.';
+
+                        // Step 4: Auto-extract events from the file
+                        $importCount = extractCalendarEventsFromFile($tmpPath, $ext, $pdo);
+                        if ($importCount > 0) {
+                            $message .= " $importCount events were extracted and saved.";
+                        }
                     } catch (Exception $e) {
                         $error = 'Upload failed: ' . $e->getMessage();
                         error_log("Calendar file upload error: " . $e->getMessage());

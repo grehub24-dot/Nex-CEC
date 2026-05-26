@@ -200,8 +200,8 @@ class SupabaseClient {
 
     public function notNull($column) {
         $newClient = clone $this;
-        // PostgREST uses column=is.not.null for IS NOT NULL
-        $newClient->filters[] = "$column=is.not.null";
+        // PostgREST uses column=is.not_null for IS NOT NULL
+        $newClient->filters[] = "$column=is.not_null";
         return $newClient;
     }
 

@@ -135,7 +135,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         // Upsert: remove any existing assignment, then insert
                         $pdo->prepare("DELETE FROM class_teachers WHERE staff_id = ?")->execute([$staff_id]);
                         $pdo->prepare("INSERT INTO class_teachers (staff_id, class_id) VALUES (?, ?)")->execute([$staff_id, $class_id]);
-                        $message = "Role updated to Class Teacher. Assigned to class #{$class_id}.";
+
+                        // Auto-assign subjects for this teacher+class
+                        $linked = linkTeacherClassSubjects($pdo, $staff_id, $class_id);
+                        $message = "Role updated to Class Teacher. Assigned to class #{$class_id}. $linked subject(s) linked.";
                     } else {
                         // No class selected — just remove any previous assignment
                         $pdo->prepare("DELETE FROM class_teachers WHERE staff_id = ?")->execute([$staff_id]);

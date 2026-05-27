@@ -57,8 +57,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     continue;
                 }
                 
-                // Use guardian email as student account email
-                $email = $guardian_email ?: strtolower(str_replace(' ', '', $full_name)) . '@nexcec.edu';
+                // Generate unique student login email (guardian email stays on student record for parent contact)
+                $slug = strtolower(preg_replace('/[^a-z0-9]/', '', str_replace(' ', '', $full_name)));
+                $email = $slug . '.' . $admission_number . '@nexcec.edu';
                 
                 // Check for duplicate
                 $stmt = $pdo->prepare("SELECT id FROM students WHERE admission_number = ?");
@@ -207,7 +208,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
     <script>
     function downloadSample() {
-        const csv = "full_name,admission_number,class_name,gender,date_of_birth,guardian_name,guardian_email,guardian_relationship,guardian_phone_primary,guardian_phone_emergency,health_insurance_id,previous_school,address\nKwame Asante,NXC/2026/001,Basic 1,Male,2018-05-15,Mr. Asante,asante@email.com,Father,0241234567,0241234568,NHIS123456789,ABC Kindergarten,Kumasi\nAma Mensah,NXC/2026/002,Basic 2,Female,2017-03-20,Mrs. Mensah,mensah@email.com,Mother,0241234569,0241234570,NHIS987654321,XYZ School,Accra";
+        const csv = "full_name,admission_number,class_name,gender,date_of_birth,guardian_name,guardian_email,guardian_relationship,guardian_phone_primary,guardian_phone_emergency,health_insurance_id,previous_school,address\nKwame Asante,NXC/2026/001,Basic 1,Male,2018-05-15,Mr. Asante,asante@email.com,Father,0241234567,0241234568,NHIS123456789,ABC Kindergarten,Kumasi\nAma Mensah,NXC/2026/002,Basic 2,Female,2017-03-20,Mrs. Mensah,mensah@email.com,Mother,0241234569,0241234570,NHIS987654321,XYZ School,Accra\nKojo Mensah,NXC/2026/003,Basic 1,Male,2019-01-10,Mrs. Mensah,mensah@email.com,Mother,0241234569,0241234570,NHIS112233445,Sunrise School,Kumasi";
         const blob = new Blob([csv], { type: 'text/csv' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');

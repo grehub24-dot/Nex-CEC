@@ -285,6 +285,7 @@ function getSidebarMenu($currentPage = '') {
     if ($isFullAdmin) {
         $allItems[] = ['href' => 'module_settings.php', 'icon' => 'fas fa-cogs', 'label' => 'Module Settings', 'acl' => 'module_settings'];
         $allItems[] = ['href' => 'subjects.php', 'icon' => 'fas fa-book', 'label' => 'Subjects', 'acl' => 'subjects'];
+        $allItems[] = ['href' => 'link_subjects.php', 'icon' => 'fas fa-link', 'label' => 'Link Subjects', 'acl' => 'subjects'];
         $allItems[] = ['href' => 'academic_calendar.php', 'icon' => 'fas fa-calendar-alt', 'label' => 'Academic Calendar', 'acl' => 'settings'];
         $allItems[] = ['href' => 'settings.php', 'icon' => 'fas fa-tools', 'label' => 'System Settings', 'acl' => 'settings'];
     }
@@ -1247,4 +1248,137 @@ function formatStaffDocuments(string $documentsJson): string {
         $items[] = '<a href="' . htmlspecialchars($url) . '" target="_blank" rel="noopener">' . htmlspecialchars($name) . '</a>';
     }
     return implode(', ', $items);
+}
+
+/**
+ * Auto-link subjects for a Class Teacher assignment.
+ *
+ * When a staff member is assigned as Class Teacher for a class, this function:
+ * 1. Looks up the class and its category (creche/nursery/kindergarten/primary/jhs)
+ * 2. Finds all master subjects belonging to that category
+ * 3. Creates per-class subject records with teacher_id and class_id set
+ *
+ * This ensures the teacher sees subjects in staff_grades.php.
+ *
+ * @param PDO   $pdo      Database connection
+ * @param int   $staff_id  Staff ID
+ * @param int   $class_id  Class ID
+ * @return int  Number of subjects linked
+ */
+function linkTeacherClassSubjects($pdo, int $staff_id, int $class_id): int {
+    // 1. Get class info
+    try {
+        $stmt = $pdo->prepare("SELECT name, level_group FROM classes WHERE id = ?");
+        $stmt->execute([$class_id]);
+        $class = $stmt->fetch();
+        if (!$class) {
+            error_log("linkTeacherClassSubjects: class #$class_id not found");
+            return 0;
+        }
+    } catch (Exception $e) {
+        error_log("linkTeacherClassSubjects: class fetch error: " . $e->getMessage());
+        return 0;
+    }
+
+    $class_name = $class['name'];
+
+    // 2. Map class name -> category (matches staff_grades.php)
+    $class_category_map = [
+        'Creche'    => 'creche',
+        'Nursery 1' => 'nursery',
+        'Nursery 2' => 'nursery',
+        'KG 1'      => 'kindergarten',
+        'KG 2'      => 'kindergarten',
+        'Basic 1'   => 'primary',
+        'Basic 2'   => 'primary',
+        'Basic 3'   => 'primary',
+        'Basic 4'   => 'primary',
+        'Basic 5'   => 'primary',
+        'Basic 6'   => 'primary',
+        'JHS 1'     => 'jhs',
+        'JHS 2'     => 'jhs',
+        'JHS 3'     => 'jhs',
+    ];
+    $category = $class_category_map[$class_name] ?? null;
+    if (!$category) {
+        error_log("linkTeacherClassSubjects: no category mapping for class '$class_name'");
+        return 0;
+    }
+
+    // 3. Get master subject IDs for this category from system_settings
+    $subject_ids = [];
+    try {
+        $stmt = $pdo->prepare("SELECT setting_value FROM system_settings WHERE setting_key = 'subject_categories'");
+        $stmt->execute();
+        $row = $stmt->fetch();
+        if ($row && !empty($row['setting_value'])) {
+            $mapping = json_decode($row['setting_value'], true);
+            if (is_array($mapping) && isset($mapping[$category])) {
+                $subject_ids = array_map('intval', $mapping[$category]);
+            }
+        }
+    } catch (Exception $e) {
+        error_log("linkTeacherClassSubjects: mapping fetch error: " . $e->getMessage());
+    }
+
+    // Fallback: use default_subjects from admin_subjects.php strategy
+    if (empty($subject_ids)) {
+        error_log("linkTeacherClassSubjects: no subject_categories mapping found for '$category', trying fallback by code");
+        $default_codes = [
+            'creche'       => ['ESS','RCN','HHN','SSA','PMD','CDE','LCS','SED'],
+            'nursery'      => ['LAN','NUM','CRE','ENV','OWP','MMD'],
+            'kindergarten' => ['KLAN','KNUM','KCRE','KENV','KOWO','KMMD'],
+            'primary'      => ['ENG','MATH','SCI','GL','HOG','RME','CA','ICT','FRE','PE'],
+            'jhs'          => ['ENG','MATH','SCI','SST','RME','GL','CAD','CT','COMP','FRE','PE'],
+        ];
+        $codes = $default_codes[$category] ?? [];
+        if (!empty($codes)) {
+            $placeholders = implode(',', array_fill(0, count($codes), '?'));
+            try {
+                $stmt = $pdo->prepare("SELECT id FROM subjects WHERE code IN ($placeholders) AND class_id IS NULL AND teacher_id IS NULL");
+                $stmt->execute($codes);
+                foreach ($stmt->fetchAll() as $r) {
+                    $subject_ids[] = (int)$r['id'];
+                }
+            } catch (Exception $e) {
+                error_log("linkTeacherClassSubjects: fallback query error: " . $e->getMessage());
+            }
+        }
+    }
+
+    if (empty($subject_ids)) {
+        error_log("linkTeacherClassSubjects: no subjects found for category '$category'");
+        return 0;
+    }
+
+    // 4. For each master subject, create/update a per-teacher-class record
+    $count = 0;
+    foreach ($subject_ids as $master_id) {
+        try {
+            // Check if this teacher already has a subject record for this class
+            $check = $pdo->prepare("SELECT id FROM subjects WHERE teacher_id = ? AND class_id = ? AND code = (SELECT code FROM subjects WHERE id = ?)");
+            $check->execute([$staff_id, $class_id, $master_id]);
+            if ($check->fetch()) {
+                continue; // Already linked
+            }
+
+            // Get master subject data
+            $orig = $pdo->prepare("SELECT name, code FROM subjects WHERE id = ?");
+            $orig->execute([$master_id]);
+            $origData = $orig->fetch();
+            if (!$origData) {
+                continue;
+            }
+
+            // INSERT a new subject row for this teacher+class combination
+            $ins = $pdo->prepare("INSERT INTO subjects (name, code, teacher_id, class_id) VALUES (?, ?, ?, ?)");
+            $ins->execute([$origData['name'], $origData['code'], $staff_id, $class_id]);
+            $count++;
+        } catch (Exception $e) {
+            error_log("linkTeacherClassSubjects: error linking subject #$master_id: " . $e->getMessage());
+        }
+    }
+
+    error_log("linkTeacherClassSubjects: linked $count subjects for staff #$staff_id, class #$class_id ($class_name, category=$category)");
+    return $count;
 }

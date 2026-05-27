@@ -80,10 +80,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             // Generate a random 6-character password
             $auto_password = substr(str_shuffle("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"), 0, 6);
 
-            // 1. Create User Account (email = guardian email for basic school)
+            // 1. Create User Account (unique student login email; guardian email stored on student record)
+            $slug = strtolower(preg_replace('/[^a-z0-9]/', '', str_replace(' ', '', $full_name)));
+            $student_email = $slug . '.' . ($admission_number ?: $enrollmentId) . '@nexcec.edu';
             $password_hash = password_hash($auto_password, PASSWORD_DEFAULT);
             $stmt = $pdo->prepare("INSERT INTO users (email, password, role) VALUES (?, ?, ?)");
-            $stmt->execute([$guardian_email, $password_hash, 'student']);
+            $stmt->execute([$student_email, $password_hash, 'student']);
             $user_id = $pdo->lastInsertId();
 
             // 2. Create Student Record (Basic School schema)

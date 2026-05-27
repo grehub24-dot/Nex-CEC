@@ -60,19 +60,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     
     // Handle Profile Picture — upload to Supabase Storage
     $profile_picture = null;
-    if (isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] === UPLOAD_ERR_OK) {
-        $ext = pathinfo($_FILES['profile_picture']['name'], PATHINFO_EXTENSION);
-        $filename = $enrollmentId . '_' . time() . '.' . $ext;
-        $newUrl = upload_to_supabase_storage($_FILES['profile_picture'], 'profiles', $filename, 'images/aamusted.jpg');
-        if (strpos($newUrl, 'http') === 0) {
-            $profile_picture = $newUrl;
+    try {
+        if (isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] === UPLOAD_ERR_OK) {
+            $ext = pathinfo($_FILES['profile_picture']['name'], PATHINFO_EXTENSION);
+            $filename = $enrollmentId . '_' . time() . '.' . $ext;
+            $newUrl = upload_to_supabase_storage($_FILES['profile_picture'], 'profiles', $filename, 'images/aamusted.jpg');
+            if (strpos($newUrl, 'http') === 0) {
+                $profile_picture = $newUrl;
+            }
         }
+    } catch (Exception $e) {
+        error_log("admin_students: profile_picture upload error: " . $e->getMessage());
+        // Non-fatal — continue without profile picture
     }
 
     // Check duplicate enrollment ID
-    $stmt = $pdo->prepare("SELECT id FROM students WHERE enrollment_id = ?");
-    $stmt->execute([$enrollmentId]);
-    if ($stmt->fetch()) {
+    try {
+        $stmt = $pdo->prepare("SELECT id FROM students WHERE enrollment_id = ?");
+        $stmt->execute([$enrollmentId]);
+    } catch (Exception $e) {
+        error_log("admin_students: duplicate enrollment check failed: " . $e->getMessage());
+        $error = "Database error during enrollment check. Please try again.";
+    }
+    if (isset($stmt) && $stmt->fetch()) {
         $error = "Student with Enrollment ID $enrollmentId already exists.";
     } else {
         $pdo->beginTransaction();
@@ -175,6 +185,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             }
         } catch (Exception $e) {
             $pdo->rollBack();
+            error_log("admin_students: add_student transaction failed: " . $e->getMessage() . " | full_name=$full_name | class=$class_name | student_email=$student_email");
             $error = "Error: " . $e->getMessage();
         }
     }

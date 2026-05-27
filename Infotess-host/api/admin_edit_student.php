@@ -57,18 +57,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Handle Profile Picture — upload to Supabase Storage
     $admissionNumberForFile = $admission_number ?: 'student';
     $profile_picture = $_POST['current_picture'] ?? null;
-    if (isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] === UPLOAD_ERR_OK) {
-        // Reject files over 4MB (Vercel serverless limit is 4.5MB)
-        if ($_FILES['profile_picture']['size'] > 4 * 1024 * 1024) {
-            $error = "Profile picture is too large (max 4MB). Please choose a smaller image.";
-        } else {
-            $ext = pathinfo($_FILES['profile_picture']['name'], PATHINFO_EXTENSION);
-            $filename = $admissionNumberForFile . '_' . time() . '.' . $ext;
-            $newUrl = upload_to_supabase_storage($_FILES['profile_picture'], 'profiles', $filename, $profile_picture ?: 'images/aamusted.jpg');
-            if (strpos($newUrl, 'http') === 0) {
-                $profile_picture = $newUrl;
+    try {
+        if (isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] === UPLOAD_ERR_OK) {
+            // Reject files over 4MB (Vercel serverless limit is 4.5MB)
+            if ($_FILES['profile_picture']['size'] > 4 * 1024 * 1024) {
+                $error = "Profile picture is too large (max 4MB). Please choose a smaller image.";
+            } else {
+                $ext = pathinfo($_FILES['profile_picture']['name'], PATHINFO_EXTENSION);
+                $filename = $admissionNumberForFile . '_' . time() . '.' . $ext;
+                $newUrl = upload_to_supabase_storage($_FILES['profile_picture'], 'profiles', $filename, $profile_picture ?: 'images/aamusted.jpg');
+                if (strpos($newUrl, 'http') === 0) {
+                    $profile_picture = $newUrl;
+                }
             }
         }
+    } catch (Exception $e) {
+        error_log("admin_edit_student: profile_picture upload error: " . $e->getMessage());
+        // Non-fatal — continue without changing profile picture
     }
 
     if (empty($error)) {
@@ -105,6 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $student = $stmt->fetch();
     } catch (Exception $e) {
         $pdo->rollBack();
+        error_log("admin_edit_student: update transaction failed: " . $e->getMessage() . " | id=$id | full_name=$full_name");
         $error = "Error updating student: " . $e->getMessage();
     }
     } // end if (empty($error))

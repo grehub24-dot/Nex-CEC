@@ -75,6 +75,52 @@ $month_name = date('F', mktime(0, 0, 0, (int)($payroll['month'] ?? 1), 1));
             .no-print { display: none; }
             .payslip { border: none; margin: 0; padding: 20px; }
         }
+        @media (max-width: 768px) {
+            .payslip { padding: 15px; margin: 15px 10px; }
+            .payslip-info { grid-template-columns: 1fr; gap: 2px; font-size: 13px; }
+            .payslip-footer { grid-template-columns: 1fr; gap: 20px; }
+            .payslip-header h1 { font-size: 1.1rem; }
+            .payslip-header h2 { font-size: 0.95rem; }
+        }
+        @media (max-width: 600px) {
+            .payslip { padding: 12px; border-width: 1px; }
+            .payslip-header { padding-bottom: 12px; margin-bottom: 12px; }
+            .payslip-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; }
+            .payslip-table tbody,
+            .payslip-table tr,
+            .payslip-table td { display: block; }
+            .payslip-table tr {
+                display: grid;
+                grid-template-columns: 1fr auto;
+                gap: 0;
+                padding: 6px 0;
+                border-bottom: 1px solid #e5e7eb;
+            }
+            .payslip-table td {
+                border: none !important;
+                padding: 3px 6px !important;
+                font-size: 13px;
+            }
+            .payslip-table td:nth-child(1) { grid-column: 1; grid-row: 1; }
+            .payslip-table td:nth-child(2) { grid-column: 2; grid-row: 1; text-align: right !important; }
+            .payslip-table td:nth-child(3) { grid-column: 1; grid-row: 2; }
+            .payslip-table td:nth-child(4) { grid-column: 2; grid-row: 2; text-align: right !important; }
+            .payslip-table .total-row td {
+                font-size: 13px;
+                padding: 5px 6px !important;
+            }
+            .payslip-table .total-row td:nth-child(1),
+            .payslip-table .total-row td:nth-child(3) { font-weight: 700; }
+            .payslip [style*="font-size:2rem"] { font-size: 1.5rem !important; }
+            .payslip-footer { margin-top: 24px; gap: 16px; }
+            .signature-line { margin-top: 30px; font-size: 12px; }
+        }
+        @media (max-width: 400px) {
+            .payslip { padding: 8px; }
+            .payslip-info { font-size: 12px; }
+            .payslip-table td { font-size: 12px; padding: 2px 4px !important; }
+            .payslip [style*="font-size:2rem"] { font-size: 1.2rem !important; }
+        }
     </style>
 </head>
 <body>

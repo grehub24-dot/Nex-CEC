@@ -283,7 +283,8 @@ header("Content-Security-Policy: default-src 'self'; "
                     allowfullscreen
                     loading="lazy"
                     onload="document.getElementById('iframeLoader').classList.add('hidden');"
-                    sandbox="allow-scripts allow-same-origin allow-forms allow-popups">
+                    referrerpolicy="no-referrer-when-downgrade"
+                    sandbox="allow-scripts allow-forms allow-popups allow-storage-access-by-user-activation allow-top-navigation-by-user-activation">
             </iframe>
         </div>
     <?php elseif ($resource['embed_type'] === 'redirect'): ?>

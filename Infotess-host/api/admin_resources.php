@@ -405,8 +405,8 @@ $embed_types = [
                 <div class="card-content">
                     <h3><i class="fas fa-info-circle"></i> How Resource URLs Work</h3>
                     <ul style="margin-top:10px; line-height:1.8; color:#555;">
-                        <li><strong>Iframe</strong> — The external site is shown inside a Nex CEC page. The URL bar always shows <code>nexcec.com/resource.php?id=X</code>. Works for <strong>Khan Academy</strong>, <strong>Blockly Games</strong>, <strong>kiddoworksheets</strong>. <strong>Scratch</strong> project embeds also work if using the <code>/embed</code> URL.</li>
-                        <li><strong>Redirect</strong> — Opens in a new tab via a Nex CEC interstitial page. Used for sites that block iframes (<strong>PBS Kids</strong>, <strong>hand2mind</strong>, <strong>NASA</strong>).</li>
+                        <li><strong>Iframe</strong> — The external site is shown inside a Nex CEC page. The URL bar always shows <code>nexcec.com/resource.php?id=X</code>. Works for <strong>Blockly Games</strong>, <strong>kiddoworksheets</strong>. <strong>Scratch</strong> project embeds also work if using the <code>/embed</code> URL.</li>
+                        <li><strong>Redirect</strong> — Opens in a new tab via a Nex CEC interstitial page. Used for sites that block iframes (<strong>Khan Academy</strong> — uses Fastly Shield, <strong>PBS Kids</strong>, <strong>hand2mind</strong>, <strong>NASA</strong>).</li>
                         <li><strong>Category & Class filters</strong> — When viewing in teacher/parent portals, resources are filtered by class and subject for relevance.</li>
                     </ul>
                 </div>

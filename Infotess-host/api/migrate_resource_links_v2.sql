@@ -5,27 +5,27 @@
 -- resources to an existing resource_links table.
 --
 -- New sources added:
---   khanacademy   → iframe OK (no restrictions)
+--   khanacademy   → redirect (Fastly Shield — blocks iframes via DDoS challenge cookies)
 --   scratch       → redirect only (SAMEORIGIN on main pages)
 --   blockly       → iframe OK (no restrictions)
 --   nasa          → redirect only (SAMEORIGIN or DENY)
 -- =============================================================
 
--- == KHAN ACADEMY (iframe OK) ==
+-- == KHAN ACADEMY (redirect — Fastly Shield blocks iframes) ==
 INSERT INTO resource_links (title, url, source, category, class_id, subject_id, description, embed_type, sort_order) VALUES
-('Khan Academy — Math (K-12)', 'https://www.khanacademy.org/math', 'khanacademy', 'math', NULL, NULL, 'Complete K-12 math curriculum: arithmetic, algebra, geometry, trigonometry, calculus, and statistics. Video lessons + practice exercises.', 'iframe', 26),
+('Khan Academy — Math (K-12)', 'https://www.khanacademy.org/math', 'khanacademy', 'math', NULL, NULL, 'Complete K-12 math curriculum: arithmetic, algebra, geometry, trigonometry, calculus, and statistics. Video lessons + practice exercises.', 'redirect', 26),
 
-('Khan Academy — Science & Engineering', 'https://www.khanacademy.org/science', 'khanacademy', 'stem', NULL, NULL, 'Physics, chemistry, biology, earth science, and engineering. NGSS-aligned video lessons with interactive exercises.', 'iframe', 27),
+('Khan Academy — Science & Engineering', 'https://www.khanacademy.org/science', 'khanacademy', 'stem', NULL, NULL, 'Physics, chemistry, biology, earth science, and engineering. NGSS-aligned video lessons with interactive exercises.', 'redirect', 27),
 
-('Khan Academy — Reading & Grammar', 'https://www.khanacademy.org/ela', 'khanacademy', 'literacy', NULL, NULL, 'Reading comprehension, vocabulary, grammar, and writing skills for all grade levels. Novel study guides included.', 'iframe', 28),
+('Khan Academy — Reading & Grammar', 'https://www.khanacademy.org/ela', 'khanacademy', 'literacy', NULL, NULL, 'Reading comprehension, vocabulary, grammar, and writing skills for all grade levels. Novel study guides included.', 'redirect', 28),
 
-('Khan Academy — Computing (Coding)', 'https://www.khanacademy.org/computing', 'khanacademy', 'coding', NULL, NULL, 'Learn JavaScript, HTML/CSS, and SQL through interactive coding challenges and projects. Ideal for JHS ICT.', 'iframe', 29),
+('Khan Academy — Computing (Coding)', 'https://www.khanacademy.org/computing', 'khanacademy', 'coding', NULL, NULL, 'Learn JavaScript, HTML/CSS, and SQL through interactive coding challenges and projects. Ideal for JHS ICT.', 'redirect', 29),
 
-('Khan Academy — Early Math (Ages 2-8)', 'https://www.khanacademy.org/math/early-math', 'khanacademy', 'math', NULL, NULL, 'Counting, shapes, addition, subtraction, place value, and measurement for early learners (Creche through Basic 2).', 'iframe', 30),
+('Khan Academy — Early Math (Ages 2-8)', 'https://www.khanacademy.org/math/early-math', 'khanacademy', 'math', NULL, NULL, 'Counting, shapes, addition, subtraction, place value, and measurement for early learners (Creche through Basic 2).', 'redirect', 30),
 
-('Khan Academy — Arts & Humanities', 'https://www.khanacademy.org/humanities', 'khanacademy', 'art', NULL, NULL, 'Art history, music, world history, civics, and literature. Rich video content with primary source explorations.', 'iframe', 31),
+('Khan Academy — Arts & Humanities', 'https://www.khanacademy.org/humanities', 'khanacademy', 'art', NULL, NULL, 'Art history, music, world history, civics, and literature. Rich video content with primary source explorations.', 'redirect', 31),
 
-('Khan Academy — Test Prep', 'https://www.khanacademy.org/test-prep', 'khanacademy', 'all', NULL, NULL, 'SAT, LSAT, and other standardized test preparation with personalized practice plans and progress tracking.', 'iframe', 32);
+('Khan Academy — Test Prep', 'https://www.khanacademy.org/test-prep', 'khanacademy', 'all', NULL, NULL, 'SAT, LSAT, and other standardized test preparation with personalized practice plans and progress tracking.', 'redirect', 32);
 
 -- == SCRATCH (redirect only — SAMEORIGIN on main pages) ==
 INSERT INTO resource_links (title, url, source, category, class_id, subject_id, description, embed_type, sort_order) VALUES

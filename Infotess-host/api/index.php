@@ -89,7 +89,7 @@ $routes['forgot-password.php'] = 'forgot-password.php';
 $routes['route_selector.php'] = 'route_selector.php';
 
 // Admin routes
-$adminPages = ['dashboard','students','staff','edit_staff','payments','fees','fees_debt','student_billing','class_billing','payroll','pay_slip','salary','grades','attendance','staff_attendance','reports','settings','users','edit_student','inbox','messaging','module_settings','subjects','link_subjects','verify','bulk_import','enrollments','role_permissions','academic_calendar','migrate_parent_students'];
+$adminPages = ['dashboard','students','staff','edit_staff','payments','fees','fees_debt','student_billing','class_billing','payroll','pay_slip','salary','grades','attendance','staff_attendance','reports','settings','users','edit_student','inbox','messaging','module_settings','subjects','link_subjects','verify','bulk_import','enrollments','role_permissions','academic_calendar','migrate_parent_students','resources'];
 foreach ($adminPages as $page) {
     $routes["admin/$page.php"] = "admin_$page.php";
 }
@@ -105,6 +105,10 @@ $routes['mark_message_read.php'] = 'mark_message_read.php';
 $routes['report_card_pdf.php'] = 'report_card_pdf.php';
 $routes['ajax_get_subjects_by_class.php'] = 'ajax_get_subjects_by_class.php';
 $routes['admin/view_receipt.php'] = 'view_receipt.php';
+
+// Resource viewer (masked external URL viewer)
+$routes['resource.php'] = 'resource_viewer.php';
+$routes['resource_redirect.php'] = 'resource_redirect.php';
 
 // Staff routes
 $staffPages = ['dashboard', 'payslip', 'attendance', 'grades', 'fees_debt', 'profile', 'messaging', 'academic_calendar'];

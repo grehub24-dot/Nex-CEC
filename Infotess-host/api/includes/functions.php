@@ -126,6 +126,7 @@ function getAccessControl() {
         'module_settings' => ['admin', 'super_admin'],
         'users' => ['admin', 'super_admin'],
         'role_permissions' => ['admin', 'super_admin'],
+        'resources' => ['admin', 'super_admin'],
         'bulk_import' => ['admin', 'super_admin'],
         
         // Admin + Teacher
@@ -286,6 +287,7 @@ function getSidebarMenu($currentPage = '') {
         $allItems[] = ['href' => 'module_settings.php', 'icon' => 'fas fa-cogs', 'label' => 'Module Settings', 'acl' => 'module_settings'];
         $allItems[] = ['href' => 'subjects.php', 'icon' => 'fas fa-book', 'label' => 'Subjects', 'acl' => 'subjects'];
         $allItems[] = ['href' => 'link_subjects.php', 'icon' => 'fas fa-link', 'label' => 'Link Subjects', 'acl' => 'subjects'];
+        $allItems[] = ['href' => 'resources.php', 'icon' => 'fas fa-bookmark', 'label' => 'Resource Links', 'acl' => 'resources'];
         $allItems[] = ['href' => 'academic_calendar.php', 'icon' => 'fas fa-calendar-alt', 'label' => 'Academic Calendar', 'acl' => 'settings'];
         $allItems[] = ['href' => 'settings.php', 'icon' => 'fas fa-tools', 'label' => 'System Settings', 'acl' => 'settings'];
     }

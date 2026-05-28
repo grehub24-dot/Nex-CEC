@@ -1084,14 +1084,21 @@ function sendStaffInvite(int $staffId, int $userId, int $invitedBy, string $emai
         $token = generateStaffInviteToken();
         $expiresAt = date('Y-m-d H:i:s', time() + 172800); // 48 hours from now
 
-        // Check for existing pending invite
-        $existing = $pdo->prepare("SELECT id, token FROM staff_invites WHERE staff_id = ? AND status = 'pending'");
+        // Check for existing pending invite (status='pending' in DB)
+        $existing = $pdo->prepare("SELECT id, token, expires_at FROM staff_invites WHERE staff_id = ? AND status = 'pending'");
         $existing->execute([$staffId]);
         $existingRow = $existing->fetch();
 
         if ($existingRow) {
-            // Reuse existing token, just re-send
-            $token = $existingRow['token'];
+            // If the existing invite has actually expired, refresh token + expiry
+            $existingExpiry = strtotime($existingRow['expires_at']);
+            if ($existingExpiry < time()) {
+                $stmt = $pdo->prepare("UPDATE staff_invites SET token = ?, expires_at = ? WHERE id = ? AND status = 'pending'");
+                $stmt->execute([$token, $expiresAt, $existingRow['id']]);
+            } else {
+                // Reuse existing token, just re-send
+                $token = $existingRow['token'];
+            }
         } else {
             $stmt = $pdo->prepare("INSERT INTO staff_invites (staff_id, user_id, token, status, invited_by, expires_at) VALUES (?, ?, ?, 'pending', ?, ?)");
             $stmt->execute([$staffId, $userId, $token, $invitedBy, $expiresAt]);

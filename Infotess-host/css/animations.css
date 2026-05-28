@@ -67,6 +67,18 @@
 .anim-stagger > *:nth-child(5) { animation-delay: 400ms; }
 .anim-stagger > *:nth-child(6) { animation-delay: 500ms; }
 
+/* ---- Scroll-trigger visibility ---- */
+.anim-on-scroll {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 500ms ease-out, transform 500ms ease-out;
+}
+
+.anim-on-scroll.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 /* ---- Reduced Motion ---- */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

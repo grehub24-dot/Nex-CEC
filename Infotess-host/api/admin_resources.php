@@ -140,8 +140,8 @@ try {
 } catch (Exception $e) {}
 
 // Sources & Categories for dropdown
-$sources = ['hand2mind', 'pbskids', 'kiddoworksheets', 'other'];
-$categories = ['all', 'math', 'literacy', 'stem', 'ece', 'printables', 'sel', 'art'];
+$sources = ['hand2mind', 'pbskids', 'kiddoworksheets', 'khanacademy', 'scratch', 'blockly', 'nasa', 'other'];
+$categories = ['all', 'math', 'literacy', 'stem', 'coding', 'ece', 'printables', 'sel', 'art'];
 $embed_types = [
     'iframe'    => 'Iframe (URL hidden, site shown inline)',
     'redirect'  => 'Redirect (opens in new tab via interstitial)',
@@ -191,6 +191,10 @@ $embed_types = [
         .source-hand2mind { background: #e3f2fd; color: #0d47a1; }
         .source-pbskids { background: #fce4ec; color: #880e4f; }
         .source-kiddoworksheets { background: #e8f5e9; color: #1b5e20; }
+        .source-khanacademy { background: #fff3e0; color: #e65100; }
+        .source-scratch { background: #fce4ec; color: #c62828; }
+        .source-blockly { background: #e8eaf6; color: #283593; }
+        .source-nasa { background: #e0f2f1; color: #004d40; }
         .source-other { background: #f5f5f5; color: #616161; }
         .embed-badge {
             display: inline-block;
@@ -401,8 +405,8 @@ $embed_types = [
                 <div class="card-content">
                     <h3><i class="fas fa-info-circle"></i> How Resource URLs Work</h3>
                     <ul style="margin-top:10px; line-height:1.8; color:#555;">
-                        <li><strong>Iframe</strong> — The external site is shown inside a Nex CEC page. The URL bar always shows <code>nexcec.com/resource.php?id=X</code>. Works for <strong>hand2mind</strong> and <strong>kiddoworksheets</strong>.</li>
-                        <li><strong>Redirect</strong> — Opens in a new tab via a Nex CEC interstitial page. Used for sites that block iframes (<strong>PBS Kids</strong>).</li>
+                        <li><strong>Iframe</strong> — The external site is shown inside a Nex CEC page. The URL bar always shows <code>nexcec.com/resource.php?id=X</code>. Works for <strong>Khan Academy</strong>, <strong>Blockly Games</strong>, <strong>kiddoworksheets</strong>. <strong>Scratch</strong> project embeds also work if using the <code>/embed</code> URL.</li>
+                        <li><strong>Redirect</strong> — Opens in a new tab via a Nex CEC interstitial page. Used for sites that block iframes (<strong>PBS Kids</strong>, <strong>hand2mind</strong>, <strong>NASA</strong>).</li>
                         <li><strong>Category & Class filters</strong> — When viewing in teacher/parent portals, resources are filtered by class and subject for relevance.</li>
                     </ul>
                 </div>

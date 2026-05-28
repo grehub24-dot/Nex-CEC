@@ -172,6 +172,10 @@ try {
         .card-source.hand2mind { background: #e3f2fd; color: #0d47a1; }
         .card-source.pbskids { background: #fce4ec; color: #880e4f; }
         .card-source.kiddoworksheets { background: #e8f5e9; color: #1b5e20; }
+        .card-source.khanacademy { background: #fff3e0; color: #e65100; }
+        .card-source.scratch { background: #fce4ec; color: #c62828; }
+        .card-source.blockly { background: #e8eaf6; color: #283593; }
+        .card-source.nasa { background: #e0f2f1; color: #004d40; }
         .card-source.other { background: #f5f5f5; color: #616161; }
 
         .card-title {

@@ -72,7 +72,7 @@ try {
 
     // Also filter by category if selected
     $selected_category = $_GET['category'] ?? '';
-    if ($selected_category && in_array($selected_category, ['all','math','literacy','stem','ece','printables','sel','art'])) {
+    if ($selected_category && in_array($selected_category, ['all','math','literacy','stem','coding','ece','printables','sel','art'])) {
         if ($selected_category !== 'all') {
             $query .= " AND r.category = ?";
             $params[] = $selected_category;
@@ -168,6 +168,10 @@ $hasChildren = count($children) > 0;
         .card-source.hand2mind { background: #e3f2fd; color: #0d47a1; }
         .card-source.pbskids { background: #fce4ec; color: #880e4f; }
         .card-source.kiddoworksheets { background: #e8f5e9; color: #1b5e20; }
+        .card-source.khanacademy { background: #fff3e0; color: #e65100; }
+        .card-source.scratch { background: #fce4ec; color: #c62828; }
+        .card-source.blockly { background: #e8eaf6; color: #283593; }
+        .card-source.nasa { background: #e0f2f1; color: #004d40; }
         .card-source.other { background: #f5f5f5; color: #616161; }
 
         .card-title {
@@ -287,6 +291,7 @@ $hasChildren = count($children) > 0;
                     <option value="math" <?php echo ($_GET['category'] ?? '') === 'math' ? 'selected' : ''; ?>>🔢 Math</option>
                     <option value="literacy" <?php echo ($_GET['category'] ?? '') === 'literacy' ? 'selected' : ''; ?>>📖 Literacy & Reading</option>
                     <option value="stem" <?php echo ($_GET['category'] ?? '') === 'stem' ? 'selected' : ''; ?>>🔬 Science & STEM</option>
+                    <option value="coding" <?php echo ($_GET['category'] ?? '') === 'coding' ? 'selected' : ''; ?>>💻 Coding & Programming</option>
                     <option value="ece" <?php echo ($_GET['category'] ?? '') === 'ece' ? 'selected' : ''; ?>>🧸 Early Childhood</option>
                     <option value="sel" <?php echo ($_GET['category'] ?? '') === 'sel' ? 'selected' : ''; ?>>💚 Social-Emotional</option>
                     <option value="art" <?php echo ($_GET['category'] ?? '') === 'art' ? 'selected' : ''; ?>>🎨 Art & Creative</option>

@@ -177,8 +177,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_bill'])) {
 }
 
 // Handle custom fee updates (from either main form or breakdown form)
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['save_bill']) || isset($_POST['update_custom_fees']))) {
-    if (isset($_POST['update_custom_fees'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['save_bill']) || isset($_POST['update_custom_fees']) || isset($_POST['add_custom_fee']))) {
+    if (isset($_POST['update_custom_fees']) || isset($_POST['add_custom_fee'])) {
         validate_request_csrf();
     }
     // --- Process custom fees (update amounts & removals) ---
@@ -240,10 +240,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Calculate totals from existing bill items
 $billed_total = array_sum(array_column($existing_items, 'amount'));
 
-// Check if any custom fees exist (for breakdown edit controls)
+// Check if any manually-added custom fees exist (for breakdown edit controls)
+// Auto-applied discounts (fee_type='Discount') are excluded — they're not editable
 $has_custom_fees = false;
 foreach ($existing_items as $ei) {
-    if (empty($ei['fee_structure_id'])) {
+    if (empty($ei['fee_structure_id']) && ($ei['fee_type'] ?? '') !== 'Discount') {
         $has_custom_fees = true;
         break;
     }
@@ -444,21 +445,26 @@ function isAutoChecked($fee, $is_new_student) {
                     <tbody>
                     <?php foreach ($existing_items as $ei): 
                         $is_custom = empty($ei['fee_structure_id']);
+                        // Auto-applied discounts (Staff Child, Sibling) have fee_structure_id=NULL
+                        // but are NOT manually added custom fees — differentiate by fee_type
+                        $is_auto_discount = $is_custom && ($ei['fee_type'] === 'Discount');
+                        $show_as_custom = $is_custom && !$is_auto_discount;
                     ?>
-                        <tr style="border-bottom:1px solid #f0f0f0;<?php echo $is_custom ? 'background:#fef9e7;' : ''; ?>">
+                        <tr style="border-bottom:1px solid #f0f0f0;<?php echo $show_as_custom ? 'background:#fef9e7;' : ($is_auto_discount ? 'background:#f4ecf7;' : ''); ?>">
                             <td style="padding:8px 4px;">
                                 <?php echo htmlspecialchars($ei['title']); ?>
-                                <?php if ($is_custom): ?><span style="font-size:10px;color:#e8a317;margin-left:4px;">(custom)</span><?php endif; ?>
+                                <?php if ($show_as_custom): ?><span style="font-size:10px;color:#e8a317;margin-left:4px;">(custom)</span><?php endif; ?>
+                                <?php if ($is_auto_discount): ?><span style="font-size:10px;color:#8e44ad;margin-left:4px;">(auto)</span><?php endif; ?>
                             </td>
                             <td style="padding:8px 4px;color:#888;"><?php echo htmlspecialchars($ei['fee_type']); ?></td>
                             <td style="padding:8px 4px;text-align:right;font-weight:600;">
-                                <?php if ($is_custom): ?>
-                                    <input type="number" step="0.01" min="0" name="custom_fee_amount[<?php echo (int)$ei['id']; ?>]" value="<?php echo number_format((float)$ei['amount'], 2); ?>" style="width:90px;text-align:right;font-weight:600;padding:4px;border:1px solid #f9e79f;border-radius:4px;">
+                                <?php if ($show_as_custom): ?>
+                                    <input type="number" step="0.01" name="custom_fee_amount[<?php echo (int)$ei['id']; ?>]" value="<?php echo number_format((float)$ei['amount'], 2); ?>" style="width:90px;text-align:right;font-weight:600;padding:4px;border:1px solid #f9e79f;border-radius:4px;">
                                 <?php else: ?>
                                     GHS <?php echo number_format((float)$ei['amount'], 2); ?>
                                 <?php endif; ?>
                             </td>
-                            <?php if ($is_custom): ?>
+                            <?php if ($show_as_custom): ?>
                             <td style="padding:8px 4px;text-align:center;">
                                 <input type="checkbox" name="custom_fee_remove[<?php echo (int)$ei['id']; ?>]" value="1" title="Remove this custom fee">
                             </td>

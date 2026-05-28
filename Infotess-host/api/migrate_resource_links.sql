@@ -11,7 +11,7 @@
 --   'redirect' → interactive content (games) — opens via interstitial
 --
 -- Source guide:
---   hand2mind       → iframe OK (no X-Frame-Options)
+--   hand2mind       → redirect only (X-Frame-Options: SAMEORIGIN — blocks external iframes)
 --   kiddoworksheets → iframe OK (no X-Frame-Options)
 --   pbskids         → redirect only (DENY + strict CSP)
 -- =============================================================
@@ -37,25 +37,25 @@ CREATE TABLE IF NOT EXISTS resource_links (
 -- Seed data — curated educational resources
 -- =============================================================
 
--- == HAND2MIND (iframe OK, ECE through Basic 6) ==
+-- == HAND2MIND (redirect only — X-Frame-Options: SAMEORIGIN, cannot iframe) ==
 INSERT INTO resource_links (title, url, source, category, class_id, subject_id, description, embed_type, sort_order) VALUES
-('Hand2Mind — Free Resources Library', 'https://www.hand2mind.com/free-resources', 'hand2mind', 'all', NULL, NULL, 'Browse hundreds of free downloadable lesson plans, activity mats, and worksheets organized by grade and subject.', 'iframe', 1),
+('Hand2Mind — Free Resources Library', 'https://www.hand2mind.com/free-resources', 'hand2mind', 'all', NULL, NULL, 'Browse hundreds of free downloadable lesson plans, activity mats, and worksheets organized by grade and subject.', 'redirect', 1),
 
-('Daily Foundational Literacy Lessons', 'https://www.hand2mind.com/learn/daily-foundational-literacy-lessons', 'hand2mind', 'literacy', NULL, NULL, 'Ready-to-use daily literacy lessons covering phonemic awareness, phonics, fluency, vocabulary, and comprehension.', 'iframe', 2),
+('Daily Foundational Literacy Lessons', 'https://www.hand2mind.com/learn/daily-foundational-literacy-lessons', 'hand2mind', 'literacy', NULL, NULL, 'Ready-to-use daily literacy lessons covering phonemic awareness, phonics, fluency, vocabulary, and comprehension.', 'redirect', 2),
 
-('Math Daily Lessons', 'https://www.hand2mind.com/learn/math-daily-lessons', 'hand2mind', 'math', NULL, NULL, '20-minute daily math lessons with hands-on activities aligned to curriculum standards.', 'iframe', 3),
+('Math Daily Lessons', 'https://www.hand2mind.com/learn/math-daily-lessons', 'hand2mind', 'math', NULL, NULL, '20-minute daily math lessons with hands-on activities aligned to curriculum standards.', 'redirect', 3),
 
-('Hand2Mind — Math Manipulatives', 'https://www.hand2mind.com/subjects/math', 'hand2mind', 'math', NULL, NULL, 'Browse hands-on math resources: base ten blocks, counters, pattern blocks, fraction tiles, and more.', 'iframe', 4),
+('Hand2Mind — Math Manipulatives', 'https://www.hand2mind.com/subjects/math', 'hand2mind', 'math', NULL, NULL, 'Browse hands-on math resources: base ten blocks, counters, pattern blocks, fraction tiles, and more.', 'redirect', 4),
 
-('Hand2Mind — Literacy Resources', 'https://www.hand2mind.com/subjects/literacy', 'hand2mind', 'literacy', NULL, NULL, 'Literacy tools: letter tiles, reading rods, sound boxes, decodable books, and phonics kits.', 'iframe', 5),
+('Hand2Mind — Literacy Resources', 'https://www.hand2mind.com/subjects/literacy', 'hand2mind', 'literacy', NULL, NULL, 'Literacy tools: letter tiles, reading rods, sound boxes, decodable books, and phonics kits.', 'redirect', 5),
 
-('Hand2Mind — STEM Activities', 'https://www.hand2mind.com/subjects/stem', 'hand2mind', 'stem', NULL, NULL, 'Science, technology, engineering, and math activity kits and lesson ideas for hands-on STEM learning.', 'iframe', 6),
+('Hand2Mind — STEM Activities', 'https://www.hand2mind.com/subjects/stem', 'hand2mind', 'stem', NULL, NULL, 'Science, technology, engineering, and math activity kits and lesson ideas for hands-on STEM learning.', 'redirect', 6),
 
-('Hand2Mind — Social-Emotional Learning', 'https://www.hand2mind.com/subjects/sel', 'hand2mind', 'sel', NULL, NULL, 'SEL resources: mindfulness tools, emotion cards, calming kits, and classroom management solutions.', 'iframe', 7),
+('Hand2Mind — Social-Emotional Learning', 'https://www.hand2mind.com/subjects/sel', 'hand2mind', 'sel', NULL, NULL, 'SEL resources: mindfulness tools, emotion cards, calming kits, and classroom management solutions.', 'redirect', 7),
 
-('Hand2Mind — Early Childhood', 'https://www.hand2mind.com/subjects/early-childhood', 'hand2mind', 'ece', NULL, NULL, 'PreK and early childhood resources: fine motor tools, sensory play, early math and literacy foundations.', 'iframe', 8),
+('Hand2Mind — Early Childhood', 'https://www.hand2mind.com/subjects/early-childhood', 'hand2mind', 'ece', NULL, NULL, 'PreK and early childhood resources: fine motor tools, sensory play, early math and literacy foundations.', 'redirect', 8),
 
-('Hand2Mind — Intervention Resources', 'https://www.hand2mind.com/subjects/intervention', 'hand2mind', 'all', NULL, NULL, 'Targeted intervention resources for struggling learners: RTI tiers, special education, and differentiation tools.', 'iframe', 9);
+('Hand2Mind — Intervention Resources', 'https://www.hand2mind.com/subjects/intervention', 'hand2mind', 'all', NULL, NULL, 'Targeted intervention resources for struggling learners: RTI tiers, special education, and differentiation tools.', 'redirect', 9);
 
 -- == KIDDOWORKSHEETS (iframe OK, nursery through Basic 6) ==
 INSERT INTO resource_links (title, url, source, category, class_id, subject_id, description, embed_type, sort_order) VALUES

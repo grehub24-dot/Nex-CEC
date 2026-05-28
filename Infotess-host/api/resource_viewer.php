@@ -303,7 +303,7 @@ header("Content-Security-Policy: default-src 'self'; "
                 <p style="margin-top:20px; font-size:0.9rem; color:#999;">
                     This interactive activity opens in a new tab.
                 </p>
-                <a href="<?php echo htmlspecialchars($resource['url']); ?>"
+                <a href="../resource_redirect.php?id=<?php echo (int)$resource['id']; ?>"
                    class="btn-launch"
                    target="_blank"
                    rel="noopener noreferrer">

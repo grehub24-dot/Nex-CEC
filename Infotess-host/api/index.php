@@ -111,7 +111,7 @@ $routes['resource.php'] = 'resource_viewer.php';
 $routes['resource_redirect.php'] = 'resource_redirect.php';
 
 // Staff routes
-$staffPages = ['dashboard', 'payslip', 'attendance', 'grades', 'fees_debt', 'profile', 'messaging', 'academic_calendar'];
+$staffPages = ['dashboard', 'payslip', 'attendance', 'grades', 'fees_debt', 'profile', 'messaging', 'academic_calendar', 'resources'];
 foreach ($staffPages as $page) {
     $routes["staff/$page.php"] = "staff_$page.php";
 }
@@ -124,7 +124,7 @@ $routes["staff/register.php"] = "staff_register.php";
 $routes["staff/login.php"] = "login.php";
 
 // Parent routes
-$parentPages = ['dashboard', 'student', 'fees', 'report_card', 'messages', 'profile', 'password-reset', 'academic_calendar'];
+$parentPages = ['dashboard', 'student', 'fees', 'report_card', 'messages', 'profile', 'password-reset', 'academic_calendar', 'resources'];
 foreach ($parentPages as $page) {
     $routes["parent/$page.php"] = "parent_$page.php";
 }

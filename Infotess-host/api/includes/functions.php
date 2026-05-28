@@ -423,6 +423,7 @@ function renderStaffSidebar($currentPage = '', $schoolName = 'Nex CEC', $unreadC
     
     $items = [
         ['href' => '../staff/dashboard.php', 'icon' => 'fas fa-home',        'label' => 'Dashboard',        'key' => 'dashboard'],
+        ['href' => '../staff/resources.php','icon' => 'fas fa-bookmark',      'label' => 'Teaching Resources','key' => 'resources'],
         ['href' => '../staff/grades.php',    'icon' => 'fas fa-clipboard-list', 'label' => 'SBA / Grades',    'key' => 'grades',      'teacherOnly' => true],
         ['href' => '../staff/attendance.php','icon' => 'fas fa-calendar-check','label' => 'My Attendance',   'key' => 'attendance'],
         ['href' => '../staff/payslip.php',   'icon' => 'fas fa-file-invoice-dollar','label' => 'Pay Slips',  'key' => 'payslip'],
@@ -539,6 +540,10 @@ function renderParentSidebar($currentPage = '', $schoolName = 'Nex CEC', $unread
     $active = ($currentPage === 'dashboard') ? ' class="active"' : '';
     $html .= '<li><a href="../parent/dashboard.php"' . $active . '><i class="fas fa-home"></i> My Children</a></li>';
     
+    // Learning at Home Resources
+    $active = ($currentPage === 'resources') ? ' class="active"' : '';
+    $html .= '<li><a href="../parent/resources.php"' . $active . '><i class="fas fa-bookmark"></i> Learning at Home</a></li>';
+
     // Messages (with unread badge)
     $active = ($currentPage === 'messages') ? ' class="active"' : '';
     $html .= '<li><a href="../parent/messages.php"' . $active . '><i class="fas fa-envelope"></i> Messages';

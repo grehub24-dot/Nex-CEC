@@ -1,0 +1,71 @@
+/* ========================================
+   Nex CEC 3D School Elements
+   Styles for Three.js container and SVG fallback
+   ======================================== */
+
+.school-3d-container {
+  position: relative;
+}
+
+.school-3d-container.hero-3d {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 50%;
+  height: 80%;
+  pointer-events: none;
+}
+
+.school-3d-container.content-3d {
+  width: 400px;
+  height: 400px;
+  margin: 0 auto var(--space-xl);
+}
+
+.school-3d-container canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* ---- SVG Fallback ---- */
+.school-3d-fallback {
+  display: none;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-on-dark-muted);
+  font-size: var(--text-sm-size);
+}
+
+.no-webgl .school-3d-fallback {
+  display: flex;
+}
+
+/* ---- Scroll-trigger visibility ---- */
+.anim-on-scroll {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 500ms ease-out, transform 500ms ease-out;
+}
+
+.anim-on-scroll.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (max-width: 767px) {
+  .school-3d-container.hero-3d {
+    position: relative;
+    transform: none;
+    width: 100%;
+    height: 200px;
+    margin-top: var(--space-xl);
+  }
+  .school-3d-container.content-3d {
+    width: 280px;
+    height: 280px;
+  }
+}

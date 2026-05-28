@@ -1,0 +1,137 @@
+/* ========================================
+   Nex CEC Design Tokens
+   Notion-Inspired School Design System
+   ======================================== */
+
+:root {
+  /* ---- Brand Colors ---- */
+  --color-primary: #5645d4;
+  --color-primary-pressed: #4534b3;
+  --color-on-primary: #ffffff;
+  --color-brand-navy: #0a1530;
+  --color-brand-navy-deep: #070f24;
+  --color-brand-navy-mid: #1a2a52;
+  --color-link-blue: #0075de;
+  --color-link-blue-pressed: #005bab;
+
+  /* ---- Education-Stage Card Tints ---- */
+  --color-tint-peach: #ffe8d4;     /* Creche / Early Childhood */
+  --color-tint-rose: #fde0ec;      /* Nursery / KG */
+  --color-tint-mint: #d9f3e1;      /* Primary (B1–B6) */
+  --color-tint-lavender: #e6e0f5;  /* JHS (JHS1–JHS3) */
+  --color-tint-sky: #dcecfa;       /* Extracurricular */
+  --color-tint-yellow: #fef7d6;    /* Achievements */
+  --color-tint-cream: #f8f5e8;     /* General content */
+
+  /* ---- Neutrals ---- */
+  --color-canvas: #ffffff;
+  --color-surface: #f6f5f4;
+  --color-surface-soft: #fafaf9;
+  --color-hairline: #e5e3df;
+  --color-hairline-soft: #ede9e4;
+  --color-hairline-strong: #c8c4be;
+  --color-ink-deep: #000000;
+  --color-ink: #1a1a1a;
+  --color-charcoal: #37352f;
+  --color-slate: #5d5b54;
+  --color-steel: #787671;
+  --color-muted: #bbb8b1;
+  --color-on-dark: #ffffff;
+  --color-on-dark-muted: #a4a097;
+
+  /* ---- Semantic ---- */
+  --color-success: #1aae39;
+  --color-warning: #dd5b00;
+  --color-error: #e03131;
+
+  /* ---- Typography Scale ---- */
+  --font-family: 'Inter', -apple-system, system-ui, sans-serif;
+  --text-hero-size: 72px;
+  --text-hero-lh: 1.05;
+  --text-hero-ls: -2px;
+  --text-hero-weight: 700;
+  --text-display-size: 48px;
+  --text-display-lh: 1.10;
+  --text-display-ls: -1px;
+  --text-display-weight: 700;
+  --text-h1-size: 40px;
+  --text-h1-lh: 1.15;
+  --text-h1-ls: -0.5px;
+  --text-h1-weight: 700;
+  --text-h2-size: 32px;
+  --text-h2-lh: 1.20;
+  --text-h2-ls: -0.3px;
+  --text-h2-weight: 600;
+  --text-h3-size: 24px;
+  --text-h3-lh: 1.25;
+  --text-h3-weight: 600;
+  --text-h4-size: 20px;
+  --text-h4-lh: 1.30;
+  --text-h4-weight: 600;
+  --text-body-size: 16px;
+  --text-body-lh: 1.60;
+  --text-body-weight: 400;
+  --text-sm-size: 14px;
+  --text-sm-lh: 1.50;
+  --text-sm-weight: 400;
+  --text-button-size: 14px;
+  --text-button-lh: 1.30;
+  --text-button-weight: 500;
+  --text-caption-size: 13px;
+  --text-caption-lh: 1.40;
+  --text-caption-weight: 500;
+  --text-micro-size: 11px;
+  --text-micro-lh: 1.40;
+  --text-micro-weight: 600;
+  --text-micro-ls: 1px;
+
+  /* ---- Spacing Scale ---- */
+  --space-xxs: 4px;
+  --space-xs: 8px;
+  --space-sm: 12px;
+  --space-md: 16px;
+  --space-lg: 20px;
+  --space-xl: 24px;
+  --space-xxl: 32px;
+  --space-xxxl: 40px;
+  --space-section-sm: 48px;
+  --space-section: 64px;
+  --space-section-lg: 96px;
+  --space-hero: 120px;
+
+  /* ---- Rounded Corners ---- */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-xxl: 24px;
+  --radius-full: 9999px;
+
+  /* ---- Shadows ---- */
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.06);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.08);
+
+  /* ---- Transitions ---- */
+  --transition-fast: 150ms ease-out;
+  --transition-base: 200ms ease;
+  --transition-slow: 250ms ease-out;
+}
+
+/* ---- Mobile Typography Overrides ---- */
+@media (max-width: 767px) {
+  :root {
+    --text-hero-size: 40px;
+    --text-hero-ls: -1px;
+    --text-display-size: 36px;
+    --text-h1-size: 28px;
+    --text-h2-size: 24px;
+    --text-h3-size: 20px;
+    --text-h4-size: 18px;
+    --text-body-size: 15px;
+    --text-sm-size: 13px;
+    --space-section-lg: 48px;
+    --space-hero: 80px;
+  }
+}

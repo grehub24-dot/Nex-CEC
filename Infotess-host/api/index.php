@@ -89,7 +89,7 @@ $routes['forgot-password.php'] = 'forgot-password.php';
 $routes['route_selector.php'] = 'route_selector.php';
 
 // Admin routes
-$adminPages = ['dashboard','students','staff','edit_staff','payments','fees','fees_debt','student_billing','class_billing','payroll','pay_slip','salary','grades','attendance','staff_attendance','reports','settings','users','edit_student','inbox','messaging','module_settings','subjects','link_subjects','verify','bulk_import','enrollments','role_permissions','academic_calendar','migrate_parent_students','resources'];
+$adminPages = ['dashboard','students','staff','edit_staff','payments','fees','fees_debt','student_billing','class_billing','payroll','pay_slip','salary','grades','attendance','staff_attendance','reports','settings','users','edit_student','inbox','messaging','module_settings','subjects','link_subjects','verify','bulk_import','enrollments','role_permissions','academic_calendar','migrate_parent_students','resources','lesson_notes'];
 foreach ($adminPages as $page) {
     $routes["admin/$page.php"] = "admin_$page.php";
 }
@@ -110,8 +110,14 @@ $routes['admin/view_receipt.php'] = 'view_receipt.php';
 $routes['resource.php'] = 'resource_viewer.php';
 $routes['resource_redirect.php'] = 'resource_redirect.php';
 
+// Lesson note viewer (shared across all roles)
+$routes['lesson_note_view.php'] = 'lesson_note_view.php';
+
+// AJAX endpoints
+$routes['ajax_get_lesson_note.php'] = 'ajax_get_lesson_note.php';
+
 // Staff routes
-$staffPages = ['dashboard', 'payslip', 'attendance', 'grades', 'fees_debt', 'profile', 'messaging', 'academic_calendar', 'resources', 'resource_assignments'];
+$staffPages = ['dashboard', 'payslip', 'attendance', 'grades', 'fees_debt', 'profile', 'messaging', 'academic_calendar', 'resources', 'resource_assignments', 'lesson_notes'];
 foreach ($staffPages as $page) {
     $routes["staff/$page.php"] = "staff_$page.php";
 }
@@ -124,7 +130,7 @@ $routes["staff/register.php"] = "staff_register.php";
 $routes["staff/login.php"] = "login.php";
 
 // Parent routes
-$parentPages = ['dashboard', 'student', 'fees', 'report_card', 'messages', 'profile', 'password-reset', 'academic_calendar', 'resources'];
+$parentPages = ['dashboard', 'student', 'fees', 'report_card', 'messages', 'profile', 'password-reset', 'academic_calendar', 'resources', 'lesson_notes'];
 foreach ($parentPages as $page) {
     $routes["parent/$page.php"] = "parent_$page.php";
 }

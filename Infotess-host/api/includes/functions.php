@@ -288,6 +288,7 @@ function getSidebarMenu($currentPage = '') {
         $allItems[] = ['href' => 'subjects.php', 'icon' => 'fas fa-book', 'label' => 'Subjects', 'acl' => 'subjects'];
         $allItems[] = ['href' => 'link_subjects.php', 'icon' => 'fas fa-link', 'label' => 'Link Subjects', 'acl' => 'subjects'];
         $allItems[] = ['href' => 'resources.php', 'icon' => 'fas fa-bookmark', 'label' => 'Resource Links', 'acl' => 'resources'];
+        $allItems[] = ['href' => 'lesson_notes.php', 'icon' => 'fas fa-book-open', 'label' => 'Lesson Notes', 'acl' => 'resources'];
         $allItems[] = ['href' => 'academic_calendar.php', 'icon' => 'fas fa-calendar-alt', 'label' => 'Academic Calendar', 'acl' => 'settings'];
         $allItems[] = ['href' => 'settings.php', 'icon' => 'fas fa-tools', 'label' => 'System Settings', 'acl' => 'settings'];
     }
@@ -425,6 +426,7 @@ function renderStaffSidebar($currentPage = '', $schoolName = 'Nex CEC', $unreadC
         ['href' => '../staff/dashboard.php', 'icon' => 'fas fa-home',        'label' => 'Dashboard',        'key' => 'dashboard'],
         ['href' => '../staff/resources.php','icon' => 'fas fa-bookmark',      'label' => 'Teaching Resources','key' => 'resources'],
         ['href' => '../staff/resource_assignments.php','icon' => 'fas fa-tasks', 'label' => 'My Assignments', 'key' => 'resource_assignments'],
+        ['href' => '../staff/lesson_notes.php','icon' => 'fas fa-book-open',   'label' => 'Lesson Notes',   'key' => 'lesson_notes'],
         ['href' => '../staff/grades.php',    'icon' => 'fas fa-clipboard-list', 'label' => 'SBA / Grades',    'key' => 'grades',      'teacherOnly' => true],
         ['href' => '../staff/attendance.php','icon' => 'fas fa-calendar-check','label' => 'My Attendance',   'key' => 'attendance'],
         ['href' => '../staff/payslip.php',   'icon' => 'fas fa-file-invoice-dollar','label' => 'Pay Slips',  'key' => 'payslip'],
@@ -544,6 +546,8 @@ function renderParentSidebar($currentPage = '', $schoolName = 'Nex CEC', $unread
     // Learning at Home Resources
     $active = ($currentPage === 'resources') ? ' class="active"' : '';
     $html .= '<li><a href="../parent/resources.php"' . $active . '><i class="fas fa-bookmark"></i> Learning at Home</a></li>';
+    $active = ($currentPage === 'lesson_notes') ? ' class="active"' : '';
+    $html .= '<li><a href="../parent/lesson_notes.php"' . $active . '><i class="fas fa-book-open"></i> Lesson Notes</a></li>';
 
     // Messages (with unread badge)
     $active = ($currentPage === 'messages') ? ' class="active"' : '';

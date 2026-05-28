@@ -413,8 +413,6 @@ $total_pages = $total_rows > 0 ? (int)ceil($total_rows / $limit) : 1;
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Students — <?php echo htmlspecialchars($school_name); ?> Admin</title>
     <link rel="stylesheet" href="../css/style.css">
-    <!-- DEMO: Linear design theme (from awesome-design-md) -->
-    <link rel="stylesheet" href="css/linear-theme.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); }
@@ -432,12 +430,6 @@ $total_pages = $total_rows > 0 ? (int)ceil($total_rows / $limit) : 1;
             <?php echo renderSidebar('students', $school_name); ?>
 
         <main class="main-content">
-            <!-- DEMO BADGE: Linear Design Theme (remove for production) -->
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding:8px 14px;background:#0f1011;border:1px solid #23252a;border-radius:8px;font-size:12px;color:#8a8f98;">
-                <span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:4px;background:#5e6ad2;color:#fff;font-size:10px;font-weight:600;">L</span>
-                <span>Theme: <strong style="color:#d0d6e0;">Linear</strong> — from <code style="color:#828fff;">awesome-design-md</code> · <code style="color:#828fff;">DESIGN.md</code> at project root</span>
-                <span style="margin-left:auto;font-size:10px;color:#62666d;">DEMO</span>
-            </div>
             <div class="top-bar">
                 <h2>Student Management</h2>
                 <div style="display:flex; gap:10px;">

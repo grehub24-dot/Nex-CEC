@@ -1,5 +1,6 @@
 <?php
 require_once 'includes/db.php';
+require_once 'includes/Mailer.php';
 
 // Enforce access control
 requireAccess('edit_student');
@@ -76,6 +77,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Non-fatal — continue without changing profile picture
     }
 
+    // Before updating, fetch the current student record (to detect guardian_email changes)
+    $oldStmt = $pdo->prepare("SELECT * FROM students WHERE id = ?");
+    $oldStmt->execute([$id]);
+    $oldStudent = $oldStmt->fetch();
+
     if (empty($error)) {
     try {
         $pdo->beginTransaction();
@@ -103,7 +109,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $pdo->commit();
         $message = "Student details updated successfully.";
-        
+
+        // Sync parent_students link: if guardian_email changed, remove old parent link
+        $old_email = trim($oldStudent['guardian_email'] ?? '');
+        $new_email = trim($guardian_email);
+        if ($old_email !== '' && $old_email !== $new_email) {
+            // Find old parent user and remove link to this student
+            $oldParent = $pdo->prepare("SELECT id FROM users WHERE email = ?");
+            $oldParent->execute([$old_email]);
+            $oldParentRow = $oldParent->fetch();
+            if ($oldParentRow) {
+                $pdo->prepare("DELETE FROM parent_students WHERE parent_user_id = ? AND student_id = ?")
+                    ->execute([(int)$oldParentRow['id'], (int)$id]);
+            }
+        }
+
+        // Ensure current guardian has a parent_students link (handles new registration AND data migration)
+        if (!empty($guardian_email)) {
+            linkParentToStudent($pdo, [
+                'id' => (int)$id,
+                'guardian_email' => $guardian_email,
+                'guardian_name' => $guardian_name,
+                'guardian_relationship' => $guardian_relationship,
+                'guardian_phone_primary' => $guardian_phone_primary,
+            ]);
+        }
+
         // Refresh student data
         $stmt = $pdo->prepare("SELECT * FROM students WHERE id = ?");
         $stmt->execute([$id]);

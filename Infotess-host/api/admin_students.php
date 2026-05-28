@@ -134,6 +134,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 'class_name' => $class_name
             ];
 
+            // 3. Create parent_students link for guardian portal access
+            // Only attempt if guardian_email is provided
+            if (!empty($guardian_email)) {
+                $parentStudent = [
+                    'id' => $student_id,
+                    'guardian_email' => $guardian_email,
+                    'guardian_name' => $guardian_name,
+                    'guardian_relationship' => $guardian_relationship,
+                    'guardian_phone_primary' => $guardian_phone_primary,
+                ];
+                linkParentToStudent($pdo, $parentStudent);
+            }
+
             // Send email to guardian
             if ($guardian_email) {
                 $mailer = new Mailer();

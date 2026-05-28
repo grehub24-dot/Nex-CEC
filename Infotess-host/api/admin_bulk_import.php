@@ -95,9 +95,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         $settings['current_academic_year'] ?? date('Y') . '/' . (date('Y') + 1),
                         $settings['current_term'] ?? '1'
                     ]);
+                    $student_id = (int)$pdo->lastInsertId();
                     
                     $pdo->commit();
                     $imported++;
+
+                    // Create parent_students link for guardian portal access
+                    if (!empty($guardian_email)) {
+                        linkParentToStudent($pdo, [
+                            'id' => $student_id,
+                            'guardian_email' => $guardian_email,
+                            'guardian_name' => $guardian_name,
+                            'guardian_relationship' => $guardian_relationship,
+                            'guardian_phone_primary' => $guardian_phone_primary,
+                        ]);
+                    }
                 } catch (Exception $e) {
                     $pdo->rollBack();
                     $errors[] = "Error importing $full_name: " . $e->getMessage();

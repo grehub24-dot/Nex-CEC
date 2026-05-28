@@ -89,6 +89,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     
                     $pdo->commit();
 
+                    // Auto-detect and link any existing students whose guardian matches this staff member
+                    autoLinkStaffChildren($pdo, [
+                        'id'       => $staff_id_inserted,
+                        'full_name' => $full_name,
+                        'phone'    => $phone,
+                        'email'    => $email,
+                        'user_id'  => $user_id,
+                    ]);
+
                     // Send invite
                     $inviteResult = sendStaffInvite($staff_id_inserted, $user_id, (int)$_SESSION['user_id'], $email, $phone, $full_name);
                     if ($inviteResult['success']) {
@@ -106,9 +115,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
                     $stmt = $pdo->prepare("INSERT INTO staff (user_id, staff_id, full_name, position, department, qualification, phone, email, gender, date_of_birth, address, hire_date, bank_name, account_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                     $stmt->execute([$user_id, $staff_id, $full_name, $position, $department, $qualification, $phone, $email, $gender, $date_of_birth, $address, $hire_date, $bank_name, $account_number]);
+                    $staff_id_inserted = (int)$pdo->lastInsertId();
                     
                     $pdo->commit();
                     $message = "Staff member added successfully! ID: $staff_id | Temp password: <strong>$auto_password</strong>";
+
+                    // Auto-detect and link any existing students whose guardian matches this staff member
+                    autoLinkStaffChildren($pdo, [
+                        'id'       => $staff_id_inserted,
+                        'full_name' => $full_name,
+                        'phone'    => $phone,
+                        'email'    => $email,
+                        'user_id'  => $user_id,
+                    ]);
                 }
             } catch (Exception $e) {
                 $pdo->rollBack();

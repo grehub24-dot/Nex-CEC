@@ -47,6 +47,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $stmt->execute([$full_name, $position, $department, $qualification, $phone, $email, $gender, $date_of_birth, $address, $hire_date, $status, $bank_name, $account_number, $staff_id]);
         $message = "Staff member updated successfully.";
         
+        // Auto-detect and link any existing students whose guardian matches this staff member
+        autoLinkStaffChildren($pdo, [
+            'id'       => $staff_id,
+            'full_name' => $full_name,
+            'phone'    => $phone,
+            'email'    => $email,
+            'user_id'  => (int)$staff['user_id'],
+        ]);
+
         // Refresh data
         $stmt = $pdo->prepare("SELECT * FROM staff WHERE id = ?");
         $stmt->execute([$staff_id]);

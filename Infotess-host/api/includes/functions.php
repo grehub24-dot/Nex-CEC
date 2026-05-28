@@ -1382,3 +1382,184 @@ function linkTeacherClassSubjects($pdo, int $staff_id, int $class_id): int {
     error_log("linkTeacherClassSubjects: linked $count subjects for staff #$staff_id, class #$class_id ($class_name, category=$category)");
     return $count;
 }
+
+/**
+ * Create or find a parent user account and link it to a student via parent_students.
+ *
+ * Uses the student's guardian_email to look up or create a parent user (role='parent'),
+ * then inserts a row in parent_students to link them. Does NOT change students.user_id
+ * (which remains the student's own login account).
+ *
+ * @param PDO    $pdo         Database connection
+ * @param array  $student     Student record (must contain 'id', 'guardian_email', and optionally 'guardian_name', 'guardian_relationship', 'guardian_phone_primary')
+ * @return int|null           Parent user ID, or null if no guardian_email or on failure
+ */
+function linkParentToStudent($pdo, array $student): ?int {
+    $guardian_email = trim($student['guardian_email'] ?? '');
+    if (empty($guardian_email)) {
+        return null;
+    }
+
+    $student_id = (int)($student['id'] ?? 0);
+    if ($student_id <= 0) {
+        error_log("linkParentToStudent: invalid student_id");
+        return null;
+    }
+
+    try {
+        // 1. Look for existing user with this email (any role — could be a staff member)
+        $stmt = $pdo->prepare("SELECT id, role FROM users WHERE email = ?");
+        $stmt->execute([$guardian_email]);
+        $existing = $stmt->fetch();
+
+        if ($existing) {
+            $parent_user_id = (int)$existing['id'];
+            // If this is a staff/teacher account, they already have login credentials
+            // — no need to send a separate parent-portal welcome email
+        } else {
+            // 2. Create new parent user account
+            $auto_password = substr(str_shuffle("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"), 0, 8);
+            $password_hash = password_hash($auto_password, PASSWORD_DEFAULT);
+
+            $stmt = $pdo->prepare("INSERT INTO users (email, password, role, status) VALUES (?, ?, 'parent', 'active')");
+            $stmt->execute([$guardian_email, $password_hash]);
+            $parent_user_id = (int)$pdo->lastInsertId();
+
+            // Send welcome email with credentials
+            $guardian_name = $student['guardian_name'] ?? '';
+            try {
+                $appUrl = getAppUrl();
+                $school_name = 'Nex CEC';
+                // Try to get school name from settings
+                $s = $pdo->query("SELECT setting_value FROM system_settings WHERE setting_key = 'school_name'")->fetch();
+                if ($s && !empty($s['setting_value'])) {
+                    $school_name = $s['setting_value'];
+                }
+
+                $subject = "Parent Portal Access — $school_name";
+                $html = "
+                <!DOCTYPE html>
+                <html>
+                <head><meta charset='UTF-8'></head>
+                <body style='font-family:Arial,sans-serif;background:#f4f4f4;padding:20px;'>
+                    <div style='max-width:600px;margin:0 auto;background:white;border-radius:8px;overflow:hidden;'>
+                        <div style='background:linear-gradient(to right,#1a5276,#2e86c1);color:white;text-align:center;padding:40px 20px;'>
+                            <h1 style='margin:0;font-size:24px;'>Welcome to $school_name</h1>
+                            <p style='margin-top:8px;opacity:0.9;'>Parent Portal Access</p>
+                        </div>
+                        <div style='padding:30px;color:#333;font-size:14px;'>
+                            <p>Dear " . htmlspecialchars($guardian_name ?: 'Parent/Guardian', ENT_QUOTES, 'UTF-8') . ",</p>
+                            <p>A parent portal account has been created for you.</p>
+                            <div style='background:#f0f7ff;border:1px solid #b8d9e8;border-radius:6px;padding:20px;margin:20px 0;'>
+                                <div style='font-size:12px;color:#666;'>Email</div>
+                                <div style='font-size:18px;font-weight:bold;color:#1a5276;'>" . htmlspecialchars($guardian_email, ENT_QUOTES, 'UTF-8') . "</div>
+                                <div style='font-size:12px;color:#666;margin-top:12px;'>Temporary Password</div>
+                                <div style='font-size:18px;font-weight:bold;color:#1a5276;'>" . htmlspecialchars($auto_password, ENT_QUOTES, 'UTF-8') . "</div>
+                            </div>
+                            <p style='text-align:center;'>
+                                <a href='" . htmlspecialchars($appUrl, ENT_QUOTES, 'UTF-8') . "/login.php' style='display:inline-block;background:#27ae60;color:white;padding:12px 25px;text-decoration:none;border-radius:6px;font-weight:bold;'>Login to Parent Portal</a>
+                            </p>
+                            <p style='font-size:12px;color:#999;'>Please log in and change your password immediately.</p>
+                        </div>
+                        <div style='text-align:center;padding:30px;font-size:12px;color:#666;border-top:1px solid #eee;'>
+                            $school_name &bull; Parent Portal
+                        </div>
+                    </div>
+                </body>
+                </html>";
+
+                $mailer = new Mailer();
+                $mailer->sendHTML($guardian_email, $subject, $html);
+            } catch (Exception $e) {
+                error_log("linkParentToStudent: welcome email failed for $guardian_email: " . $e->getMessage());
+                // Non-fatal — account was created
+            }
+        }
+
+        // 3. Insert parent_students link if not already exists
+        $stmt = $pdo->prepare("SELECT id FROM parent_students WHERE parent_user_id = ? AND student_id = ?");
+        $stmt->execute([$parent_user_id, $student_id]);
+        if (!$stmt->fetch()) {
+            $relationship = $student['guardian_relationship'] ?? 'Guardian';
+            $stmt = $pdo->prepare("INSERT INTO parent_students (parent_user_id, student_id, relationship, is_primary) VALUES (?, ?, ?, ?)");
+            $stmt->execute([$parent_user_id, $student_id, $relationship, true]);
+        }
+
+        return $parent_user_id;
+    } catch (Exception $e) {
+        error_log("linkParentToStudent: error for student #$student_id: " . $e->getMessage());
+        return null;
+    }
+}
+
+/**
+ * Auto-detect students whose guardian matches a staff member, and link them via parent_students.
+ *
+ * Called after adding or editing a staff member. Searches for students whose guardian_name,
+ * guardian_phone_primary, or guardian_email matches the staff member's details, then creates
+ * parent_students links using the staff member's user_id (enabling dual-role parent access).
+ *
+ * @param PDO    $pdo         Database connection
+ * @param array  $staff       Staff record (must contain 'id', 'full_name', 'phone', 'email', 'user_id')
+ * @return int   Number of students linked
+ */
+function autoLinkStaffChildren($pdo, array $staff): int {
+    $staff_id   = (int)($staff['id'] ?? 0);
+    $full_name  = trim($staff['full_name'] ?? '');
+    $phone      = trim($staff['phone'] ?? '');
+    $email      = trim($staff['email'] ?? '');
+    $user_id    = (int)($staff['user_id'] ?? 0);
+
+    if ($staff_id <= 0 || $user_id <= 0) {
+        error_log("autoLinkStaffChildren: invalid staff record (id=$staff_id, user_id=$user_id)");
+        return 0;
+    }
+
+    $linked = 0;
+    try {
+        // Build WHERE conditions matching the billing-file detection logic
+        $conditions = [];
+        $params = [];
+        if (!empty($full_name)) {
+            $conditions[] = "guardian_name = ?";
+            $params[] = $full_name;
+        }
+        if (!empty($phone)) {
+            $conditions[] = "guardian_phone_primary = ?";
+            $params[] = $phone;
+        }
+        if (!empty($email)) {
+            $conditions[] = "guardian_email = ?";
+            $params[] = $email;
+        }
+
+        if (empty($conditions)) {
+            return 0;
+        }
+
+        $sql = "SELECT id, guardian_name, guardian_email, guardian_relationship FROM students WHERE " . implode(' OR ', $conditions);
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+
+        while ($student = $stmt->fetch()) {
+            $student_id = (int)$student['id'];
+            // Check if already linked
+            $check = $pdo->prepare("SELECT id FROM parent_students WHERE parent_user_id = ? AND student_id = ?");
+            $check->execute([$user_id, $student_id]);
+            if ($check->fetch()) {
+                continue; // Already linked
+            }
+
+            $relationship = $student['guardian_relationship'] ?? 'Guardian';
+            $ins = $pdo->prepare("INSERT INTO parent_students (parent_user_id, student_id, relationship, is_primary) VALUES (?, ?, ?, ?)");
+            $ins->execute([$user_id, $student_id, $relationship, true]);
+            $linked++;
+
+            error_log("autoLinkStaffChildren: linked staff #$staff_id (user #$user_id) to student #$student_id");
+        }
+    } catch (Exception $e) {
+        error_log("autoLinkStaffChildren: error for staff #$staff_id: " . $e->getMessage());
+    }
+
+    return $linked;
+}

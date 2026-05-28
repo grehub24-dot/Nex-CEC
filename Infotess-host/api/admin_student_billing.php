@@ -124,8 +124,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_bill'])) {
             }
         }
 
+        // --- Auto-apply Staff Child Discount ---
+        $staff_discount = (float)($settings['staff_child_discount'] ?? 150.00);
+        if ($staff_discount > 0) {
+            $is_staff_child = false;
+            $gname = trim($student['guardian_name'] ?? '');
+            $gphone = trim($student['guardian_phone_primary'] ?? '');
+            $gemail = trim($student['guardian_email'] ?? '');
+            try {
+                $stmtSc = $pdo->query("SELECT full_name, phone, email FROM staff WHERE status = 'active'");
+                foreach ($stmtSc->fetchAll() as $st) {
+                    $sname = trim($st['full_name'] ?? '');
+                    $sphone = trim($st['phone'] ?? '');
+                    $semail = trim($st['email'] ?? '');
+                    if (($gname !== '' && $gname === $sname) ||
+                        ($gphone !== '' && $gphone === $sphone) ||
+                        ($gemail !== '' && $gemail === $semail)) {
+                        $is_staff_child = true;
+                        break;
+                    }
+                }
+            } catch (Exception $e) {}
+            if ($is_staff_child) {
+                $checkStmt = $pdo->prepare("SELECT id FROM student_bill_items WHERE student_id = ? AND academic_year = ? AND term = ? AND title = 'Staff Child Discount'");
+                $checkStmt->execute([$student_id, $filter_year, $filter_term]);
+                if (!$checkStmt->fetch()) {
+                    try {
+                        $insStmt->execute([
+                            $student_id, null, $filter_year, $filter_term,
+                            'Staff Child Discount', (-1 * $staff_discount), 'Discount',
+                            0, $staffRow ? (int)$staffRow['id'] : null
+                        ]);
+                    } catch (Exception $e) {
+                        if (strpos($e->getMessage(), '409') === false && strpos($e->getMessage(), '23505') === false) {
+                            throw $e;
+                        }
+                    }
+                }
+            }
+        }
+
         $pdo->commit();
-        $message = "Bill updated: $inserted fee item(s) saved.";
+        if ($is_staff_child ?? false) {
+            $message = "Bill updated: $inserted fee item(s) saved. Staff Child Discount of GHS " . number_format($staff_discount, 2) . " applied.";
+        } else {
+            $message = "Bill updated: $inserted fee item(s) saved.";
+        }
     } catch (Exception $e) {
         $pdo->rollBack();
         $error = "Error saving bill: " . $e->getMessage();

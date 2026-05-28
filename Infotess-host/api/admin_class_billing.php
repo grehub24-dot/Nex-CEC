@@ -80,15 +80,17 @@ if ($filter_class) {
     } catch (Exception $e) {}
 
     // --- Staff child detection ---
-    $staff_map = []; // Maps staff full_name => true and staff phone => true
+    $staff_map = []; // Maps staff full_name / phone / email => true
     try {
         $stmt = $pdo->query("SELECT full_name, phone, email FROM staff WHERE status = 'active'");
         $active_staff = $stmt->fetchAll();
         foreach ($active_staff as $st) {
             $name = trim($st['full_name'] ?? '');
             $phone = trim($st['phone'] ?? '');
+            $email = trim($st['email'] ?? '');
             if ($name !== '') $staff_map[$name] = true;
             if ($phone !== '') $staff_map[$phone] = true;
+            if ($email !== '') $staff_map[$email] = true;
         }
     } catch (Exception $e) {}
 

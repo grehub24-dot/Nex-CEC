@@ -51,7 +51,6 @@
         }
     }
     $school_name = $settings['school_name'] ?? 'Nex CEC';
-    $school_motto = $settings['school_motto'] ?? 'Excellence in Education';
     $school_logo = $settings['school_logo_url'] ?? ($base_url . 'images/chariot-logo.svg');
 
     // Determine current page for active nav state
@@ -94,14 +93,14 @@
                     <?php else: ?>
                         <li role="none"><a href="<?php echo $base_url; ?>student_dashboard.php" class="btn btn-primary btn-sm" role="menuitem">Dashboard</a></li>
                     <?php endif; ?>
-                    <li role="none"><a href="<?php echo $base_url; ?>logout.php" role="menuitem" style="color: var(--color-steel);"><i class="fas fa-sign-out-alt"></i></a></li>
+                    <li role="none"><a href="<?php echo $base_url; ?>logout.php" role="menuitem" style="color: var(--color-steel);" aria-label="Logout"><i class="fas fa-sign-out-alt"></i></a></li>
                 <?php else: ?>
                     <li role="none"><a href="<?php echo $base_url; ?>register.php" class="btn btn-primary" role="menuitem"><i class="fas fa-user-plus"></i> Enroll Now</a></li>
                     <li role="none"><a href="<?php echo $base_url; ?>login.php" class="btn btn-secondary" role="menuitem"><i class="fas fa-sign-in-alt"></i> Login</a></li>
                 <?php endif; ?>
             </ul>
 
-            <button class="hamburger-btn" id="mobileNavToggle" aria-label="Toggle navigation menu" aria-expanded="false" style="display: none;">
+            <button class="hamburger-btn" id="mobileNavToggle" aria-label="Toggle navigation menu" aria-expanded="false">
                 <i class="fas fa-bars"></i>
             </button>
         </div>

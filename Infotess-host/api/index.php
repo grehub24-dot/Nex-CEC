@@ -111,7 +111,7 @@ $routes['resource.php'] = 'resource_viewer.php';
 $routes['resource_redirect.php'] = 'resource_redirect.php';
 
 // Staff routes
-$staffPages = ['dashboard', 'payslip', 'attendance', 'grades', 'fees_debt', 'profile', 'messaging', 'academic_calendar', 'resources'];
+$staffPages = ['dashboard', 'payslip', 'attendance', 'grades', 'fees_debt', 'profile', 'messaging', 'academic_calendar', 'resources', 'resource_assignments'];
 foreach ($staffPages as $page) {
     $routes["staff/$page.php"] = "staff_$page.php";
 }

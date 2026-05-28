@@ -424,6 +424,7 @@ function renderStaffSidebar($currentPage = '', $schoolName = 'Nex CEC', $unreadC
     $items = [
         ['href' => '../staff/dashboard.php', 'icon' => 'fas fa-home',        'label' => 'Dashboard',        'key' => 'dashboard'],
         ['href' => '../staff/resources.php','icon' => 'fas fa-bookmark',      'label' => 'Teaching Resources','key' => 'resources'],
+        ['href' => '../staff/resource_assignments.php','icon' => 'fas fa-tasks', 'label' => 'My Assignments', 'key' => 'resource_assignments'],
         ['href' => '../staff/grades.php',    'icon' => 'fas fa-clipboard-list', 'label' => 'SBA / Grades',    'key' => 'grades',      'teacherOnly' => true],
         ['href' => '../staff/attendance.php','icon' => 'fas fa-calendar-check','label' => 'My Attendance',   'key' => 'attendance'],
         ['href' => '../staff/payslip.php',   'icon' => 'fas fa-file-invoice-dollar','label' => 'Pay Slips',  'key' => 'payslip'],

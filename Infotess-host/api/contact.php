@@ -39,6 +39,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <p>We'd love to hear from you. Get in touch with our team for any inquiries or to schedule a visit.</p>
 </div>
 
+<div id="contact-3d" class="school-3d-container content-3d" style="margin: var(--space-xxl) auto; width: 100%; max-width: 400px; height: 300px;"></div>
+
 <section class="section">
     <div class="container">
         <?php if ($message): ?>
@@ -138,5 +140,75 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
     </div>
 </section>
+
+<!-- Three.js 3D Envelope Scene -->
+<script type="importmap">
+{
+    "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+    }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+(function initEnvelope() {
+    const container = document.getElementById('contact-3d');
+    if (!container) return;
+    const w = container.offsetWidth || 400;
+    const h = container.offsetHeight || 300;
+    if (w < 100 || h < 100) return;
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(40, w / h, 0.1, 1000);
+    camera.position.set(2, 1.2, 2.5);
+    camera.lookAt(0, 0, 0);
+    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    renderer.setSize(w, h);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    container.appendChild(renderer.domElement);
+    const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+    scene.add(ambient);
+    const dir = new THREE.DirectionalLight(0xffffff, 0.8);
+    dir.position.set(2, 4, 3);
+    scene.add(dir);
+    // Envelope body (box with slight opening)
+    const envMat = new THREE.MeshPhongMaterial({ color: 0x5645d4, shininess: 20 });
+    const body = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.7, 0.8), envMat);
+    body.position.y = 0.35;
+    scene.add(body);
+    // Envelope flap (triangular shape using a cone with 3 sides)
+    const flapMat = new THREE.MeshPhongMaterial({ color: 0x4534b3, shininess: 15 });
+    const flap = new THREE.Mesh(new THREE.ConeGeometry(0.7, 0.15, 3), flapMat);
+    flap.position.set(0, 0.78, -0.1);
+    flap.rotation.x = 0.1;
+    flap.rotation.y = Math.PI;
+    scene.add(flap);
+    // Seal dot
+    const sealMat = new THREE.MeshPhongMaterial({ color: 0xffe8d4, emissive: 0xffcc80, emissiveIntensity: 0.2 });
+    const seal = new THREE.Mesh(new THREE.CircleGeometry(0.08, 16), sealMat);
+    seal.position.set(0, 0.78, 0.35);
+    seal.rotation.x = -0.3;
+    scene.add(seal);
+    // Gentle floating animation
+    let time = 0;
+    function animate() {
+        requestAnimationFrame(animate);
+        time += 0.02;
+        body.rotation.y += 0.004;
+        flap.rotation.y += 0.004;
+        body.position.y = 0.35 + Math.sin(time) * 0.04;
+        flap.position.y = 0.78 + Math.sin(time) * 0.04;
+        renderer.render(scene, camera);
+    }
+    animate();
+    window.addEventListener('resize', function() {
+        const w2 = container.offsetWidth || 400;
+        const h2 = container.offsetHeight || 300;
+        if (w2 < 100 || h2 < 100) return;
+        camera.aspect = w2 / h2;
+        camera.updateProjectionMatrix();
+        renderer.setSize(w2, h2);
+    });
+})();
+</script>
 
 <?php require_once 'includes/footer.php'; ?>

@@ -90,7 +90,13 @@ if (empty($chart_labels)) { $chart_labels = [date('M Y')]; $chart_data = [0]; }
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard — <?php echo htmlspecialchars($school_name); ?></title>
-    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/design-tokens.css">
+    <link rel="stylesheet" href="../css/typography.css">
+    <link rel="stylesheet" href="../css/layout.css">
+    <link rel="stylesheet" href="../css/components.css">
+    <link rel="stylesheet" href="../css/animations.css">
+    <link rel="stylesheet" href="../css/3d-school.css">
+    <link rel="stylesheet" href="../css/style.css"><!-- legacy compat -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -219,9 +225,9 @@ if (empty($chart_labels)) { $chart_labels = [date('M Y')]; $chart_data = [0]; }
             </div>
 
             <!-- Quick Links -->
-            <div class="section mb-30">
+            <div class="section-block">
                 <h3>Quick Actions</h3>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;">
+                <div class="anim-stagger" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;">
                     <a href="students.php" class="card quick-action-card">
                         <div class="card-content text-center">
                             <i class="fas fa-user-plus color-primary"></i>
@@ -264,7 +270,7 @@ if (empty($chart_labels)) { $chart_labels = [date('M Y')]; $chart_data = [0]; }
             </div>
 
             <!-- Recent Payments Table -->
-            <div class="section">
+            <div class="section-block">
                 <h3>Recent Payments</h3>
                 <div class="table-responsive">
                     <table class="table">
@@ -294,7 +300,7 @@ if (empty($chart_labels)) { $chart_labels = [date('M Y')]; $chart_data = [0]; }
             </div>
 
             <!-- Charts -->
-            <div class="section">
+            <div class="section-block">
                 <h3>Revenue Analytics</h3>
                 <canvas id="revenueChart" width="400" height="150"></canvas>
             </div>

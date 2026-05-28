@@ -89,7 +89,13 @@ try {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Parent Dashboard — <?php echo htmlspecialchars($school_name); ?></title>
-    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/design-tokens.css">
+    <link rel="stylesheet" href="../css/typography.css">
+    <link rel="stylesheet" href="../css/layout.css">
+    <link rel="stylesheet" href="../css/components.css">
+    <link rel="stylesheet" href="../css/animations.css">
+    <link rel="stylesheet" href="../css/3d-school.css">
+    <link rel="stylesheet" href="../css/style.css"><!-- legacy compat -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         .parent-container { display: flex; min-height: 100vh; }
@@ -235,7 +241,7 @@ try {
         </div>
 
         <!-- Stats -->
-        <div class="stat-cards">
+        <div class="stat-cards anim-stagger">
             <div class="stat-card">
                 <div class="icon blue"><i class="fas fa-users"></i></div>
                 <div class="info">

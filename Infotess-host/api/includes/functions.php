@@ -327,11 +327,12 @@ function renderSidebar($currentPage = '', $schoolName = 'Nex CEC') {
     
     // Sidebar
     $html .= '<aside class="sidebar" id="sidebar">';
-    $html .= '<div class="sidebar-header position-relative" style="padding: 20px 10px;">';
+    $html .= '<div class="sidebar-header">';
     $html .= '<button class="sidebar-close-btn" id="sidebarCloseBtn" aria-label="Close menu"><i class="fas fa-times"></i></button>';
     $logoUrl = getCachedSchoolLogoUrl();
-    $html .= '<img src="' . htmlspecialchars($logoUrl) . '" alt="Logo" style="width: 56px; height: 56px; object-fit: cover; background: #fff; border-radius: 50%; display: inline-block;" onerror="this.onerror=null;this.src=\'../images/aamusted.jpg\'">';
-    $html .= '<h3>' . htmlspecialchars($schoolName) . ' ' . $roleLabel . '</h3>';
+    $html .= '<img src="' . htmlspecialchars($logoUrl) . '" alt="Logo" class="sidebar-logo" onerror="this.onerror=null;this.src=\'../images/aamusted.jpg\'">';
+    $html .= '<h3 style="font-size: 14px; font-weight: 600; color: var(--color-charcoal); margin: var(--space-sm) 0 0;">' . htmlspecialchars($schoolName) . '</h3>';
+    $html .= '<span class="text-micro">' . $roleLabel . '</span>';
     $html .= '</div>';
     $html .= '<ul class="sidebar-menu">';
     

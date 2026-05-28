@@ -427,6 +427,110 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['clear_bills']) && $fi
     }
 }
 
+// Handle re-apply discounts (staff child + sibling) without touching existing fee items
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reapply_discounts']) && $filter_class) {
+    if (!isAdmin() && !empty($teacher_class_names) && !in_array($filter_class, $teacher_class_names)) {
+        $error = "Access denied: you are not authorized to modify bills for this class.";
+        goto render_page;
+    }
+    validate_request_csrf();
+    try {
+        // Re-fetch students with fresh data
+        $stmt = $pdo->prepare("SELECT * FROM students WHERE status = 'active' AND class_name = ? ORDER BY full_name ASC");
+        $stmt->execute([$filter_class]);
+        $fresh_students = $stmt->fetchAll();
+
+        // Rebuild staff map
+        $staff_map = [];
+        $stmtSt = $pdo->query("SELECT full_name, phone, email FROM staff WHERE status = 'active'");
+        foreach ($stmtSt->fetchAll() as $st) {
+            $name = trim($st['full_name'] ?? '');
+            $phone = trim($st['phone'] ?? '');
+            $email = trim($st['email'] ?? '');
+            if ($name !== '') $staff_map[$name] = true;
+            if ($phone !== '') $staff_map[$phone] = true;
+            if ($email !== '') $staff_map[$email] = true;
+        }
+
+        // Rebuild sibling groups
+        $guardian_groups = [];
+        foreach ($fresh_students as $s) {
+            $key = trim($s['guardian_phone_primary'] ?? '') ?: trim($s['guardian_email'] ?? '');
+            if ($key === '') continue;
+            if (!isset($guardian_groups[$key])) $guardian_groups[$key] = [];
+            $guardian_groups[$key][] = (int)$s['id'];
+        }
+        $sibling_ids = [];
+        foreach ($guardian_groups as $gkey => $sids) {
+            if (count($sids) >= 3) {
+                $sid_name_map = [];
+                foreach ($fresh_students as $s) {
+                    if (in_array((int)$s['id'], $sids)) {
+                        $sid_name_map[(int)$s['id']] = $s['full_name'] ?? '';
+                    }
+                }
+                asort($sid_name_map);
+                $sorted_sids = array_keys($sid_name_map);
+                for ($i = 2; $i < count($sorted_sids); $i++) {
+                    $sibling_ids[$sorted_sids[$i]] = true;
+                }
+            }
+        }
+
+        $user_id = $_SESSION['user_id'];
+        $stmtStaff = $pdo->prepare("SELECT id FROM staff WHERE user_id = ?");
+        $stmtStaff->execute([$user_id]);
+        $staffRow = $stmtStaff->fetch();
+        $staff_id = $staffRow ? (int)$staffRow['id'] : null;
+
+        $staff_discount = (float)($settings['staff_child_discount'] ?? 150.00);
+        $sibling_discount = (float)($settings['sibling_discount_amount'] ?? 150.00);
+
+        $staff_applied = 0;
+        $sibling_applied = 0;
+        $insStmt = $pdo->prepare("INSERT INTO student_bill_items (student_id, fee_structure_id, academic_year, term, title, amount, fee_type, is_optional, created_by) VALUES (?, NULL, ?, ?, ?, ?, 'Discount', 0, ?)");
+
+        foreach ($fresh_students as $s) {
+            $sid = (int)$s['id'];
+            $gname = trim($s['guardian_name'] ?? '');
+            $gphone = trim($s['guardian_phone_primary'] ?? '');
+            $gemail = trim($s['guardian_email'] ?? '');
+
+            // Staff Child Discount
+            $is_staff = isset($staff_map[$gname]) || isset($staff_map[$gphone]) || isset($staff_map[$gemail]);
+            if ($is_staff && $staff_discount > 0) {
+                $check = $pdo->prepare("SELECT id FROM student_bill_items WHERE student_id = ? AND academic_year = ? AND term = ? AND title = 'Staff Child Discount'");
+                $check->execute([$sid, $filter_year, $filter_term]);
+                if (!$check->fetch()) {
+                    $insStmt->execute([$sid, $filter_year, $filter_term, 'Staff Child Discount', (-1 * $staff_discount), $staff_id]);
+                    $staff_applied++;
+                }
+            }
+
+            // Sibling Discount (3rd+ child)
+            if (isset($sibling_ids[$sid]) && $sibling_discount > 0) {
+                $check = $pdo->prepare("SELECT id FROM student_bill_items WHERE student_id = ? AND academic_year = ? AND term = ? AND title = 'Sibling Discount (3rd Child)'");
+                $check->execute([$sid, $filter_year, $filter_term]);
+                if (!$check->fetch()) {
+                    $insStmt->execute([$sid, $filter_year, $filter_term, 'Sibling Discount (3rd Child)', (-1 * $sibling_discount), $staff_id]);
+                    $sibling_applied++;
+                }
+            }
+        }
+
+        $parts = [];
+        if ($staff_applied > 0) $parts[] = "$staff_applied Staff Child Discount(s)";
+        if ($sibling_applied > 0) $parts[] = "$sibling_applied Sibling Discount(s)";
+        if (empty($parts)) {
+            $message = "All discounts already applied — nothing to add.";
+        } else {
+            $message = "Discounts re-applied: " . implode(', ', $parts) . ".";
+        }
+    } catch (Exception $e) {
+        $error = "Error re-applying discounts: " . $e->getMessage();
+    }
+}
+
 render_page:
 ?>
 <!DOCTYPE html>
@@ -469,6 +573,8 @@ render_page:
         .btn-danger:hover { background: #c0392b; }
         .btn-warning { padding: 10px 24px; background: #f39c12; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; }
         .btn-warning:hover { background: #d68910; }
+        .btn-info { padding: 10px 24px; background: #3498db; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; }
+        .btn-info:hover { background: #2980b9; }
         .btn-back { padding: 10px 20px; background: #95a5a6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; text-decoration: none; display: inline-block; }
         .btn-back:hover { background: #7f8c8d; }
         .summary-bar { display: flex; justify-content: space-between; align-items: center; background: #1a5276; color: white; padding: 14px 20px; border-radius: 8px; margin-top: 16px; }
@@ -614,6 +720,9 @@ render_page:
                         </button>
                         <?php endif; ?>
                         <input type="hidden" name="apply_mode" id="apply_mode" value="all">
+                        <button type="submit" name="reapply_discounts" value="1" class="btn-info" onclick="return confirm('Re-apply Staff Child and Sibling discounts for <?php echo htmlspecialchars($filter_class); ?>? Existing fee items will not be changed.');">
+                            <i class="fas fa-percent"></i> Re-apply Discounts
+                        </button>
                         <button type="submit" name="clear_bills" value="1" class="btn-danger" onclick="return confirm('DELETE all bills for <?php echo htmlspecialchars($filter_class); ?>? This cannot be undone.');">
                             <i class="fas fa-trash"></i> Clear All Bills
                         </button>

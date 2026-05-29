@@ -30,11 +30,11 @@ foreach ($gallery_items as $item) {
 <!-- Hero Band -->
 <div class="hero-band-narrow">
     <div class="hero-band-content">
-        <span class="badge badge-on-dark" style="margin-bottom: var(--space-md);">Captured Moments</span>
+        <span class="badge badge-on-dark">Captured Moments</span>
         <h1 class="text-hero">Our Gallery</h1>
         <p class="text-on-dark-muted hero-band-text">Explore the vibrant life and learning at <?php echo htmlspecialchars($settings['school_name'] ?? 'Nex CEC'); ?> through our photo collection.</p>
     </div>
-    <div id="gallery-3d" class="school-3d-container content-3d" style="position: relative; margin: 0 auto; width: 100%; max-width: 400px; height: 300px; z-index: 2;"></div>
+    <div id="gallery-3d" class="school-3d-container content-3d"></div>
 </div>
 
 <!-- Gallery Section -->
@@ -61,7 +61,7 @@ foreach ($gallery_items as $item) {
                      alt="<?php echo htmlspecialchars($item['caption'] ?? 'Gallery image'); ?>"
                      loading="lazy"
                      onclick="openLightbox(this.src, '<?php echo htmlspecialchars($item['caption'] ?? ''); ?>')"
-                     onerror="this.onerror=null; this.parentElement.innerHTML='<div style=\"background:var(--color-tint-gray);height:200px;display:flex;align-items:center;justify-content:center;border-radius:var(--radius-lg);color:var(--color-steel);font-size:0.9rem;\">📷 Image</div>'">
+                     onerror="this.onerror=null; this.parentElement.classList.add('gallery-img-fallback');">
                 <?php if (!empty($item['caption'])): ?>
                 <div class="gallery-overlay" onclick="openLightbox('<?php echo htmlspecialchars($item['image_url']); ?>', '<?php echo htmlspecialchars($item['caption']); ?>')">
                     <span><?php echo htmlspecialchars($item['caption']); ?></span>
@@ -74,20 +74,20 @@ foreach ($gallery_items as $item) {
         <!-- Empty State -->
         <div class="empty-state anim-stagger visible">
             <div class="empty-state-icon">📸</div>
-            <h3 style="color: var(--color-charcoal); margin-bottom: var(--space-sm);">Gallery Coming Soon</h3>
-            <p style="color: var(--color-steel); max-width: 500px; margin: 0 auto var(--space-lg);">We're collecting our best moments! Check back soon to see photos of our students, events, and campus life.</p>
-            <div class="card-grid" style="max-width: 700px; margin: 0 auto;">
-                <div class="card" style="text-align: center; padding: var(--space-lg);">
-                    <div style="font-size: 2rem; margin-bottom: var(--space-xs);">🏫</div>
-                    <p style="font-size: var(--text-sm-size); color: var(--color-steel); margin: 0;">Campus Life</p>
+            <h3 class="mb-sm">Gallery Coming Soon</h3>
+            <p class="empty-state-text">We're collecting our best moments! Check back soon to see photos of our students, events, and campus life.</p>
+            <div class="card-grid mx-auto">
+                <div class="card text-center">
+                    <div class="card-icon-block">🏫</div>
+                    <p class="text-sm">Campus Life</p>
                 </div>
-                <div class="card" style="text-align: center; padding: var(--space-lg);">
-                    <div style="font-size: 2rem; margin-bottom: var(--space-xs);">🎓</div>
-                    <p style="font-size: var(--text-sm-size); color: var(--color-steel); margin: 0;">Graduations</p>
+                <div class="card text-center">
+                    <div class="card-icon-block">🎓</div>
+                    <p class="text-sm">Graduations</p>
                 </div>
-                <div class="card" style="text-align: center; padding: var(--space-lg);">
-                    <div style="font-size: 2rem; margin-bottom: var(--space-xs);">⚽</div>
-                    <p style="font-size: var(--text-sm-size); color: var(--color-steel); margin: 0;">Sports</p>
+                <div class="card text-center">
+                    <div class="card-icon-block">⚽</div>
+                    <p class="text-sm">Sports</p>
                 </div>
             </div>
         </div>
@@ -101,6 +101,22 @@ foreach ($gallery_items as $item) {
     <img id="lightbox-img" src="" alt="">
 </div>
 
+<style>
+.gallery-img-fallback {
+    background: var(--color-surface);
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-lg);
+    color: var(--color-steel);
+    font-size: 0.9rem;
+}
+.gallery-img-fallback::after {
+    content: "📷 Image";
+}
+</style>
+
 <script>
 // Lightbox
 function openLightbox(src, title) {
@@ -111,7 +127,6 @@ function openLightbox(src, title) {
     lb.classList.add('active');
     lb.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
-    // Focus close button for a11y
     setTimeout(function() {
         lb.querySelector('.lightbox-close').focus();
     }, 100);
@@ -137,11 +152,7 @@ document.querySelectorAll('.filter-btn').forEach(function(btn) {
         this.setAttribute('aria-pressed', 'true');
         var filter = this.getAttribute('data-filter');
         document.querySelectorAll('.gallery-figure').forEach(function(fig) {
-            if (filter === 'all' || fig.getAttribute('data-category') === filter) {
-                fig.style.display = '';
-            } else {
-                fig.style.display = 'none';
-            }
+            fig.style.display = (filter === 'all' || fig.getAttribute('data-category') === filter) ? '' : 'none';
         });
     });
 });

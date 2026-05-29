@@ -18,8 +18,9 @@
 }
 
 .school-3d-container.content-3d {
-  width: 400px;
-  height: 400px;
+  max-width: 400px;
+  width: 100%;
+  height: 300px;
   margin: 0 auto var(--space-xl);
 }
 

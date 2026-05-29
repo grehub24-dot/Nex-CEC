@@ -38,22 +38,20 @@ foreach ($events as $ev) {
 <!-- Hero Band -->
 <div class="hero-band-narrow">
     <div class="hero-band-content">
-        <span class="badge badge-on-dark" style="margin-bottom: var(--space-md);">Save the Date</span>
+        <span class="badge badge-on-dark">Save the Date</span>
         <h1 class="text-hero">Upcoming Events</h1>
         <p class="text-on-dark-muted hero-band-text">Mark your calendars! Stay connected with the latest school events, activities, and important dates at <?php echo htmlspecialchars($settings['school_name'] ?? 'Nex CEC'); ?>.</p>
     </div>
-    <div id="events-3d" class="school-3d-container content-3d" style="position: relative; margin: 0 auto; width: 100%; max-width: 400px; height: 300px; z-index: 2;"></div>
+    <div id="events-3d" class="school-3d-container content-3d"></div>
 </div>
 
 <section class="section-block">
     <div class="container">
         <?php if ($has_upcoming): ?>
         <!-- Upcoming Events Timeline -->
-        <div class="anim-stagger visible" style="margin-bottom: var(--space-section);">
-            <h2 class="section-title" style="text-align: left;">
-                <span>📅</span> Upcoming Events
-            </h2>
-            <p style="color: var(--color-slate); margin-bottom: var(--space-lg);">Events you won't want to miss this term.</p>
+        <div class="anim-stagger visible timeline-block">
+            <h2 class="section-title">📅 Upcoming Events</h2>
+            <p class="timeline-subtitle">Events you won't want to miss this term.</p>
             <div class="timeline">
                 <?php foreach ($upcoming_events as $ev): 
                     $day = date('d', strtotime($ev['event_date']));
@@ -62,22 +60,20 @@ foreach ($events as $ev) {
                 ?>
                 <div class="timeline-item">
                     <div class="timeline-dot"></div>
-                    <div style="display: flex; gap: var(--space-md); align-items: flex-start;">
+                    <div class="timeline-content">
                         <div class="timeline-date-box">
                             <div class="day"><?php echo $day; ?></div>
                             <div class="month"><?php echo $month; ?></div>
                             <div class="year"><?php echo $year; ?></div>
                         </div>
-                        <div>
-                            <h3 style="margin: 0 0 var(--space-xs);"><?php echo htmlspecialchars($ev['title']); ?></h3>
-                            <p style="color: var(--color-slate); margin: 0 0 var(--space-sm);"><?php echo htmlspecialchars($ev['description'] ?? 'No description available.'); ?></p>
+                        <div class="timeline-info">
+                            <h3><?php echo htmlspecialchars($ev['title']); ?></h3>
+                            <p class="timeline-desc"><?php echo htmlspecialchars($ev['description'] ?? 'No description available.'); ?></p>
                             <?php if (!empty($ev['location'])): ?>
-                            <div style="font-size: var(--text-sm-size); color: var(--color-steel); margin-bottom: var(--space-sm);">
-                                <span>📍</span> <?php echo htmlspecialchars($ev['location']); ?>
-                            </div>
+                            <div class="timeline-location">📍 <?php echo htmlspecialchars($ev['location']); ?></div>
                             <?php endif; ?>
                             <?php if (!empty($ev['source_url'])): ?>
-                            <a href="<?php echo htmlspecialchars($ev['source_url']); ?>" class="btn btn-primary" style="display: inline-flex;">More Info →</a>
+                            <a href="<?php echo htmlspecialchars($ev['source_url']); ?>" class="btn btn-primary">More Info →</a>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -89,27 +85,21 @@ foreach ($events as $ev) {
 
         <?php if ($has_past): ?>
         <!-- Past Events -->
-        <div>
-            <h2 class="section-title" style="text-align: left;">
-                <span>📖</span> Past Events
-            </h2>
-            <p style="color: var(--color-slate); margin-bottom: var(--space-lg);">Highlights from our recent activities.</p>
+        <div class="past-block">
+            <h2 class="section-title">📖 Past Events</h2>
+            <p class="past-subtitle">Highlights from our recent activities.</p>
             <div class="card-grid card-grid-3">
                 <?php
                 $sorted_past = array_reverse($past_events);
                 foreach ($sorted_past as $ev): 
                 ?>
-                <div class="card">
-                    <div class="card-content" style="padding: var(--space-md) var(--space-lg);">
-                        <div style="font-size: var(--text-caption-size); color: var(--color-steel); margin-bottom: var(--space-xs);">
-                            📅 <?php echo date('F d, Y', strtotime($ev['event_date'])); ?>
-                        </div>
+                <div class="card-premium">
+                    <div class="card-body">
+                        <div class="card-date">📅 <?php echo date('F d, Y', strtotime($ev['event_date'])); ?></div>
                         <h3 class="card-title"><?php echo htmlspecialchars($ev['title']); ?></h3>
                         <p class="card-text"><?php echo htmlspecialchars($ev['description'] ?? 'No description.'); ?></p>
                         <?php if (!empty($ev['location'])): ?>
-                        <div style="font-size: var(--text-sm-size); color: var(--color-steel); margin-top: var(--space-sm);">
-                            📍 <?php echo htmlspecialchars($ev['location']); ?>
-                        </div>
+                        <div class="event-location">📍 <?php echo htmlspecialchars($ev['location']); ?></div>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -122,12 +112,43 @@ foreach ($events as $ev) {
         <!-- Empty State -->
         <div class="empty-state">
             <div class="empty-state-icon">🗓️</div>
-            <h3 style="color: var(--color-charcoal); margin-bottom: var(--space-sm);">No Events Scheduled</h3>
-            <p style="color: var(--color-steel); max-width: 500px; margin: 0 auto;">There are no events posted yet. Check back soon for updates on school activities, parent-teacher meetings, and special celebrations.</p>
+            <h3 class="empty-state-title">No Events Scheduled</h3>
+            <p class="empty-state-text">There are no events posted yet. Check back soon for updates on school activities, parent-teacher meetings, and special celebrations.</p>
         </div>
         <?php endif; ?>
     </div>
 </section>
+
+<style>
+.timeline-block { margin-bottom: var(--space-section); }
+.timeline-subtitle,
+.past-subtitle {
+    color: var(--color-slate);
+    margin-bottom: var(--space-lg);
+}
+.timeline-content {
+    display: flex;
+    gap: var(--space-md);
+    align-items: flex-start;
+}
+.timeline-info h3 {
+    margin: 0 0 var(--space-xs);
+}
+.timeline-desc {
+    color: var(--color-slate);
+    margin: 0 0 var(--space-sm);
+}
+.timeline-location {
+    font-size: var(--text-sm-size);
+    color: var(--color-steel);
+    margin-bottom: var(--space-sm);
+}
+.event-location {
+    font-size: var(--text-sm-size);
+    color: var(--color-steel);
+    margin-top: var(--space-sm);
+}
+</style>
 
 <!-- 3D Calendar Scene (shared module) -->
 <script type="module">

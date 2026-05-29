@@ -14,7 +14,7 @@ description: >
   child-friendly. Colorful student photography breaks up blue/white blocks.
 
 colors:
-  # ---- 60/30/10 Palette — "Golden Waves" adaptation ----
+  # ---- 60/30/10 Palette — "Golden Waves" (from Piktochart) ----
   # 60% Base (Background) — Crisp White
   canvas: "#ffffff"
   surface: "#f6f5f4"
@@ -25,20 +25,22 @@ colors:
   primary-hover: "#3b6da0"
   primary-pressed: "#1e3a5f"
   on-primary: "#ffffff"
-  brand-navy: "#1e3a5f"       # Light Navy (nav, footer, headers)
+  brand-navy: "#1e3a5f"           # Light Navy (nav, footer, headers)
   brand-navy-deep: "#0f2847"
   brand-navy-mid: "#2b4c7e"
+  deep-blue: "#003366"            # From Golden Waves article — deeper navy
 
   # 10% Accent (Action) — Vibrant Gold (Golden Waves)
   accent: "#FFD700"
   accent-hover: "#FFE44D"
   accent-pressed: "#DAA520"
-  on-accent: "#1e3a5f"        # Navy text on gold (for readability)
+  on-accent: "#1e3a5f"            # Navy text on gold (for readability)
+  bold-orange: "#FF8C00"          # From Golden Waves article — energy/CTAs
 
   # Golden Waves secondary tones
-  soft-blue: "#A3C1DA"        # Calming secondary — section backgrounds
-  pale-yellow: "#F0E68C"      # Warm highlight — banners, badges
-  tint-soft-blue: "#D6E4F0"   # Light soft blue tint for cards
+  soft-blue: "#A3C1DA"           # Calming secondary — section backgrounds
+  pale-yellow: "#F0E68C"         # Warm highlight — banners, badges
+  tint-soft-blue: "#D6E4F0"      # Light soft blue tint for cards
   star: "#f5b342"
 
   # Functional links

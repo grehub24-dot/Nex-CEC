@@ -463,6 +463,45 @@ body {
   }
 }
 
+/* ---- Hero Band Content ---- */
+.hero-band-content {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.hero-band-text {
+  font-size: 18px;
+  line-height: 1.7;
+  max-width: 700px;
+  margin: 0 auto var(--space-xl);
+}
+
+.hero-band-meta {
+  display: flex;
+  gap: var(--space-xxl);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* ---- Focus Visible (a11y) ---- */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.nav-links a:focus-visible,
+.sidebar-menu a:focus-visible,
+.footer-link:focus-visible,
+.hamburger-btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
 /* ---- Skip Link (a11y) ---- */
 .skip-link {
   position: absolute;

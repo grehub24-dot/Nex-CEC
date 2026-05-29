@@ -1,6 +1,12 @@
 <?php
 require_once 'includes/header.php';
 
+$settings = [];
+try {
+    $stmt = $pdo->query("SELECT setting_key, setting_value FROM system_settings");
+    while ($row = $stmt->fetch()) { $settings[$row['setting_key']] = $row['setting_value']; }
+} catch (Exception $e) {}
+
 // Fetch gallery items
 $gallery_items = [];
 try {
@@ -21,32 +27,31 @@ foreach ($gallery_items as $item) {
 }
 ?>
 
-<!-- Hero Inner -->
-<section class="hero-inner">
-    <div class="container" style="text-align: center; position: relative; z-index: 2;">
-        <span class="badge-pill badge-gold" style="margin-bottom: 16px;">Captured Moments</span>
-        <h1 style="font-size: 2.8rem; color: #fff; margin-bottom: 12px;">Our Gallery</h1>
-        <p style="color: rgba(255,255,255,0.8); font-size: 1.1rem; max-width: 600px; margin: 0 auto;">Explore the vibrant life and learning at Chariot Educational Complex through our photo collection.</p>
+<!-- Hero Band -->
+<div class="hero-band-narrow">
+    <div class="hero-band-content">
+        <span class="badge badge-on-dark" style="margin-bottom: var(--space-md);">Captured Moments</span>
+        <h1 class="text-hero">Our Gallery</h1>
+        <p class="text-on-dark-muted hero-band-text">Explore the vibrant life and learning at <?php echo htmlspecialchars($settings['school_name'] ?? 'Nex CEC'); ?> through our photo collection.</p>
     </div>
-</section>
-
-<div id="gallery-3d" class="school-3d-container content-3d" style="margin: var(--space-xxl) auto; width: 100%; max-width: 400px; height: 300px;"></div>
+    <div id="gallery-3d" class="school-3d-container content-3d" style="position: relative; margin: 0 auto; width: 100%; max-width: 400px; height: 300px; z-index: 2;"></div>
+</div>
 
 <!-- Gallery Section -->
-<section class="section">
+<section class="section-block">
     <div class="container">
         <?php if (!empty($categories)): ?>
         <!-- Filter Buttons -->
-        <div class="stagger-children visible" style="text-align: center; margin-bottom: 36px;">
-            <button class="btn-gold gallery-filter active" data-filter="all" style="margin: 4px; padding: 8px 20px; font-size: 0.85rem;">All</button>
+        <div class="filter-bar anim-stagger visible">
+            <button class="filter-btn active" data-filter="all" aria-pressed="true">All</button>
             <?php foreach ($categories as $cat): ?>
-            <button class="btn-outline-gold gallery-filter" data-filter="<?php echo htmlspecialchars(strtolower($cat)); ?>" style="margin: 4px; padding: 8px 20px; font-size: 0.85rem;"><?php echo htmlspecialchars(ucfirst($cat)); ?></button>
+            <button class="filter-btn" data-filter="<?php echo htmlspecialchars(strtolower($cat)); ?>" aria-pressed="false"><?php echo htmlspecialchars(ucfirst($cat)); ?></button>
             <?php endforeach; ?>
         </div>
         <?php endif; ?>
 
         <?php if (!empty($gallery_items)): ?>
-        <!-- Masonry Grid -->
+        <!-- Gallery Grid -->
         <div class="gallery-masonry" id="gallery-grid">
             <?php foreach ($gallery_items as $item): 
                 $cat_class = !empty($item['category']) ? strtolower(htmlspecialchars($item['category'])) : 'uncategorized';
@@ -56,7 +61,7 @@ foreach ($gallery_items as $item) {
                      alt="<?php echo htmlspecialchars($item['caption'] ?? 'Gallery image'); ?>"
                      loading="lazy"
                      onclick="openLightbox(this.src, '<?php echo htmlspecialchars($item['caption'] ?? ''); ?>')"
-                     onerror="this.onerror=null; this.parentElement.innerHTML='<div style=\"background:#f0f0f0;height:200px;display:flex;align-items:center;justify-content:center;border-radius:16px;color:#999;font-size:0.9rem;\">📷 Image</div>'">
+                     onerror="this.onerror=null; this.parentElement.innerHTML='<div style=\"background:var(--color-tint-gray);height:200px;display:flex;align-items:center;justify-content:center;border-radius:var(--radius-lg);color:var(--color-steel);font-size:0.9rem;\">📷 Image</div>'">
                 <?php if (!empty($item['caption'])): ?>
                 <div class="gallery-overlay" onclick="openLightbox('<?php echo htmlspecialchars($item['image_url']); ?>', '<?php echo htmlspecialchars($item['caption']); ?>')">
                     <span><?php echo htmlspecialchars($item['caption']); ?></span>
@@ -67,22 +72,22 @@ foreach ($gallery_items as $item) {
         </div>
         <?php else: ?>
         <!-- Empty State -->
-        <div class="animate-on-scroll" style="text-align: center; padding: 60px 20px;">
-            <div style="font-size: 4rem; margin-bottom: 20px; opacity: 0.3;">📸</div>
-            <h3 style="color: #003366; margin-bottom: 12px;">Gallery Coming Soon</h3>
-            <p style="color: #888; max-width: 500px; margin: 0 auto 24px;">We're collecting our best moments! Check back soon to see photos of our students, events, and campus life at Chariot Educational Complex.</p>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; max-width: 700px; margin: 0 auto;">
-                <div style="background: #f5f5f5; border-radius: 12px; padding: 30px 20px; text-align: center;">
-                    <div style="font-size: 2rem; margin-bottom: 8px;">🏫</div>
-                    <p style="font-size: 0.85rem; color: #888; margin: 0;">Campus Life</p>
+        <div class="empty-state anim-stagger visible">
+            <div class="empty-state-icon">📸</div>
+            <h3 style="color: var(--color-charcoal); margin-bottom: var(--space-sm);">Gallery Coming Soon</h3>
+            <p style="color: var(--color-steel); max-width: 500px; margin: 0 auto var(--space-lg);">We're collecting our best moments! Check back soon to see photos of our students, events, and campus life.</p>
+            <div class="card-grid" style="max-width: 700px; margin: 0 auto;">
+                <div class="card" style="text-align: center; padding: var(--space-lg);">
+                    <div style="font-size: 2rem; margin-bottom: var(--space-xs);">🏫</div>
+                    <p style="font-size: var(--text-sm-size); color: var(--color-steel); margin: 0;">Campus Life</p>
                 </div>
-                <div style="background: #f5f5f5; border-radius: 12px; padding: 30px 20px; text-align: center;">
-                    <div style="font-size: 2rem; margin-bottom: 8px;">🎓</div>
-                    <p style="font-size: 0.85rem; color: #888; margin: 0;">Graduations</p>
+                <div class="card" style="text-align: center; padding: var(--space-lg);">
+                    <div style="font-size: 2rem; margin-bottom: var(--space-xs);">🎓</div>
+                    <p style="font-size: var(--text-sm-size); color: var(--color-steel); margin: 0;">Graduations</p>
                 </div>
-                <div style="background: #f5f5f5; border-radius: 12px; padding: 30px 20px; text-align: center;">
-                    <div style="font-size: 2rem; margin-bottom: 8px;">⚽</div>
-                    <p style="font-size: 0.85rem; color: #888; margin: 0;">Sports</p>
+                <div class="card" style="text-align: center; padding: var(--space-lg);">
+                    <div style="font-size: 2rem; margin-bottom: var(--space-xs);">⚽</div>
+                    <p style="font-size: var(--text-sm-size); color: var(--color-steel); margin: 0;">Sports</p>
                 </div>
             </div>
         </div>
@@ -90,9 +95,9 @@ foreach ($gallery_items as $item) {
     </div>
 </section>
 
-<!-- Lightbox -->
-<div class="lightbox" id="lightbox" onclick="closeLightbox()">
-    <span class="lightbox-close" onclick="closeLightbox()">&times;</span>
+<!-- Lightbox (a11y: dynamic alt + focus management) -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()" role="dialog" aria-modal="true" aria-label="Image preview">
+    <button class="lightbox-close" onclick="closeLightbox()" aria-label="Close image preview">&times;</button>
     <img id="lightbox-img" src="" alt="">
 </div>
 
@@ -102,27 +107,34 @@ function openLightbox(src, title) {
     var lb = document.getElementById('lightbox');
     var img = document.getElementById('lightbox-img');
     img.src = src;
+    img.alt = title || 'Gallery image preview';
     lb.classList.add('active');
+    lb.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
+    // Focus close button for a11y
+    setTimeout(function() {
+        lb.querySelector('.lightbox-close').focus();
+    }, 100);
 }
 function closeLightbox() {
     var lb = document.getElementById('lightbox');
     lb.classList.remove('active');
+    lb.setAttribute('aria-hidden', 'true');
     document.body.style.overflow = '';
 }
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') closeLightbox();
 });
 
-// Gallery filtering
-document.querySelectorAll('.gallery-filter').forEach(function(btn) {
+// Gallery filtering (a11y: aria-pressed)
+document.querySelectorAll('.filter-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {
-        document.querySelectorAll('.gallery-filter').forEach(function(b) {
-            b.className = b.className.replace(' btn-gold', ' btn-outline-gold');
+        document.querySelectorAll('.filter-btn').forEach(function(b) {
             b.classList.remove('active');
+            b.setAttribute('aria-pressed', 'false');
         });
-        this.className = this.className.replace(' btn-outline-gold', ' btn-gold');
         this.classList.add('active');
+        this.setAttribute('aria-pressed', 'true');
         var filter = this.getAttribute('data-filter');
         document.querySelectorAll('.gallery-figure').forEach(function(fig) {
             if (filter === 'all' || fig.getAttribute('data-category') === filter) {
@@ -133,89 +145,14 @@ document.querySelectorAll('.gallery-filter').forEach(function(btn) {
         });
     });
 });
-
-// Scroll animation
-(function() {
-    var els = document.querySelectorAll('.animate-on-scroll');
-    var observer = new IntersectionObserver(function(entries) {
-        entries.forEach(function(entry) {
-            if (entry.isIntersecting) {
-                entry.target.classList.add('visible');
-                observer.unobserve(entry.target);
-            }
-        });
-    }, { threshold: 0.1 });
-    els.forEach(function(el) { observer.observe(el); });
-})();
 </script>
 
-<!-- Three.js 3D Picture Frame Scene -->
-<script type="importmap">
-{
-    "imports": {
-        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
-    }
-}
-</script>
+<!-- 3D Picture Frame Scene (shared module) -->
 <script type="module">
-import * as THREE from 'three';
-(function initFrame() {
-    const container = document.getElementById('gallery-3d');
-    if (!container) return;
-    const w = container.offsetWidth || 400;
-    const h = container.offsetHeight || 300;
-    if (w < 100 || h < 100) return;
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(40, w / h, 0.1, 1000);
-    camera.position.set(1.5, 0.8, 2.5);
-    camera.lookAt(0, 0, 0);
-    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-    renderer.setSize(w, h);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    container.appendChild(renderer.domElement);
-    const ambient = new THREE.AmbientLight(0xffffff, 0.5);
-    scene.add(ambient);
-    const dir = new THREE.DirectionalLight(0xffffff, 0.8);
-    dir.position.set(2, 3, 4);
-    scene.add(dir);
-    // Frame (using EdgesGeometry for outline look)
-    const frameMat = new THREE.MeshPhongMaterial({ color: 0x5645d4, shininess: 40 });
-    const frame = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.0, 0.08), frameMat);
-    frame.position.z = 0;
-    scene.add(frame);
-    // Inner mat (lighter)
-    const matMat = new THREE.MeshPhongMaterial({ color: 0xe6e0f5 });
-    const inner = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.7, 0.09), matMat);
-    inner.position.set(0, 0, 0.04);
-    scene.add(inner);
-    // Image plane (photo inside frame)
-    const photoMat = new THREE.MeshBasicMaterial({ color: 0xd9f3e1 });
-    const photo = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.5), photoMat);
-    photo.position.set(0, 0, 0.09);
-    scene.add(photo);
-    // Small decorative dots at corners
-    const dotMat = new THREE.MeshBasicMaterial({ color: 0xffe8d4 });
-    const positions = [[-0.65, 0.45, 0.05], [0.65, 0.45, 0.05], [-0.65, -0.45, 0.05], [0.65, -0.45, 0.05]];
-    positions.forEach(function(pos) {
-        const dot = new THREE.Mesh(new THREE.CircleGeometry(0.03, 8), dotMat);
-        dot.position.set(pos[0], pos[1], pos[2]);
-        scene.add(dot);
-    });
-    function animate() {
-        requestAnimationFrame(animate);
-        scene.rotation.y += 0.005;
-        renderer.render(scene, camera);
+    import { initScene } from '../js/school-3d.js';
+    if (document.getElementById('gallery-3d')) {
+        initScene('gallery-3d', 'frame');
     }
-    animate();
-    window.addEventListener('resize', function() {
-        const w2 = container.offsetWidth || 400;
-        const h2 = container.offsetHeight || 300;
-        if (w2 < 100 || h2 < 100) return;
-        camera.aspect = w2 / h2;
-        camera.updateProjectionMatrix();
-        renderer.setSize(w2, h2);
-    });
-})();
 </script>
 
 <?php require_once 'includes/footer.php'; ?>

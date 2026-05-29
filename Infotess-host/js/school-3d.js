@@ -9,10 +9,11 @@
  *   'frame'     — Picture frame with inner mat and photo
  *   'calendar'  — Calendar with pages, grid, and spiral rings
  *
- * Usage (when consolidated):
+ * Usage:
  *   import { initScene } from './school-3d.js';
  *   initScene('hero-3d-container', 'school');
  */
+import * as THREE from 'three';
 
 /**
  * Detect WebGL support

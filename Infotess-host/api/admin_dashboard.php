@@ -101,7 +101,7 @@ if (empty($chart_labels)) { $chart_labels = [date('M Y')]; $chart_data = [0]; }
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <a href="#main-content" class="skip-link" style="position: absolute; top: -100%; left: 0; background: var(--primary-color); color: #fff; padding: 10px 20px; z-index: 9999; transition: top 0.2s;">Skip to main content</a>
+    <a href="#main-content" class="skip-link" style="position: absolute; top: -100%; left: 0; background: var(--color-primary); color: var(--color-on-dark); padding: 10px 20px; z-index: 9999; transition: top 0.2s;">Skip to main content</a>
     <style>.skip-link:focus { top: 0; }</style>
     <div class="dashboard-container">
             <?php echo renderSidebar('dashboard', $school_name); ?>
@@ -178,9 +178,9 @@ if (empty($chart_labels)) { $chart_labels = [date('M Y')]; $chart_data = [0]; }
                     </div>
                 </div>
                 <?php if (!empty($teacher_classes)): ?>
-                    <div style="margin-bottom: 25px; background: white; padding: 18px 22px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
-                        <strong style="font-size:14px; color:#1a5276;">Assigned Classes:</strong>
-                        <span style="margin-left: 10px; color: #555;"><?php echo htmlspecialchars(implode(', ', $teacher_classes)); ?></span>
+                    <div style="margin-bottom: 25px; background: var(--color-canvas); padding: 18px 22px; border-radius: var(--radius-lg); box-shadow: var(--shadow-md);">
+                        <strong style="font-size:14px; color: var(--color-brand-navy);">Assigned Classes:</strong>
+                        <span style="margin-left: 10px; color: var(--color-slate);"><?php echo htmlspecialchars(implode(', ', $teacher_classes)); ?></span>
                     </div>
                 <?php endif; ?>
             <?php else: ?>
@@ -249,13 +249,13 @@ if (empty($chart_labels)) { $chart_labels = [date('M Y')]; $chart_data = [0]; }
                     </a>
                     <a href="attendance.php" class="card quick-action-card">
                         <div class="card-content text-center">
-                            <i class="fas fa-user-check" style="color: #2e86c1;"></i>
+                            <i class="fas fa-user-check" style="color: var(--color-primary);"></i>
                             <p class="mt-10 fw-bold">Take Attendance</p>
                         </div>
                     </a>
                     <a href="payroll.php" class="card quick-action-card">
                         <div class="card-content text-center">
-                            <i class="fas fa-file-invoice-dollar" style="color: #8e44ad;"></i>
+                            <i class="fas fa-file-invoice-dollar" style="color: var(--color-accent-pink);"></i>
                             <p class="mt-10 fw-bold">Generate Payroll</p>
                         </div>
                     </a>
@@ -322,8 +322,8 @@ if (empty($chart_labels)) { $chart_labels = [date('M Y')]; $chart_data = [0]; }
                 datasets: [{
                     label: 'Revenue (GHS)',
                     data: <?php echo json_encode($chart_data); ?>,
-                    backgroundColor: 'rgba(0, 51, 102, 0.7)',
-                    borderColor: 'rgba(0, 51, 102, 1)',
+                    backgroundColor: 'rgba(86, 69, 212, 0.7)',
+                    borderColor: 'rgba(86, 69, 212, 1)',
                     borderWidth: 1
                 }]
             },

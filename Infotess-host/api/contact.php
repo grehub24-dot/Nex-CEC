@@ -33,83 +33,88 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 ?>
 
-<!-- Hero Inner -->
-<div class="hero-inner">
-    <h1>Contact <?php echo htmlspecialchars($school_name); ?></h1>
-    <p>We'd love to hear from you. Get in touch with our team for any inquiries or to schedule a visit.</p>
+<!-- Hero Band -->
+<div class="hero-band-narrow">
+    <div class="hero-band-content">
+        <h1 class="text-hero">Contact <?php echo htmlspecialchars($school_name); ?></h1>
+        <p class="text-on-dark-muted hero-band-text">We'd love to hear from you. Get in touch with our team for any inquiries or to schedule a visit.</p>
+    </div>
+    <div id="contact-3d" class="school-3d-container content-3d" style="position: relative; margin: 0 auto; width: 100%; max-width: 400px; height: 300px; z-index: 2;"></div>
 </div>
 
-<div id="contact-3d" class="school-3d-container content-3d" style="margin: var(--space-xxl) auto; width: 100%; max-width: 400px; height: 300px;"></div>
-
-<section class="section">
+<section class="section-block">
     <div class="container">
         <?php if ($message): ?>
-            <div class="alert alert-success" style="animation: fadeInDown 0.4s var(--ease-out-expo);"><?php echo htmlspecialchars($message); ?></div>
+            <div class="alert alert-success" style="animation: fadeInDown 0.4s var(--transition-base);"><?php echo htmlspecialchars($message); ?></div>
         <?php endif; ?>
         <?php if ($error): ?>
-            <div class="alert alert-danger" style="animation: fadeInDown 0.4s var(--ease-out-expo);"><?php echo htmlspecialchars($error); ?></div>
+            <div class="alert alert-danger" style="animation: fadeInDown 0.4s var(--transition-base);"><?php echo htmlspecialchars($error); ?></div>
         <?php endif; ?>
 
-        <div class="contact-grid">
+        <div class="card-grid card-grid-2" style="align-items: start;">
             <!-- Contact Form -->
-            <div class="contact-form-card">
-                <h3><i class="fas fa-paper-plane"></i> Send us a Message</h3>
-                <form method="POST" action="">
-                    <div class="grid-form">
-                        <div class="form-group">
-                            <label for="name" class="required">Full Name</label>
-                            <input type="text" id="name" name="name" class="form-control" required placeholder="Your full name">
+            <div class="card">
+                <div class="card-content" style="padding: var(--space-xl);">
+                    <h3 class="card-title" style="margin-bottom: var(--space-lg);"><i class="fas fa-paper-plane" style="color: var(--color-primary);"></i> Send us a Message</h3>
+                    <form method="POST" action="">
+                        <div class="card-grid card-grid-2" style="gap: var(--space-md);">
+                            <div class="form-group">
+                                <label for="name" class="required">Full Name</label>
+                                <input type="text" id="name" name="name" class="form-control" required placeholder="Your full name">
+                            </div>
+                            <div class="form-group">
+                                <label for="email" class="required">Email Address</label>
+                                <input type="email" id="email" name="email" class="form-control" required placeholder="your@email.com">
+                            </div>
                         </div>
                         <div class="form-group">
-                            <label for="email" class="required">Email Address</label>
-                            <input type="email" id="email" name="email" class="form-control" required placeholder="your@email.com">
+                            <label for="subject">Subject</label>
+                            <input type="text" id="subject" name="subject" class="form-control" placeholder="How can we help you?" value="General Inquiry">
                         </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="subject">Subject</label>
-                        <input type="text" id="subject" name="subject" class="form-control" placeholder="How can we help you?" value="General Inquiry">
-                    </div>
-                    <div class="form-group">
-                        <label for="message" class="required">Your Message</label>
-                        <textarea id="message" name="message" class="form-control" rows="6" required placeholder="Tell us more about your inquiry..."></textarea>
-                    </div>
-                    <button type="submit" class="btn-primary" style="width: 100%;"><i class="fas fa-paper-plane"></i> Send Message</button>
-                </form>
+                        <div class="form-group">
+                            <label for="message" class="required">Your Message</label>
+                            <textarea id="message" name="message" class="form-control" rows="6" required placeholder="Tell us more about your inquiry..."></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="width: 100%;"><i class="fas fa-paper-plane"></i> Send Message</button>
+                    </form>
+                </div>
             </div>
 
             <!-- Contact Info -->
-            <div class="contact-info-card">
-                <h3><i class="fas fa-address-card"></i> Contact Information</h3>
+            <div class="card">
+                <div class="card-content" style="padding: var(--space-xl);">
+                    <h3 class="card-title" style="margin-bottom: var(--space-lg);"><i class="fas fa-address-card" style="color: var(--color-primary);"></i> Contact Information</h3>
 
-                <div class="contact-info-item">
-                    <i class="fas fa-map-marker-alt"></i>
-                    <div>
-                        <strong>Location</strong>
-                        <span><?php echo nl2br(htmlspecialchars($settings['school_address'] ?? 'School Address, City, Ghana')); ?></span>
+                    <div style="display: flex; align-items: flex-start; gap: var(--space-md); margin-bottom: var(--space-lg);">
+                        <i class="fas fa-map-marker-alt" style="font-size: 1.2rem; color: var(--color-primary); margin-top: 4px;"></i>
+                        <div>
+                            <strong>Location</strong>
+                            <p style="margin: 0; color: var(--color-slate); font-size: var(--text-sm-size);"><?php echo nl2br(htmlspecialchars($settings['school_address'] ?? 'School Address, City, Ghana')); ?></p>
+                        </div>
                     </div>
-                </div>
 
-                <div class="contact-info-item">
-                    <i class="fas fa-phone-alt"></i>
-                    <div>
-                        <strong>Phone</strong>
-                        <span><a href="tel:<?php echo htmlspecialchars($settings['school_phone'] ?? ''); ?>"><?php echo htmlspecialchars($settings['school_phone'] ?? '+233 XX XXX XXXX'); ?></a></span>
+                    <div style="display: flex; align-items: flex-start; gap: var(--space-md); margin-bottom: var(--space-lg);">
+                        <i class="fas fa-phone-alt" style="font-size: 1.2rem; color: var(--color-primary); margin-top: 4px;"></i>
+                        <div>
+                            <strong>Phone</strong>
+                            <p style="margin: 0; color: var(--color-slate); font-size: var(--text-sm-size);"><a href="tel:<?php echo htmlspecialchars($settings['school_phone'] ?? ''); ?>"><?php echo htmlspecialchars($settings['school_phone'] ?? '+233 XX XXX XXXX'); ?></a></p>
+                        </div>
                     </div>
-                </div>
 
-                <div class="contact-info-item">
-                    <i class="fas fa-envelope"></i>
-                    <div>
-                        <strong>Email</strong>
-                        <span><a href="mailto:<?php echo htmlspecialchars($settings['school_email'] ?? ''); ?>"><?php echo htmlspecialchars($settings['school_email'] ?? 'info@school.edu.gh'); ?></a></span>
+                    <div style="display: flex; align-items: flex-start; gap: var(--space-md); margin-bottom: var(--space-lg);">
+                        <i class="fas fa-envelope" style="font-size: 1.2rem; color: var(--color-primary); margin-top: 4px;"></i>
+                        <div>
+                            <strong>Email</strong>
+                            <p style="margin: 0; color: var(--color-slate); font-size: var(--text-sm-size);"><a href="mailto:<?php echo htmlspecialchars($settings['school_email'] ?? ''); ?>"><?php echo htmlspecialchars($settings['school_email'] ?? 'info@school.edu.gh'); ?></a></p>
+                        </div>
                     </div>
-                </div>
 
-                <div class="contact-hours">
-                    <h4><i class="fas fa-clock"></i> Office Hours</h4>
-                    <p>Monday – Friday: <strong>7:30 AM – 4:00 PM</strong></p>
-                    <p>Saturday & Sunday: <strong>Closed</strong></p>
-                    <p style="margin-top: 10px; font-size: var(--text-xs); opacity: 0.75;"><i class="fas fa-info-circle"></i> We respond to messages within 24 hours during the school week.</p>
+                    <div style="border-top: 1px solid var(--color-hairline); padding-top: var(--space-lg); margin-top: var(--space-lg);">
+                        <h4 style="margin-bottom: var(--space-sm);"><i class="fas fa-clock" style="color: var(--color-primary);"></i> Office Hours</h4>
+                        <p style="margin: 0; color: var(--color-slate); font-size: var(--text-sm-size);">Monday – Friday: <strong>7:30 AM – 4:00 PM</strong></p>
+                        <p style="margin: var(--space-xs) 0 0; color: var(--color-slate); font-size: var(--text-sm-size);">Saturday &amp; Sunday: <strong>Closed</strong></p>
+                        <p style="margin-top: var(--space-md); font-size: var(--text-caption-size); color: var(--color-steel);"><i class="fas fa-info-circle"></i> We respond to messages within 24 hours during the school week.</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -117,98 +122,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </section>
 
 <!-- Map / Location Section -->
-<section class="section section-photo-bg section-photo-bg-contact" style="background: var(--color-gray-50); padding-top: var(--space-8); padding-bottom: var(--space-8);">
+<section class="section-block section-photo-bg">
     <style>
-        .section-photo-bg-contact::before {
+        .section-photo-bg-contact {
             background-image: url('images/students/gallery-1.jpg');
         }
     </style>
     <div class="container">
-        <div class="photo-split" style="align-items: stretch;">
-            <div class="photo-split-image" style="min-height: 300px;">
-                <img src="images/students/students-group-2.jpg" alt="<?php echo htmlspecialchars($school_name); ?> campus life" loading="lazy" style="min-height: 300px;">
+        <div class="card-grid card-grid-2" style="align-items: stretch;">
+            <div style="min-height: 300px;">
+                <img src="images/students/students-group-2.jpg" alt="<?php echo htmlspecialchars($school_name); ?> campus life" loading="lazy" style="width: 100%; min-height: 300px; object-fit: cover; border-radius: var(--radius-lg);">
             </div>
-            <div class="photo-split-content" style="display: flex; flex-direction: column; justify-content: center;">
-                <h2 style="font-size: var(--text-3xl); color: var(--color-primary); margin-bottom: var(--space-4);">Find Us</h2>
-                <p style="color: var(--text-muted); margin-bottom: var(--space-4);">We are located in the heart of the community. Visit our campus to see our facilities and meet our team.</p>
-                <div style="border-radius: var(--radius-lg); padding: var(--space-6); background: var(--color-gray-50); border: 1px solid var(--color-gray-200); text-align: center;">
+            <div style="display: flex; flex-direction: column; justify-content: center;">
+                <h2 class="section-title" style="text-align: left; margin-bottom: var(--space-lg);">Find Us</h2>
+                <p style="color: var(--color-slate); margin-bottom: var(--space-md);">We are located in the heart of the community. Visit our campus to see our facilities and meet our team.</p>
+                <div style="border-radius: var(--radius-lg); padding: var(--space-lg); background: var(--color-tint-gray); border: 1px solid var(--color-hairline); text-align: center;">
                     <i class="fas fa-map-marked-alt" style="font-size: 2rem; color: var(--color-primary); margin-bottom: 10px; display: block;"></i>
-                    <p style="font-weight: 600; color: var(--color-gray-700); margin-bottom: 4px;"><?php echo htmlspecialchars($settings['school_address'] ?? 'School Address, City, Ghana'); ?></p>
-                    <p style="font-size: var(--text-sm); color: var(--text-muted);">Interactive map available on Google Maps</p>
+                    <p style="font-weight: 600; color: var(--color-charcoal); margin-bottom: 4px;"><?php echo htmlspecialchars($settings['school_address'] ?? 'School Address, City, Ghana'); ?></p>
+                    <p style="font-size: var(--text-sm-size); color: var(--color-steel);">Interactive map available on Google Maps</p>
                 </div>
             </div>
         </div>
     </div>
 </section>
 
-<!-- Three.js 3D Envelope Scene -->
-<script type="importmap">
-{
-    "imports": {
-        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
-    }
-}
-</script>
+<!-- 3D Envelope Scene (shared module) -->
 <script type="module">
-import * as THREE from 'three';
-(function initEnvelope() {
-    const container = document.getElementById('contact-3d');
-    if (!container) return;
-    const w = container.offsetWidth || 400;
-    const h = container.offsetHeight || 300;
-    if (w < 100 || h < 100) return;
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(40, w / h, 0.1, 1000);
-    camera.position.set(2, 1.2, 2.5);
-    camera.lookAt(0, 0, 0);
-    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-    renderer.setSize(w, h);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    container.appendChild(renderer.domElement);
-    const ambient = new THREE.AmbientLight(0xffffff, 0.5);
-    scene.add(ambient);
-    const dir = new THREE.DirectionalLight(0xffffff, 0.8);
-    dir.position.set(2, 4, 3);
-    scene.add(dir);
-    // Envelope body (box with slight opening)
-    const envMat = new THREE.MeshPhongMaterial({ color: 0x5645d4, shininess: 20 });
-    const body = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.7, 0.8), envMat);
-    body.position.y = 0.35;
-    scene.add(body);
-    // Envelope flap (triangular shape using a cone with 3 sides)
-    const flapMat = new THREE.MeshPhongMaterial({ color: 0x4534b3, shininess: 15 });
-    const flap = new THREE.Mesh(new THREE.ConeGeometry(0.7, 0.15, 3), flapMat);
-    flap.position.set(0, 0.78, -0.1);
-    flap.rotation.x = 0.1;
-    flap.rotation.y = Math.PI;
-    scene.add(flap);
-    // Seal dot
-    const sealMat = new THREE.MeshPhongMaterial({ color: 0xffe8d4, emissive: 0xffcc80, emissiveIntensity: 0.2 });
-    const seal = new THREE.Mesh(new THREE.CircleGeometry(0.08, 16), sealMat);
-    seal.position.set(0, 0.78, 0.35);
-    seal.rotation.x = -0.3;
-    scene.add(seal);
-    // Gentle floating animation
-    let time = 0;
-    function animate() {
-        requestAnimationFrame(animate);
-        time += 0.02;
-        body.rotation.y += 0.004;
-        flap.rotation.y += 0.004;
-        body.position.y = 0.35 + Math.sin(time) * 0.04;
-        flap.position.y = 0.78 + Math.sin(time) * 0.04;
-        renderer.render(scene, camera);
+    import { initScene } from '../js/school-3d.js';
+    if (document.getElementById('contact-3d')) {
+        initScene('contact-3d', 'envelope');
     }
-    animate();
-    window.addEventListener('resize', function() {
-        const w2 = container.offsetWidth || 400;
-        const h2 = container.offsetHeight || 300;
-        if (w2 < 100 || h2 < 100) return;
-        camera.aspect = w2 / h2;
-        camera.updateProjectionMatrix();
-        renderer.setSize(w2, h2);
-    });
-})();
 </script>
 
 <?php require_once 'includes/footer.php'; ?>

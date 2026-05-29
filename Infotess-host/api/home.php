@@ -29,19 +29,19 @@ $years_count = 4;
     <div id="hero-3d-container" class="school-3d-container hero-3d"></div>
 
     <!-- Hero Content -->
-    <div style="position: relative; z-index: 2; text-align: center; max-width: 900px; margin: 0 auto; padding: 0 24px;">
+    <div class="hero-band-content">
         <h1 class="text-hero" style="margin-bottom: var(--space-md);">Welcome to <?php echo htmlspecialchars($school_name); ?></h1>
-        <p class="text-on-dark-muted" style="font-size: 18px; line-height: 1.7; max-width: 700px; margin: 0 auto var(--space-xl);">
+        <p class="text-on-dark-muted hero-band-text">
             <?php echo htmlspecialchars($settings['school_motto'] ?? 'Excellence in Education'); ?> — Providing quality education from Creche through Junior High School in a safe, nurturing, and academically excellent environment.
         </p>
         <div style="display: flex; gap: var(--space-md); flex-wrap: wrap; justify-content: center; margin-bottom: var(--space-xxl);">
             <a href="register.php" class="btn btn-on-dark btn-lg"><i class="fas fa-user-plus"></i> Enroll Now</a>
             <a href="contact.php" class="btn btn-secondary-on-dark btn-lg">Contact Us</a>
         </div>
-        <div style="display: flex; gap: var(--space-xxl); flex-wrap: wrap; justify-content: center;">
-            <span style="color: var(--color-on-dark-muted); font-size: 14px;"><i class="fas fa-calendar-check" style="color: var(--color-primary); margin-right: 6px;"></i> 18+ Years of Excellence</span>
-            <span style="color: var(--color-on-dark-muted); font-size: 14px;"><i class="fas fa-chalkboard-teacher" style="color: var(--color-primary); margin-right: 6px;"></i> Dedicated Staff</span>
-            <span style="color: var(--color-on-dark-muted); font-size: 14px;"><i class="fas fa-users" style="color: var(--color-primary); margin-right: 6px;"></i> Holistic Education</span>
+        <div class="hero-band-meta">
+            <span class="text-on-dark-muted" style="font-size: 14px;"><i class="fas fa-calendar-check" style="color: var(--color-primary); margin-right: 6px;"></i> 18+ Years of Excellence</span>
+            <span class="text-on-dark-muted" style="font-size: 14px;"><i class="fas fa-chalkboard-teacher" style="color: var(--color-primary); margin-right: 6px;"></i> Dedicated Staff</span>
+            <span class="text-on-dark-muted" style="font-size: 14px;"><i class="fas fa-users" style="color: var(--color-primary); margin-right: 6px;"></i> Holistic Education</span>
         </div>
     </div>
 </section>
@@ -187,177 +187,13 @@ $years_count = 4;
 </section>
 
 <!-- Three.js 3D School Building -->
-<script type="importmap">
-{
-    "imports": {
-        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
-    }
-}
-</script>
+<!-- 3D hero scene (shared module) -->
 <script type="module">
-import * as THREE from 'three';
-
-(function initSchoolScene() {
-    const container = document.getElementById('hero-3d-container');
-    if (!container) return;
-
-    // Check WebGL support
-    const canvas = document.createElement('canvas');
-    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-    if (!gl) {
-        container.classList.add('no-webgl');
-        return;
+    import { initScene } from '../js/school-3d.js';
+    if (document.getElementById('hero-3d-container')) {
+        initScene('hero-3d-container', 'school');
     }
-
-    const width = container.offsetWidth || 400;
-    const height = container.offsetHeight || 300;
-    if (width < 100 || height < 100) return;
-
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(35, width / height, 0.1, 1000);
-    camera.position.set(3, 1.5, 4);
-    camera.lookAt(0, 0, 0);
-
-    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-    renderer.setSize(width, height);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    container.appendChild(renderer.domElement);
-
-    // --- Lights ---
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-    scene.add(ambientLight);
-    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    dirLight.position.set(5, 8, 5);
-    dirLight.castShadow = true;
-    scene.add(dirLight);
-    const fillLight = new THREE.DirectionalLight(0x8888ff, 0.3);
-    fillLight.position.set(-3, 2, -3);
-    scene.add(fillLight);
-
-    // --- School Building (main block) ---
-    const buildingMat = new THREE.MeshPhongMaterial({
-        color: 0x5645d4,
-        emissive: 0x2a1a7a,
-        emissiveIntensity: 0.1,
-        shininess: 30,
-    });
-    const building = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.2, 1.0), buildingMat);
-    building.position.y = 0.6;
-    building.castShadow = true;
-    scene.add(building);
-
-    // Roof
-    const roofMat = new THREE.MeshPhongMaterial({
-        color: 0x0a1530,
-        shininess: 10,
-    });
-    const roof = new THREE.Mesh(new THREE.ConeGeometry(1.1, 0.5, 4), roofMat);
-    roof.position.y = 1.45;
-    roof.rotation.y = Math.PI / 4;
-    roof.castShadow = true;
-    scene.add(roof);
-
-    // Windows (row of small blocks)
-    const windowMat = new THREE.MeshPhongMaterial({
-        color: 0xffe8d4,
-        emissive: 0xffcc80,
-        emissiveIntensity: 0.3,
-    });
-    for (let i = -0.5; i <= 0.5; i += 0.5) {
-        const windowBox = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.25, 0.05), windowMat);
-        windowBox.position.set(i, 0.65, 0.51);
-        scene.add(windowBox);
-        const windowBox2 = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.25, 0.05), windowMat);
-        windowBox2.position.set(i, 0.65, -0.51);
-        scene.add(windowBox2);
-    }
-
-    // Door
-    const doorMat = new THREE.MeshPhongMaterial({ color: 0x1a2a52 });
-    const door = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.4, 0.05), doorMat);
-    door.position.set(0, 0.2, 0.51);
-    scene.add(door);
-
-    // Ground plane
-    const groundMat = new THREE.MeshPhongMaterial({
-        color: 0x1a2a52,
-        transparent: true,
-        opacity: 0.3,
-    });
-    const ground = new THREE.Mesh(new THREE.CircleGeometry(2.5, 32), groundMat);
-    ground.rotation.x = -Math.PI / 2;
-    ground.position.y = -0.01;
-    ground.receiveShadow = true;
-    scene.add(ground);
-
-    // --- Floating books ---
-    const bookMat = new THREE.MeshPhongMaterial({ color: 0xd9f3e1 });
-    const bookMat2 = new THREE.MeshPhongMaterial({ color: 0xe6e0f5 });
-    const bookMat3 = new THREE.MeshPhongMaterial({ color: 0xffe8d4 });
-
-    const book1 = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.05, 0.2), bookMat);
-    book1.position.set(-1.4, 1.0, 0.6);
-    book1.rotation.z = 0.1;
-    scene.add(book1);
-
-    const book2 = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.05, 0.18), bookMat2);
-    book2.position.set(-1.3, 1.1, 0.7);
-    book2.rotation.z = -0.05;
-    scene.add(book2);
-
-    const book3 = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.05, 0.22), bookMat3);
-    book3.position.set(-1.5, 1.2, 0.5);
-    book3.rotation.z = 0.15;
-    scene.add(book3);
-
-    // --- Small floating stars/particles ---
-    const starMat = new THREE.PointsMaterial({
-        color: 0xffffff,
-        size: 0.02,
-        transparent: true,
-        opacity: 0.4,
-    });
-    const starPositions = [];
-    for (let i = 0; i < 60; i++) {
-        const theta = Math.random() * Math.PI * 2;
-        const phi = Math.acos(2 * Math.random() - 1);
-        const r = 2.5 + Math.random() * 1.5;
-        starPositions.push(
-            r * Math.sin(phi) * Math.cos(theta),
-            r * Math.cos(phi) * 0.5 + 0.5,
-            r * Math.sin(phi) * Math.sin(theta)
-        );
-    }
-    const starGeo = new THREE.BufferGeometry();
-    starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPositions, 3));
-    const stars = new THREE.Points(starGeo, starMat);
-    scene.add(stars);
-
-    // --- Animation ---
-    function animate() {
-        requestAnimationFrame(animate);
-        building.rotation.y += 0.005;
-        roof.rotation.y += 0.005;
-        book1.rotation.y += 0.003;
-        book2.rotation.y += 0.003;
-        book3.rotation.y += 0.003;
-        stars.rotation.y -= 0.001;
-        renderer.render(scene, camera);
-    }
-    animate();
-
-    // --- Resize ---
-    window.addEventListener('resize', function() {
-        const w = container.offsetWidth || 400;
-        const h = container.offsetHeight || 300;
-        if (w < 100 || h < 100) return;
-        camera.aspect = w / h;
-        camera.updateProjectionMatrix();
-        renderer.setSize(w, h);
-    });
-})();
 </script>
+
 
 <?php require_once 'includes/footer.php'; ?>

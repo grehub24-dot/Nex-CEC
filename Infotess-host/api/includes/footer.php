@@ -1,65 +1,102 @@
     </main>
 
-    <!-- Public Footer (Navy) -->
-    <footer class="footer-navy">
-        <div class="footer-grid">
-            <!-- Brand -->
-            <div class="footer-brand">
-                <img src="<?php echo htmlspecialchars($school_logo); ?>" alt="<?php echo htmlspecialchars($school_name); ?> Logo" class="footer-logo" onerror="this.onerror=null;this.src='<?php echo $base_url; ?>images/chariot-logo.svg'">
-                <h3 class="footer-brand-name"><?php echo htmlspecialchars($school_name); ?></h3>
-                <p class="footer-motto"><?php echo htmlspecialchars($settings['school_motto'] ?? 'Excellence in Education'); ?></p>
-                <p class="footer-desc">Providing quality basic education from Creche through JHS — building strong academic foundations, character development, and holistic growth for every child.</p>
-                <div class="footer-social">
-                    <a href="<?php echo htmlspecialchars($settings['school_facebook'] ?? '#'); ?>" target="_blank" rel="noopener" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
-                    <a href="<?php echo htmlspecialchars($settings['school_twitter'] ?? '#'); ?>" target="_blank" rel="noopener" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
-                    <a href="<?php echo htmlspecialchars($settings['school_instagram'] ?? '#'); ?>" target="_blank" rel="noopener" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
-                    <a href="<?php echo htmlspecialchars($settings['school_youtube'] ?? '#'); ?>" target="_blank" rel="noopener" aria-label="YouTube"><i class="fab fa-youtube"></i></a>
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <!-- School Info -->
+                <div class="footer-section footer-brand">
+                    <img src="<?php echo htmlspecialchars($school_logo); ?>" alt="<?php echo htmlspecialchars($school_name); ?> Logo" height="50" class="footer-logo" onerror="this.onerror=null;this.src='<?php echo $base_url; ?>images/chariot-logo.svg'">
+                    <h3><?php echo htmlspecialchars($school_name); ?></h3>
+                    <p><?php echo htmlspecialchars($school_motto); ?></p>
+                    <p class="footer-description">Providing quality basic education from Creche through JHS — building strong academic foundations, character development, and holistic growth for every child.</p>
+                    <div class="footer-social">
+                        <?php if (!empty($settings['school_facebook'] ?? '')): ?>
+                            <a href="<?php echo htmlspecialchars($settings['school_facebook']); ?>" target="_blank" rel="noopener" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+                        <?php endif; ?>
+                        <?php if (!empty($settings['school_twitter'] ?? '')): ?>
+                            <a href="<?php echo htmlspecialchars($settings['school_twitter']); ?>" target="_blank" rel="noopener" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
+                        <?php endif; ?>
+                        <?php if (!empty($settings['school_instagram'] ?? '')): ?>
+                            <a href="<?php echo htmlspecialchars($settings['school_instagram']); ?>" target="_blank" rel="noopener" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+                        <?php endif; ?>
+                        <?php if (!empty($settings['school_youtube'] ?? '')): ?>
+                            <a href="<?php echo htmlspecialchars($settings['school_youtube']); ?>" target="_blank" rel="noopener" aria-label="YouTube"><i class="fab fa-youtube"></i></a>
+                        <?php endif; ?>
+                        <!-- Default social icons if not configured -->
+                        <?php if (empty($settings['school_facebook'] ?? '') && empty($settings['school_twitter'] ?? '') && empty($settings['school_instagram'] ?? '') && empty($settings['school_youtube'] ?? '')): ?>
+                            <a href="#" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+                            <a href="#" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
+                            <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+                            <a href="#" aria-label="YouTube"><i class="fab fa-youtube"></i></a>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <!-- Quick Links -->
+                <div class="footer-section">
+                    <h3><i class="fas fa-link"></i> Quick Links</h3>
+                    <ul>
+                        <li><a href="<?php echo $base_url; ?>index.php"><i class="fas fa-chevron-right"></i> Home</a></li>
+                        <li><a href="<?php echo $base_url; ?>about.php"><i class="fas fa-chevron-right"></i> About Us</a></li>
+                        <li><a href="<?php echo $base_url; ?>news.php"><i class="fas fa-chevron-right"></i> News & Updates</a></li>
+                        <li><a href="<?php echo $base_url; ?>events.php"><i class="fas fa-chevron-right"></i> School Events</a></li>
+                        <li><a href="<?php echo $base_url; ?>gallery.php"><i class="fas fa-chevron-right"></i> Photo Gallery</a></li>
+                        <li><a href="<?php echo $base_url; ?>resources.php"><i class="fas fa-chevron-right"></i> Resources</a></li>
+                        <li><a href="<?php echo $base_url; ?>register.php"><i class="fas fa-chevron-right"></i> Enroll Now</a></li>
+                        <li><a href="<?php echo $base_url; ?>contact.php"><i class="fas fa-chevron-right"></i> Contact Us</a></li>
+                    </ul>
+                </div>
+
+                <!-- Contact Info -->
+                <div class="footer-section">
+                    <h3><i class="fas fa-address-card"></i> Contact Us</h3>
+                    <ul class="footer-contact">
+                        <li>
+                            <i class="fas fa-map-marker-alt"></i>
+                            <span><?php echo htmlspecialchars($settings['school_address'] ?? 'School Address, City, Ghana'); ?></span>
+                        </li>
+                        <li>
+                            <i class="fas fa-phone-alt"></i>
+                            <span><a href="tel:<?php echo htmlspecialchars($settings['school_phone'] ?? ''); ?>"><?php echo htmlspecialchars($settings['school_phone'] ?? '+233 XX XXX XXXX'); ?></a></span>
+                        </li>
+                        <li>
+                            <i class="fas fa-envelope"></i>
+                            <span><a href="mailto:<?php echo htmlspecialchars($settings['school_email'] ?? ''); ?>"><?php echo htmlspecialchars($settings['school_email'] ?? 'info@school.edu.gh'); ?></a></span>
+                        </li>
+                    </ul>
+                    <div class="footer-hours">
+                        <h4><i class="fas fa-clock"></i> Office Hours</h4>
+                        <p>Monday – Friday: <strong>7:30 AM – 4:00 PM</strong></p>
+                        <p>Saturday & Sunday: <strong>Closed</strong></p>
+                    </div>
+                </div>
+
+                <!-- Newsletter / CTA -->
+                <div class="footer-section">
+                    <h3><i class="fas fa-bullhorn"></i> Stay Connected</h3>
+                    <p>Get the latest school news and updates delivered to your inbox.</p>
+                    <form class="footer-newsletter" method="post" action="<?php echo $base_url; ?>contact.php">
+                        <div class="newsletter-input-group">
+                            <input type="email" name="email" placeholder="Your email address" required aria-label="Email for newsletter">
+                            <button type="submit" aria-label="Subscribe"><i class="fas fa-paper-plane"></i></button>
+                        </div>
+                    </form>
+                    <div class="footer-cta">
+                        <p>Ready to join our school community?</p>
+                        <a href="<?php echo $base_url; ?>register.php" class="btn-cta">Enroll Your Child Today</a>
+                    </div>
                 </div>
             </div>
 
-            <!-- Quick Links -->
-            <div>
-                <h4 class="footer-heading">Quick Links</h4>
-                <a href="<?php echo $base_url; ?>index.php" class="footer-link">Home</a>
-                <a href="<?php echo $base_url; ?>about.php" class="footer-link">About Us</a>
-                <a href="<?php echo $base_url; ?>news.php" class="footer-link">News & Updates</a>
-                <a href="<?php echo $base_url; ?>events.php" class="footer-link">School Events</a>
-                <a href="<?php echo $base_url; ?>gallery.php" class="footer-link">Photo Gallery</a>
-                <a href="<?php echo $base_url; ?>contact.php" class="footer-link">Contact Us</a>
+            <div class="footer-bottom">
+                <p>&copy; <?php echo date('Y'); ?> <?php echo htmlspecialchars($school_name); ?>. All Rights Reserved.</p>
+                <ul class="footer-bottom-links">
+                    <li><a href="<?php echo $base_url; ?>about.php">About</a></li>
+                    <li><a href="<?php echo $base_url; ?>contact.php">Contact</a></li>
+                    <li><a href="<?php echo $base_url; ?>login.php">Staff Login</a></li>
+                </ul>
             </div>
-
-            <!-- Programs -->
-            <div>
-                <h4 class="footer-heading">Programs</h4>
-                <a href="<?php echo $base_url; ?>about.php#early-childhood" class="footer-link">Creche (1–2 yrs)</a>
-                <a href="<?php echo $base_url; ?>about.php#early-childhood" class="footer-link">Nursery (2–4 yrs)</a>
-                <a href="<?php echo $base_url; ?>about.php#early-childhood" class="footer-link">Kindergarten (4–6 yrs)</a>
-                <a href="<?php echo $base_url; ?>about.php#primary" class="footer-link">Primary (6–11 yrs)</a>
-                <a href="<?php echo $base_url; ?>about.php#jhs" class="footer-link">JHS (11–14 yrs)</a>
-            </div>
-
-            <!-- Contact -->
-            <div>
-                <h4 class="footer-heading">Contact</h4>
-                <a href="tel:<?php echo htmlspecialchars($settings['school_phone'] ?? ''); ?>" class="footer-link"><i class="fas fa-phone-alt footer-icon"></i> <?php echo htmlspecialchars($settings['school_phone'] ?? '+233 XX XXX XXXX'); ?></a>
-                <a href="mailto:<?php echo htmlspecialchars($settings['school_email'] ?? ''); ?>" class="footer-link"><i class="fas fa-envelope footer-icon"></i> <?php echo htmlspecialchars($settings['school_email'] ?? 'info@school.edu.gh'); ?></a>
-                <span class="footer-link"><i class="fas fa-map-marker-alt footer-icon"></i> <?php echo htmlspecialchars($settings['school_address'] ?? 'School Address, City, Ghana'); ?></span>
-                <div class="footer-hours">
-                    <p class="footer-hours-label">Office Hours</p>
-                    <p class="footer-hours-text">Mon–Fri: 7:30 AM – 4:00 PM</p>
-                </div>
-            </div>
-        </div>
-
-        <hr class="footer-divider">
-
-        <div class="footer-bottom">
-            <span>&copy; <?php echo date('Y'); ?> <?php echo htmlspecialchars($school_name); ?>. All rights reserved.</span>
-            <ul class="footer-bottom-links">
-                <li><a href="<?php echo $base_url; ?>about.php">About</a></li>
-                <li><a href="<?php echo $base_url; ?>contact.php">Contact</a></li>
-                <li><a href="<?php echo $base_url; ?>login.php">Staff Login</a></li>
-            </ul>
         </div>
     </footer>
 

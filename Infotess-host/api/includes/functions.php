@@ -126,7 +126,6 @@ function getAccessControl() {
         'module_settings' => ['admin', 'super_admin'],
         'users' => ['admin', 'super_admin'],
         'role_permissions' => ['admin', 'super_admin'],
-        'resources' => ['admin', 'super_admin'],
         'bulk_import' => ['admin', 'super_admin'],
         
         // Admin + Teacher
@@ -287,8 +286,6 @@ function getSidebarMenu($currentPage = '') {
         $allItems[] = ['href' => 'module_settings.php', 'icon' => 'fas fa-cogs', 'label' => 'Module Settings', 'acl' => 'module_settings'];
         $allItems[] = ['href' => 'subjects.php', 'icon' => 'fas fa-book', 'label' => 'Subjects', 'acl' => 'subjects'];
         $allItems[] = ['href' => 'link_subjects.php', 'icon' => 'fas fa-link', 'label' => 'Link Subjects', 'acl' => 'subjects'];
-        $allItems[] = ['href' => 'resources.php', 'icon' => 'fas fa-bookmark', 'label' => 'Resource Links', 'acl' => 'resources'];
-        $allItems[] = ['href' => 'lesson_notes.php', 'icon' => 'fas fa-book-open', 'label' => 'Lesson Notes', 'acl' => 'resources'];
         $allItems[] = ['href' => 'academic_calendar.php', 'icon' => 'fas fa-calendar-alt', 'label' => 'Academic Calendar', 'acl' => 'settings'];
         $allItems[] = ['href' => 'settings.php', 'icon' => 'fas fa-tools', 'label' => 'System Settings', 'acl' => 'settings'];
     }
@@ -320,26 +317,24 @@ function renderSidebar($currentPage = '', $schoolName = 'Nex CEC') {
     $html = '';
     
     // Hamburger button (visible on mobile)
-    $html .= '<button class="hamburger-btn" id="hamburgerBtn" aria-label="Open menu" aria-expanded="false"><i class="fas fa-bars"></i></button>';
+    $html .= '<button class="hamburger-btn" id="hamburgerBtn" aria-label="Open menu"><i class="fas fa-bars"></i></button>';
     
     // Sidebar overlay
     $html .= '<div class="sidebar-overlay" id="sidebarOverlay"></div>';
     
     // Sidebar
-    $html .= '<aside class="sidebar" id="sidebar" aria-label="Primary navigation">';
-    $html .= '<div class="sidebar-header">';
+    $html .= '<aside class="sidebar" id="sidebar">';
+    $html .= '<div class="sidebar-header position-relative" style="padding: 20px 10px;">';
     $html .= '<button class="sidebar-close-btn" id="sidebarCloseBtn" aria-label="Close menu"><i class="fas fa-times"></i></button>';
     $logoUrl = getCachedSchoolLogoUrl();
-    $html .= '<img src="' . htmlspecialchars($logoUrl) . '" alt="Logo" class="sidebar-logo" onerror="this.onerror=null;this.src=\'../images/aamusted.jpg\'">';
-    $html .= '<h3 style="font-size: 14px; font-weight: 600; color: var(--color-charcoal); margin: var(--space-sm) 0 0;">' . htmlspecialchars($schoolName) . '</h3>';
-    $html .= '<span class="text-micro">' . $roleLabel . '</span>';
+    $html .= '<img src="' . htmlspecialchars($logoUrl) . '" alt="Logo" style="width: 56px; height: 56px; object-fit: cover; background: #fff; border-radius: 50%; display: inline-block;" onerror="this.onerror=null;this.src=\'../images/aamusted.jpg\'">';
+    $html .= '<h3>' . htmlspecialchars($schoolName) . ' ' . $roleLabel . '</h3>';
     $html .= '</div>';
     $html .= '<ul class="sidebar-menu">';
     
     foreach ($menu as $item) {
-        $active = ($currentPage === basename($item['href'], '.php'));
-        $attr = $active ? ' class="active" aria-current="page"' : '';
-        $html .= '<li><a href="' . htmlspecialchars($item['href']) . '"' . $attr . '><i class="' . htmlspecialchars($item['icon']) . '"></i> ' . htmlspecialchars($item['label']) . '</a></li>';
+        $active = ($currentPage === basename($item['href'], '.php')) ? ' class="active"' : '';
+        $html .= '<li><a href="' . htmlspecialchars($item['href']) . '"' . $active . '><i class="' . htmlspecialchars($item['icon']) . '"></i> ' . htmlspecialchars($item['label']) . '</a></li>';
     }
     
     $html .= '</ul></aside>';
@@ -406,13 +401,13 @@ function renderStaffSidebar($currentPage = '', $schoolName = 'Nex CEC', $unreadC
     $html = '';
     
     // Hamburger button (visible on mobile) — NO inline onclick, handled by JS below to avoid double-toggle
-    $html .= '<button class="hamburger-menu" id="hamburgerBtn" aria-label="Open menu" aria-expanded="false"><i class="fas fa-bars"></i></button>';
+    $html .= '<button class="hamburger-menu" id="hamburgerBtn"><i class="fas fa-bars"></i></button>';
     
     // Sidebar overlay (tapping it closes sidebar)
     $html .= '<div class="sidebar-overlay" id="sidebarOverlay" style="z-index:90;"></div>';
     
     // Sidebar
-    $html .= '<aside class="staff-sidebar" id="sidebar" aria-label="Staff navigation">';
+    $html .= '<aside class="staff-sidebar" id="sidebar">';
     $html .= '<div class="sidebar-header">';
     $logoUrl = getCachedSchoolLogoUrl();
     $html .= '<img src="' . htmlspecialchars($logoUrl) . '" alt="Logo" style="width:64px;height:64px;border-radius:50%;object-fit:cover;background:white;padding:3px;margin-bottom:10px;" onerror="this.onerror=null;this.src=\'../images/aamusted.jpg\'">';
@@ -426,9 +421,6 @@ function renderStaffSidebar($currentPage = '', $schoolName = 'Nex CEC', $unreadC
     
     $items = [
         ['href' => '../staff/dashboard.php', 'icon' => 'fas fa-home',        'label' => 'Dashboard',        'key' => 'dashboard'],
-        ['href' => '../staff/resources.php','icon' => 'fas fa-bookmark',      'label' => 'Teaching Resources','key' => 'resources'],
-        ['href' => '../staff/resource_assignments.php','icon' => 'fas fa-tasks', 'label' => 'My Assignments', 'key' => 'resource_assignments'],
-        ['href' => '../staff/lesson_notes.php','icon' => 'fas fa-book-open',   'label' => 'Lesson Notes',   'key' => 'lesson_notes'],
         ['href' => '../staff/grades.php',    'icon' => 'fas fa-clipboard-list', 'label' => 'SBA / Grades',    'key' => 'grades',      'teacherOnly' => true],
         ['href' => '../staff/attendance.php','icon' => 'fas fa-calendar-check','label' => 'My Attendance',   'key' => 'attendance'],
         ['href' => '../staff/payslip.php',   'icon' => 'fas fa-file-invoice-dollar','label' => 'Pay Slips',  'key' => 'payslip'],
@@ -452,9 +444,8 @@ function renderStaffSidebar($currentPage = '', $schoolName = 'Nex CEC', $unreadC
             continue;
         }
         
-        $active = ($currentPage === $item['key']);
-        $attr = $active ? ' class="active" aria-current="page"' : '';
-        $html .= '<li><a href="' . htmlspecialchars($item['href']) . '"' . $attr . '>';
+        $active = ($currentPage === $item['key']) ? ' class="active"' : '';
+        $html .= '<li><a href="' . htmlspecialchars($item['href']) . '"' . $active . '>';
         $html .= '<i class="' . $item['icon'] . '"></i> ' . htmlspecialchars($item['label']);
         if (!empty($item['badge']) && $item['badge'] > 0) {
             $html .= ' <span class="msg-count">' . (int)$item['badge'] . '</span>';
@@ -521,13 +512,13 @@ function renderParentSidebar($currentPage = '', $schoolName = 'Nex CEC', $unread
     $html = '';
     
     // Hamburger button (visible on mobile) — NO inline onclick, handled by JS below
-    $html .= '<button class="hamburger-menu" id="hamburgerBtn" aria-label="Open menu" aria-expanded="false"><i class="fas fa-bars"></i></button>';
+    $html .= '<button class="hamburger-menu" id="hamburgerBtn"><i class="fas fa-bars"></i></button>';
     
     // Sidebar overlay (tapping it closes sidebar) — z-index:90 keeps it between hamburger(200) and before page content
     $html .= '<div class="sidebar-overlay" id="sidebarOverlay" style="z-index:90;"></div>';
     
     // Sidebar
-    $html .= '<aside class="parent-sidebar" id="sidebar" aria-label="Parent navigation">';
+    $html .= '<aside class="parent-sidebar" id="sidebar">';
     $html .= '<div class="sidebar-header">';
         $logoUrl = getCachedSchoolLogoUrl();
         $html .= '<img src="' . htmlspecialchars($logoUrl) . '" alt="Logo" style="width:64px;height:64px;border-radius:50%;object-fit:cover;background:white;padding:3px;margin-bottom:10px;" onerror="this.onerror=null;this.src=\'../images/aamusted.jpg\'">';
@@ -538,39 +529,33 @@ function renderParentSidebar($currentPage = '', $schoolName = 'Nex CEC', $unread
     
     // Staff Dashboard link (for dual-role users who have children)
     if ($hasChildren) {
-        $isActive = ($currentPage === 'staff_dashboard');
-        $html .= '<li><a href="../staff/dashboard.php"' . ($isActive ? ' class="active" aria-current="page"' : '') . '><i class="fas fa-chalkboard-teacher"></i> Staff Dashboard</a></li>';
+        $active = ($currentPage === 'staff_dashboard') ? ' class="active"' : '';
+        $html .= '<li><a href="../staff/dashboard.php"' . $active . '><i class="fas fa-chalkboard-teacher"></i> Staff Dashboard</a></li>';
     }
     
     // My Children
-    $isActive = ($currentPage === 'dashboard');
-    $html .= '<li><a href="../parent/dashboard.php"' . ($isActive ? ' class="active" aria-current="page"' : '') . '><i class="fas fa-home"></i> My Children</a></li>';
+    $active = ($currentPage === 'dashboard') ? ' class="active"' : '';
+    $html .= '<li><a href="../parent/dashboard.php"' . $active . '><i class="fas fa-home"></i> My Children</a></li>';
     
-    // Learning at Home Resources
-    $isActive = ($currentPage === 'resources');
-    $html .= '<li><a href="../parent/resources.php"' . ($isActive ? ' class="active" aria-current="page"' : '') . '><i class="fas fa-bookmark"></i> Learning at Home</a></li>';
-    $isActive = ($currentPage === 'lesson_notes');
-    $html .= '<li><a href="../parent/lesson_notes.php"' . ($isActive ? ' class="active" aria-current="page"' : '') . '><i class="fas fa-book-open"></i> Lesson Notes</a></li>';
-
     // Messages (with unread badge)
-    $isActive = ($currentPage === 'messages');
-    $html .= '<li><a href="../parent/messages.php"' . ($isActive ? ' class="active" aria-current="page"' : '') . '><i class="fas fa-envelope"></i> Messages';
+    $active = ($currentPage === 'messages') ? ' class="active"' : '';
+    $html .= '<li><a href="../parent/messages.php"' . $active . '><i class="fas fa-envelope"></i> Messages';
     if ($unreadCount > 0) {
         $html .= ' <span class="msg-count">' . (int)$unreadCount . '</span>';
     }
     $html .= '</a></li>';
     
     // Academic Calendar
-    $isActive = ($currentPage === 'academic_calendar');
-    $html .= '<li><a href="../parent/academic_calendar.php"' . ($isActive ? ' class="active" aria-current="page"' : '') . '><i class="fas fa-calendar-alt"></i> Academic Calendar</a></li>';
+    $active = ($currentPage === 'academic_calendar') ? ' class="active"' : '';
+    $html .= '<li><a href="../parent/academic_calendar.php"' . $active . '><i class="fas fa-calendar-alt"></i> Academic Calendar</a></li>';
 
     // My Profile
-    $isActive = ($currentPage === 'profile');
-    $html .= '<li><a href="../parent/profile.php"' . ($isActive ? ' class="active" aria-current="page"' : '') . '><i class="fas fa-user-cog"></i> My Profile</a></li>';
+    $active = ($currentPage === 'profile') ? ' class="active"' : '';
+    $html .= '<li><a href="../parent/profile.php"' . $active . '><i class="fas fa-user-cog"></i> My Profile</a></li>';
     
     // Change Password
-    $isActive = ($currentPage === 'password');
-    $html .= '<li><a href="../parent/password-reset.php"' . ($isActive ? ' class="active" aria-current="page"' : '') . '><i class="fas fa-key"></i> Change Password</a></li>';
+    $active = ($currentPage === 'password') ? ' class="active"' : '';
+    $html .= '<li><a href="../parent/password-reset.php"' . $active . '><i class="fas fa-key"></i> Change Password</a></li>';
     
     // Logout
     $html .= '<li><a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>';

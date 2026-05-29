@@ -19,175 +19,354 @@ try {
     $stmt = $pdo->query("SELECT COUNT(*) as c FROM classes");
     $class_count = (int)$stmt->fetchColumn();
 } catch (Exception $e) {}
+// Graduating years (hard-coded to current + 3 for display)
 $years_count = 4;
 ?>
 
 <!-- Hero Section -->
-<section class="hero-band">
-    <div id="hero-3d-container" class="school-3d-container hero-3d"></div>
-    <div class="hero-band-content">
-        <h1 class="text-hero mb-sm">Welcome to <?php echo htmlspecialchars($school_name); ?></h1>
-        <p class="hero-band-text">
-            <?php echo htmlspecialchars($settings['school_motto'] ?? 'Excellence in Education'); ?>
-            — Providing quality education from Creche through Junior High School in a safe, nurturing, and academically excellent environment.
-        </p>
-        <div class="hero-ctas">
-            <a href="register.php" class="btn btn-accent btn-lg"><i class="fas fa-user-plus"></i> Enroll Now</a>
-            <a href="contact.php" class="btn btn-secondary-on-dark btn-lg">Contact Us</a>
+<section class="hero" style="position: relative; overflow: hidden;">
+    <!-- 3D Globe Canvas -->
+    <div id="globe-container" style="position: absolute; inset: 0; z-index: 1; pointer-events: none;"></div>
+    
+    <!-- Hero Content -->
+    <div style="position: relative; z-index: 2; text-align: center; width: 100%; max-width: 900px; margin: 0 auto;">
+        <h1 style="color: #ffffff;">Welcome to <?php echo htmlspecialchars($school_name); ?></h1>
+        <p style="font-size: 1.2rem; line-height: 1.7; color: #ffffff; margin-bottom: 30px;"><?php echo htmlspecialchars($school_motto); ?> — Providing quality education from Creche through Junior High School in a safe, nurturing, and academically excellent environment.</p>
+        <div class="hero-badges">
+            <span class="hero-badge"><i class="fas fa-calendar-check"></i> <span>18+ Years of Excellence</span></span>
+            <span class="hero-badge"><i class="fas fa-chalkboard-teacher"></i> <span>Dedicated Staff</span></span>
+            <span class="hero-badge"><i class="fas fa-users"></i> <span>Holistic Education</span></span>
         </div>
-        <div class="hero-band-meta">
-            <span class="text-on-dark-muted"><i class="fas fa-calendar-check"></i> 18+ Years of Excellence</span>
-            <span class="text-on-dark-muted"><i class="fas fa-chalkboard-teacher"></i> Dedicated Staff</span>
-            <span class="text-on-dark-muted"><i class="fas fa-users"></i> Holistic Education</span>
+        <div style="margin-top: 30px; display: flex; gap: 16px; flex-wrap: wrap; justify-content: center;">
+            <a href="register.php" class="btn-cta"><i class="fas fa-user-plus"></i> Enroll Now</a>
+            <a href="contact.php" class="btn-cta" style="background: transparent; color: #fff; border: 2px solid rgba(255,255,255,0.6);">Contact Us</a>
         </div>
     </div>
 </section>
 
-<!-- Stats Section -->
-<section class="stats-bar">
+<!-- Stats Counter Section (overlapping) -->
+<section class="stats-section">
     <div class="container">
-        <div class="grid-4 anim-stagger" id="statsGrid">
-            <div class="card-stat">
+        <div class="stats-grid">
+            <div class="stat-item" style="animation: fadeInUp 0.5s var(--ease-out-expo) both;">
                 <div class="stat-icon"><i class="fas fa-users"></i></div>
                 <h3><?php echo number_format($student_count); ?></h3>
-                <p class="stat-label">Students Enrolled</p>
+                <p>Students Enrolled</p>
             </div>
-            <div class="card-stat">
+            <div class="stat-item" style="animation: fadeInUp 0.5s var(--ease-out-expo) 0.1s both;">
                 <div class="stat-icon"><i class="fas fa-chalkboard-teacher"></i></div>
                 <h3><?php echo number_format($staff_count); ?></h3>
-                <p class="stat-label">Staff Members</p>
+                <p>Staff Members</p>
             </div>
-            <div class="card-stat">
+            <div class="stat-item" style="animation: fadeInUp 0.5s var(--ease-out-expo) 0.2s both;">
                 <div class="stat-icon"><i class="fas fa-graduation-cap"></i></div>
                 <h3><?php echo $class_count; ?>+</h3>
-                <p class="stat-label">Class Levels</p>
+                <p>Class Levels</p>
             </div>
-            <div class="card-stat">
+            <div class="stat-item" style="animation: fadeInUp 0.5s var(--ease-out-expo) 0.3s both;">
                 <div class="stat-icon"><i class="fas fa-trophy"></i></div>
                 <h3><?php echo $years_count; ?>+</h3>
-                <p class="stat-label">Years of Impact</p>
+                <p>Years of Impact</p>
             </div>
         </div>
     </div>
 </section>
 
 <!-- What We Offer -->
-<section class="section-block">
+<section class="features-section">
     <div class="container">
-        <h2 class="text-h2 text-center mb-xs">What We Offer</h2>
-        <p class="text-sm text-center max-w-sm mb-xl">
+        <h2 class="section-title">What We Offer</h2>
+        <p style="text-align: center; max-width: 700px; margin: -20px auto 50px; color: var(--text-muted);">
             Comprehensive educational programmes designed to nurture every child's potential from early childhood through junior high school.
         </p>
-        <div class="grid-3 anim-stagger" id="featuresGrid">
-            <div class="card-feature card-tint-peach">
-                <div class="card-feature-icon"><i class="fas fa-baby icon-color-orange"></i></div>
-                <h3 class="text-h3">Early Childhood</h3>
-                <p>Creche, Nursery, and Kindergarten programmes designed to spark curiosity, creativity, and a lifelong love for learning.</p>
-                <a href="about.php#early-childhood" class="btn-link">Learn More <i class="fas fa-arrow-right"></i></a>
+        <div class="photo-card-grid">
+            <div class="photo-card">
+                <div class="photo-card-image">
+                    <img src="images/students/early-childhood.jpg" alt="Early Childhood students at <?php echo htmlspecialchars($school_name); ?>" loading="lazy">
+                </div>
+                <div class="photo-card-body">
+                    <h3>Early Childhood</h3>
+                    <p>Creche, Nursery, and Kindergarten programmes designed to spark curiosity, creativity, and a lifelong love for learning in our youngest students.</p>
+                    <a href="about.php#early-childhood" class="btn-link">Learn More <i class="fas fa-arrow-right"></i></a>
+                </div>
             </div>
-            <div class="card-feature card-tint-mint">
-                <div class="card-feature-icon"><i class="fas fa-book-open icon-color-green"></i></div>
-                <h3 class="text-h3">Primary Education</h3>
-                <p>Basic 1 to 6 with a comprehensive curriculum covering core subjects, creative arts, ICT, and physical education.</p>
-                <a href="about.php#primary" class="btn-link">Learn More <i class="fas fa-arrow-right"></i></a>
+            <div class="photo-card">
+                <div class="photo-card-image">
+                    <img src="images/students/primary.jpg" alt="Primary students at <?php echo htmlspecialchars($school_name); ?>" loading="lazy">
+                </div>
+                <div class="photo-card-body">
+                    <h3>Primary Education</h3>
+                    <p>Basic 1 to 6 with a comprehensive curriculum covering core subjects, creative arts, ICT, and physical education for well-rounded development.</p>
+                    <a href="about.php#primary" class="btn-link">Learn More <i class="fas fa-arrow-right"></i></a>
+                </div>
             </div>
-            <div class="card-feature card-tint-soft-blue">
-                <div class="card-feature-icon"><i class="fas fa-graduation-cap icon-color-primary"></i></div>
-                <h3 class="text-h3">Junior High School</h3>
-                <p>JHS 1 to 3 preparing students for the BECE with strong academics, practical skills, and character formation.</p>
-                <a href="about.php#jhs" class="btn-link">Learn More <i class="fas fa-arrow-right"></i></a>
+            <div class="photo-card">
+                <div class="photo-card-image">
+                    <img src="images/students/jhs.jpg" alt="Junior High School students at <?php echo htmlspecialchars($school_name); ?>" loading="lazy">
+                </div>
+                <div class="photo-card-body">
+                    <h3>Junior High School</h3>
+                    <p>JHS 1 to 3 preparing students for the BECE with strong academics, practical skills, and character formation for future success.</p>
+                    <a href="about.php#jhs" class="btn-link">Learn More <i class="fas fa-arrow-right"></i></a>
+                </div>
             </div>
         </div>
     </div>
 </section>
 
 <!-- About Preview -->
-<section class="section-block surface-bg">
+<section class="section" style="background: var(--color-gray-50);">
     <div class="container">
-        <div class="split-layout">
-            <div class="split-content">
-                <span class="badge badge-primary mb-sm">Our School</span>
-                <h2 class="text-h2 mb-md">Nurturing Excellence, Building Character</h2>
-                <p><?php echo htmlspecialchars($school_name); ?> is a nurturing learning environment dedicated to building strong academic foundations, character development, and holistic growth for every child from Creche to JHS 3.</p>
-                <p class="mb-lg">Our school follows the Ghana Education Service curriculum while fostering creativity, discipline, and a love for lifelong learning. We believe in partnering with parents to provide the best possible educational experience for every child.</p>
-                <a href="about.php" class="btn btn-primary"><i class="fas fa-arrow-right"></i> Learn More About Us</a>
+        <div class="photo-split">
+            <div class="photo-split-image">
+                <img src="images/story-photo.jpg" alt="<?php echo htmlspecialchars($school_name); ?> students in class" loading="lazy">
             </div>
-            <div class="split-media">
-                <div id="about-3d-preview" class="school-3d-container content-3d"></div>
+            <div class="photo-split-content">
+                <h2>Our School</h2>
+                <p><?php echo htmlspecialchars($school_name); ?> is a nurturing learning environment dedicated to building strong academic foundations, character development, and holistic growth for every child from Creche to JHS 3.</p>
+                <p>Our school follows the Ghana Education Service curriculum while fostering creativity, discipline, and a love for lifelong learning. We believe in partnering with parents to provide the best possible educational experience for every child.</p>
+                <a href="about.php" class="btn-primary"><i class="fas fa-arrow-right"></i> Learn More About Us</a>
             </div>
         </div>
     </div>
 </section>
 
-<!-- Testimonials -->
-<section class="section-block">
+<!-- Testimonials Section -->
+<section class="testimonials-section">
     <div class="container">
-        <h2 class="text-h2 text-center mb-xs">What Parents Say</h2>
-        <p class="text-sm text-center max-w-sm mb-xl">
+        <h2 class="section-title">What Parents Say</h2>
+        <p style="text-align: center; max-width: 600px; margin: -20px auto 50px; opacity: 0.85;">
             Hear from our community of parents and guardians about their experience with our school.
         </p>
-        <div class="grid-3 anim-stagger" id="testimonialsGrid">
-            <div class="card-testimonial">
-                <div class="testimonial-stars">
+        <div class="testimonials-grid">
+            <div class="testimonial-card">
+                <div class="stars">
                     <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
                 </div>
-                <blockquote class="testimonial-quote">"The care and attention my child receives at <?php echo htmlspecialchars($school_name); ?> is outstanding. I've seen remarkable growth in both academics and confidence."</blockquote>
+                <blockquote>"The care and attention my child receives at <?php echo htmlspecialchars($school_name); ?> is outstanding. I've seen remarkable growth in both academics and confidence."</blockquote>
                 <div class="testimonial-author">
-                    <div class="testimonial-avatar">A</div>
-                    <div>
-                        <strong class="testimonial-name">Parent of KG 2 Student</strong>
-                        <span class="testimonial-role">Current Parent</span>
+                    <div class="avatar">A</div>
+                    <div class="testimonial-author-info">
+                        <strong>Parent of KG 2 Student</strong>
+                        <span>Current Parent</span>
                     </div>
                 </div>
             </div>
-            <div class="card-testimonial">
-                <div class="testimonial-stars">
+            <div class="testimonial-card">
+                <div class="stars">
                     <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
                 </div>
-                <blockquote class="testimonial-quote">"The dedicated teachers and small class sizes make all the difference. My child loves going to school every day!"</blockquote>
+                <blockquote>"The dedicated teachers and small class sizes make all the difference. My child loves going to school every day!"</blockquote>
                 <div class="testimonial-author">
-                    <div class="testimonial-avatar">M</div>
-                    <div>
-                        <strong class="testimonial-name">Parent of B4 Student</strong>
-                        <span class="testimonial-role">Current Parent</span>
+                    <div class="avatar">M</div>
+                    <div class="testimonial-author-info">
+                        <strong>Parent of B4 Student</strong>
+                        <span>Current Parent</span>
                     </div>
                 </div>
             </div>
-            <div class="card-testimonial">
-                <div class="testimonial-stars">
+            <div class="testimonial-card">
+                <div class="stars">
                     <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
                 </div>
-                <blockquote class="testimonial-quote">"Excellent preparation for the BECE. The academic standards are high, and the moral foundation my child received is invaluable."</blockquote>
+                <blockquote>"Excellent preparation for the BECE. The academic standards are high, and the moral foundation my child received is invaluable."</blockquote>
                 <div class="testimonial-author">
-                    <div class="testimonial-avatar">E</div>
-                    <div>
-                        <strong class="testimonial-name">Parent of JHS Graduate</strong>
-                        <span class="testimonial-role">Alumni Parent</span>
+                    <div class="avatar">E</div>
+                    <div class="testimonial-author-info">
+                        <strong>Parent of JHS Graduate</strong>
+                        <span>Alumni Parent</span>
                     </div>
                 </div>
+            </div>
+        </div>
+        <!-- Student Photo Strip -->
+        <div class="photo-strip">
+            <div class="photo-strip-item">
+                <img src="images/students/students-group-1.jpg" alt="<?php echo htmlspecialchars($school_name); ?> students" loading="lazy">
+            </div>
+            <div class="photo-strip-item">
+                <img src="images/students/gallery-1.jpg" alt="<?php echo htmlspecialchars($school_name); ?> student activity" loading="lazy">
+            </div>
+            <div class="photo-strip-item">
+                <img src="images/students/students-group-2.jpg" alt="<?php echo htmlspecialchars($school_name); ?> student life" loading="lazy">
             </div>
         </div>
     </div>
 </section>
 
-<!-- CTA Banner -->
-<section class="section-block surface-bg">
-    <div class="container text-center max-w-md">
-        <h2 class="text-h2 mb-sm">Enroll Your Child Today</h2>
-        <p class="mb-xl">Give your child the best foundation for a bright future. Registration is now open for all levels — Creche through JHS 3.</p>
-        <div class="cta-group">
-            <a href="register.php" class="btn btn-accent btn-lg"><i class="fas fa-user-plus"></i> Enroll Now</a>
-            <a href="contact.php" class="btn btn-secondary btn-lg"><i class="fas fa-phone-alt"></i> Contact Us</a>
+<!-- Call to Action -->
+<section class="cta-section">
+    <div class="container">
+        <h2>Enroll Your Child Today</h2>
+        <p>Give your child the best foundation for a bright future. Registration is now open for all levels — Creche through JHS 3.</p>
+        <div class="cta-buttons">
+            <a href="register.php" class="btn-cta"><i class="fas fa-user-plus"></i> Enroll Now</a>
+            <a href="contact.php" class="btn-cta-outline"><i class="fas fa-phone-alt"></i> Contact Us</a>
         </div>
     </div>
 </section>
 
-<!-- Three.js 3D School Building -->
-<script type="module">
-    import { initScene } from '../js/school-3d.js';
-    if (document.getElementById('hero-3d-container')) {
-        initScene('hero-3d-container', 'school');
+<!-- Three.js 3D Globe -->
+<script type="importmap">
+{
+    "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
     }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+
+(function initGlobe() {
+    const container = document.getElementById('globe-container');
+    if (!container) return;
+
+    const width = container.offsetWidth || window.innerWidth;
+    const height = container.offsetHeight || window.innerHeight;
+    if (width < 100 || height < 100) return;
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+    camera.position.set(0, 0.3, 3.8);
+
+    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    renderer.setSize(width, height);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    container.appendChild(renderer.domElement);
+
+    // --- Globe Sphere (wireframe) ---
+    const sphereGeo = new THREE.SphereGeometry(1.2, 32, 32);
+    const sphereMat = new THREE.MeshPhongMaterial({
+        color: 0x003366,
+        emissive: 0x002244,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.35,
+    });
+    const sphere = new THREE.Mesh(sphereGeo, sphereMat);
+    scene.add(sphere);
+
+    // --- Inner glowing sphere ---
+    const glowGeo = new THREE.SphereGeometry(1.15, 24, 24);
+    const glowMat = new THREE.MeshBasicMaterial({
+        color: 0x003366,
+        transparent: true,
+        opacity: 0.2,
+    });
+    const glowSphere = new THREE.Mesh(glowGeo, glowMat);
+    scene.add(glowSphere);
+
+    // --- Gold dots on globe surface ---
+    const dotsGroup = new THREE.Group();
+    const dotCount = 120;
+    const dotGeo = new THREE.SphereGeometry(0.025, 6, 6);
+    const dotMat = new THREE.MeshBasicMaterial({ color: 0xffcc00 });
+
+    for (let i = 0; i < dotCount; i++) {
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.acos(2 * Math.random() - 1);
+        const r = 1.22;
+        const x = r * Math.sin(phi) * Math.cos(theta);
+        const y = r * Math.sin(phi) * Math.sin(theta);
+        const z = r * Math.cos(phi);
+        const dot = new THREE.Mesh(dotGeo, dotMat);
+        dot.position.set(x, y, z);
+        dotsGroup.add(dot);
+    }
+    scene.add(dotsGroup);
+
+    // --- Connection lines between nearby dots ---
+    const linePositions = [];
+    const dotPositions = [];
+    dotsGroup.children.forEach(function(d) { dotPositions.push(d.position); });
+    for (let i = 0; i < dotPositions.length; i++) {
+        for (let j = i + 1; j < dotPositions.length; j++) {
+            const d = dotPositions[i].distanceTo(dotPositions[j]);
+            if (d < 0.7 && d > 0.2) {
+                linePositions.push(dotPositions[i].x, dotPositions[i].y, dotPositions[i].z);
+                linePositions.push(dotPositions[j].x, dotPositions[j].y, dotPositions[j].z);
+            }
+        }
+    }
+    if (linePositions.length > 0) {
+        const lineGeo = new THREE.BufferGeometry();
+        lineGeo.setAttribute('position', new THREE.Float32BufferAttribute(linePositions, 3));
+        const lineMat = new THREE.LineBasicMaterial({
+            color: 0xffcc00,
+            transparent: true,
+            opacity: 0.15,
+        });
+        const lines = new THREE.LineSegments(lineGeo, lineMat);
+        scene.add(lines);
+    }
+
+    // --- Orbiting particles ---
+    const particleCount = 200;
+    const particleGeo = new THREE.BufferGeometry();
+    const particlePos = new Float32Array(particleCount * 3);
+    for (let i = 0; i < particleCount; i++) {
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.acos(2 * Math.random() - 1);
+        const r = 1.8 + Math.random() * 1.2;
+        particlePos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+        particlePos[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+        particlePos[i * 3 + 2] = r * Math.cos(phi);
+    }
+    particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePos, 3));
+    const particleMat = new THREE.PointsMaterial({
+        color: 0xffcc00,
+        size: 0.02,
+        transparent: true,
+        opacity: 0.3,
+    });
+    const particles = new THREE.Points(particleGeo, particleMat);
+    scene.add(particles);
+
+    // --- Lights ---
+    const ambientLight = new THREE.AmbientLight(0x404060);
+    scene.add(ambientLight);
+    const dirLight = new THREE.DirectionalLight(0xffcc00, 0.6);
+    dirLight.position.set(2, 2, 3);
+    scene.add(dirLight);
+    const backLight = new THREE.DirectionalLight(0x003366, 0.4);
+    backLight.position.set(-2, -1, -2);
+    scene.add(backLight);
+
+    // --- Animation ---
+    let rotationSpeed = 0.002;
+    let mouseX = 0;
+    let targetRotX = 0;
+
+    document.addEventListener('mousemove', function(e) {
+        const rect = container.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / rect.width;
+        mouseX = (x - 0.5) * 0.5;
+    });
+
+    function animate() {
+        requestAnimationFrame(animate);
+        targetRotX += (mouseX - targetRotX) * 0.03;
+        sphere.rotation.y += rotationSpeed;
+        sphere.rotation.x += targetRotX * 0.001;
+        glowSphere.rotation.y += rotationSpeed;
+        glowSphere.rotation.x += targetRotX * 0.001;
+        dotsGroup.rotation.y += rotationSpeed;
+        dotsGroup.rotation.x += targetRotX * 0.001;
+        particles.rotation.y -= rotationSpeed * 0.5;
+        renderer.render(scene, camera);
+    }
+    animate();
+
+    // --- Resize handler ---
+    window.addEventListener('resize', function() {
+        const w = container.offsetWidth || window.innerWidth;
+        const h = container.offsetHeight || window.innerHeight;
+        if (w < 100 || h < 100) return;
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+        renderer.setSize(w, h);
+    });
+})();
 </script>
 
 <?php require_once 'includes/footer.php'; ?>

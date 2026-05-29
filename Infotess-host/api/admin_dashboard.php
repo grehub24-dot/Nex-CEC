@@ -90,94 +90,12 @@ if (empty($chart_labels)) { $chart_labels = [date('M Y')]; $chart_data = [0]; }
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard — <?php echo htmlspecialchars($school_name); ?></title>
-    <link rel="stylesheet" href="../css/design-tokens.css">
-    <link rel="stylesheet" href="../css/typography.css">
-    <link rel="stylesheet" href="../css/layout.css">
-    <link rel="stylesheet" href="../css/components.css">
-    <link rel="stylesheet" href="../css/animations.css">
-    <link rel="stylesheet" href="../css/3d-school.css">
-    <link rel="stylesheet" href="../css/style.css"><!-- legacy compat -->
+    <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Showcase section styles -->
-    <style>
-        /* Section header with left accent bar */
-        .section-header-accent {
-            display: flex;
-            align-items: center;
-            gap: var(--space-sm);
-            margin-bottom: var(--space-lg);
-        }
-        .section-header-accent::before {
-            content: '';
-            width: 4px;
-            height: 24px;
-            background: var(--color-eduman-blue, var(--color-primary));
-            border-radius: 2px;
-            flex-shrink: 0;
-        }
-        .section-header-accent h3 {
-            margin: 0;
-        }
-        .badge-showcase {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            font-size: 10px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            padding: 3px 8px;
-            border-radius: var(--radius-full);
-            background: var(--color-eduman-blue, var(--color-primary));
-            color: var(--color-on-dark);
-            margin-left: auto;
-        }
-        /* Enhanced quick action cards */
-        .quick-actions-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-            gap: var(--space-md);
-            margin-top: var(--space-md);
-        }
-        .quick-actions-grid .card {
-            text-align: center;
-            padding: var(--space-lg);
-            text-decoration: none;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: var(--space-sm);
-            transition: all var(--transition-base);
-        }
-        .quick-actions-grid .card:hover {
-            transform: translateY(-3px);
-            box-shadow: var(--shadow-hover);
-            border-color: var(--color-eduman-blue, var(--color-primary));
-        }
-        .quick-actions-grid .card i {
-            font-size: 28px;
-            transition: transform var(--transition-fast);
-        }
-        .quick-actions-grid .card:hover i {
-            transform: scale(1.12);
-        }
-        .quick-actions-grid .card span {
-            font-size: var(--text-sm-size);
-            font-weight: 600;
-            color: var(--color-charcoal);
-        }
-        /* Stat card accent overrides for showcase */
-        .stat-card-eduman {
-            border-left: 4px solid var(--color-eduman-blue, #2467ec);
-        }
-        .stat-card-accent {
-            border-left: 4px solid var(--color-accent, #E8A838);
-        }
-    </style>
 </head>
-<body class="page-dashboard-eduman">
-    <a href="#main-content" class="skip-link" style="position: absolute; top: -100%; left: 0; background: var(--color-primary); color: var(--color-on-dark); padding: 10px 20px; z-index: 9999; transition: top 0.2s;">Skip to main content</a>
+<body>
+    <a href="#main-content" class="skip-link" style="position: absolute; top: -100%; left: 0; background: var(--primary-color); color: #fff; padding: 10px 20px; z-index: 9999; transition: top 0.2s;">Skip to main content</a>
     <style>.skip-link:focus { top: 0; }</style>
     <div class="dashboard-container">
             <?php echo renderSidebar('dashboard', $school_name); ?>
@@ -254,9 +172,9 @@ if (empty($chart_labels)) { $chart_labels = [date('M Y')]; $chart_data = [0]; }
                     </div>
                 </div>
                 <?php if (!empty($teacher_classes)): ?>
-                    <div style="margin-bottom: 25px; background: var(--color-canvas); padding: 18px 22px; border-radius: var(--radius-lg); box-shadow: var(--shadow-md);">
-                        <strong style="font-size:14px; color: var(--color-brand-navy);">Assigned Classes:</strong>
-                        <span style="margin-left: 10px; color: var(--color-slate);"><?php echo htmlspecialchars(implode(', ', $teacher_classes)); ?></span>
+                    <div style="margin-bottom: 25px; background: white; padding: 18px 22px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+                        <strong style="font-size:14px; color:#1a5276;">Assigned Classes:</strong>
+                        <span style="margin-left: 10px; color: #555;"><?php echo htmlspecialchars(implode(', ', $teacher_classes)); ?></span>
                     </div>
                 <?php endif; ?>
             <?php else: ?>
@@ -280,7 +198,7 @@ if (empty($chart_labels)) { $chart_labels = [date('M Y')]; $chart_data = [0]; }
                     <div class="stat-details"><h3><?php echo number_format($total_staff); ?></h3><p>Active Staff</p></div>
                 </div>
                 <?php endif; ?>
-                <div class="stat-card stat-card-eduman">
+                <div class="stat-card">
                     <div class="stat-icon"><i class="fas fa-wallet"></i></div>
                     <div class="stat-details"><h3>GHS <?php echo number_format($total_revenue, 2); ?></h3><p>Total Revenue</p></div>
                 </div>
@@ -288,7 +206,7 @@ if (empty($chart_labels)) { $chart_labels = [date('M Y')]; $chart_data = [0]; }
                     <div class="stat-icon"><i class="fas fa-receipt"></i></div>
                     <div class="stat-details"><h3><?php echo $payments_today; ?></h3><p>Payments Today</p></div>
                 </div>
-                <div class="stat-card stat-card-accent">
+                <div class="stat-card">
                     <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
                     <div class="stat-details"><h3><?php echo $compliance_rate; ?>%</h3><p>Payment Compliance</p></div>
                 </div>
@@ -300,45 +218,54 @@ if (empty($chart_labels)) { $chart_labels = [date('M Y')]; $chart_data = [0]; }
                 <?php endif; ?>
             </div>
 
-            <!-- Quick Links — redesigned showcase -->
-            <div class="section-block">
-                <div class="section-header-accent">
-                    <h3>Quick Actions</h3>
-                    <span class="badge-showcase"><i class="fas fa-palette"></i> Redesigned</span>
-                </div>
-                <div class="quick-actions-grid">
-                    <a href="students.php" class="card">
-                        <i class="fas fa-user-plus" style="color: var(--color-eduman-blue, var(--color-primary));"></i>
-                        <span>Add Student</span>
+            <!-- Quick Links -->
+            <div class="section mb-30">
+                <h3>Quick Actions</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;">
+                    <a href="students.php" class="card quick-action-card">
+                        <div class="card-content text-center">
+                            <i class="fas fa-user-plus color-primary"></i>
+                            <p class="mt-10 fw-bold">Add Student</p>
+                        </div>
                     </a>
-                    <a href="payments.php" class="card">
-                        <i class="fas fa-money-bill-wave" style="color: var(--color-success);"></i>
-                        <span>Record Payment</span>
+                    <a href="payments.php" class="card quick-action-card">
+                        <div class="card-content text-center">
+                            <i class="fas fa-money-bill-wave color-success"></i>
+                            <p class="mt-10 fw-bold">Record Payment</p>
+                        </div>
                     </a>
                     <?php if (isSuperAdmin()): ?>
-                    <a href="bulk_import.php" class="card">
-                        <i class="fas fa-file-csv" style="color: var(--color-eduman-amber, var(--color-accent));"></i>
-                        <span>Bulk Import</span>
+                    <a href="bulk_import.php" class="card quick-action-card">
+                        <div class="card-content text-center">
+                            <i class="fas fa-file-csv color-warning"></i>
+                            <p class="mt-10 fw-bold">Bulk Import</p>
+                        </div>
                     </a>
-                    <a href="attendance.php" class="card">
-                        <i class="fas fa-user-check" style="color: var(--color-primary);"></i>
-                        <span>Take Attendance</span>
+                    <a href="attendance.php" class="card quick-action-card">
+                        <div class="card-content text-center">
+                            <i class="fas fa-user-check" style="color: #2e86c1;"></i>
+                            <p class="mt-10 fw-bold">Take Attendance</p>
+                        </div>
                     </a>
-                    <a href="payroll.php" class="card">
-                        <i class="fas fa-file-invoice-dollar" style="color: #D94478;"></i>
-                        <span>Generate Payroll</span>
+                    <a href="payroll.php" class="card quick-action-card">
+                        <div class="card-content text-center">
+                            <i class="fas fa-file-invoice-dollar" style="color: #8e44ad;"></i>
+                            <p class="mt-10 fw-bold">Generate Payroll</p>
+                        </div>
                     </a>
                     <?php endif; ?>
-                    <a href="messaging.php" class="card">
-                        <i class="fas fa-envelope" style="color: var(--color-eduman-blue, var(--color-primary));"></i>
-                        <span>Send Message<?php echo $pending_messages > 0 ? " ($pending_messages)" : ""; ?></span>
+                    <a href="messaging.php" class="card quick-action-card">
+                        <div class="card-content text-center">
+                            <i class="fas fa-envelope color-danger"></i>
+                            <p class="mt-10 fw-bold">Send Message<?php echo $pending_messages > 0 ? " ($pending_messages)" : ""; ?></p>
+                        </div>
                     </a>
                 </div>
             </div>
 
             <!-- Recent Payments Table -->
-            <div class="section-block">
-                <div class="section-header-accent"><h3>Recent Payments</h3></div>
+            <div class="section">
+                <h3>Recent Payments</h3>
                 <div class="table-responsive">
                     <table class="table">
                         <thead>
@@ -367,8 +294,8 @@ if (empty($chart_labels)) { $chart_labels = [date('M Y')]; $chart_data = [0]; }
             </div>
 
             <!-- Charts -->
-            <div class="section-block">
-                <div class="section-header-accent"><h3>Revenue Analytics</h3></div>
+            <div class="section">
+                <h3>Revenue Analytics</h3>
                 <canvas id="revenueChart" width="400" height="150"></canvas>
             </div>
         </main>
@@ -389,8 +316,8 @@ if (empty($chart_labels)) { $chart_labels = [date('M Y')]; $chart_data = [0]; }
                 datasets: [{
                     label: 'Revenue (GHS)',
                     data: <?php echo json_encode($chart_data); ?>,
-                    backgroundColor: 'rgba(43, 76, 126, 0.6)',
-                    borderColor: 'rgba(43, 76, 126, 1)',
+                    backgroundColor: 'rgba(0, 51, 102, 0.7)',
+                    borderColor: 'rgba(0, 51, 102, 1)',
                     borderWidth: 1
                 }]
             },

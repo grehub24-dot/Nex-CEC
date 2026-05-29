@@ -2,52 +2,55 @@
 
     <!-- Public Footer (Navy) -->
     <footer class="footer-navy">
-        <div class="footer-grid">
+        <div class="footer-links-grid">
             <!-- Brand -->
-            <div class="footer-brand">
-                <img src="<?php echo htmlspecialchars($school_logo); ?>" alt="<?php echo htmlspecialchars($school_name); ?> Logo" class="footer-logo" onerror="this.onerror=null;this.src='<?php echo $base_url; ?>images/chariot-logo.svg'">
-                <h3 class="footer-brand-name"><?php echo htmlspecialchars($school_name); ?></h3>
-                <p class="footer-motto"><?php echo htmlspecialchars($settings['school_motto'] ?? 'Excellence in Education'); ?></p>
-                <p class="footer-desc">Providing quality basic education from Creche through JHS — building strong academic foundations, character development, and holistic growth for every child.</p>
-                <div class="footer-social">
-                    <a href="<?php echo htmlspecialchars($settings['school_facebook'] ?? '#'); ?>" target="_blank" rel="noopener" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
-                    <a href="<?php echo htmlspecialchars($settings['school_twitter'] ?? '#'); ?>" target="_blank" rel="noopener" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
-                    <a href="<?php echo htmlspecialchars($settings['school_instagram'] ?? '#'); ?>" target="_blank" rel="noopener" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
-                    <a href="<?php echo htmlspecialchars($settings['school_youtube'] ?? '#'); ?>" target="_blank" rel="noopener" aria-label="YouTube"><i class="fab fa-youtube"></i></a>
+            <div class="footer-brand-block">
+                <a href="<?php echo $base_url; ?>index.php" class="footer-logo">
+                    <img src="<?php echo htmlspecialchars($school_logo); ?>" alt="<?php echo htmlspecialchars($school_name); ?> Logo" onerror="this.onerror=null;this.src='<?php echo $base_url; ?>images/chariot-logo.svg'">
+                </a>
+                <p><?php echo htmlspecialchars($settings['school_motto'] ?? 'Excellence in Education'); ?> — Providing quality basic education from Creche through JHS, building strong academic foundations, character development, and holistic growth for every child.</p>
+                <div class="footer-social" style="display:flex;gap:12px;margin-top:12px;">
+                    <a href="<?php echo htmlspecialchars($settings['school_facebook'] ?? '#'); ?>" target="_blank" rel="noopener" aria-label="Facebook" style="color:var(--color-on-dark-muted);font-size:18px;"><i class="fab fa-facebook-f"></i></a>
+                    <a href="<?php echo htmlspecialchars($settings['school_twitter'] ?? '#'); ?>" target="_blank" rel="noopener" aria-label="Twitter" style="color:var(--color-on-dark-muted);font-size:18px;"><i class="fab fa-twitter"></i></a>
+                    <a href="<?php echo htmlspecialchars($settings['school_instagram'] ?? '#'); ?>" target="_blank" rel="noopener" aria-label="Instagram" style="color:var(--color-on-dark-muted);font-size:18px;"><i class="fab fa-instagram"></i></a>
+                    <a href="<?php echo htmlspecialchars($settings['school_youtube'] ?? '#'); ?>" target="_blank" rel="noopener" aria-label="YouTube" style="color:var(--color-on-dark-muted);font-size:18px;"><i class="fab fa-youtube"></i></a>
                 </div>
             </div>
 
             <!-- Quick Links -->
-            <div>
-                <h4 class="footer-heading">Quick Links</h4>
-                <a href="<?php echo $base_url; ?>index.php" class="footer-link">Home</a>
-                <a href="<?php echo $base_url; ?>about.php" class="footer-link">About Us</a>
-                <a href="<?php echo $base_url; ?>news.php" class="footer-link">News & Updates</a>
-                <a href="<?php echo $base_url; ?>events.php" class="footer-link">School Events</a>
-                <a href="<?php echo $base_url; ?>gallery.php" class="footer-link">Photo Gallery</a>
-                <a href="<?php echo $base_url; ?>contact.php" class="footer-link">Contact Us</a>
+            <div class="footer-col">
+                <h4>Quick Links</h4>
+                <ul>
+                    <li><a href="<?php echo $base_url; ?>index.php">Home</a></li>
+                    <li><a href="<?php echo $base_url; ?>about.php">About Us</a></li>
+                    <li><a href="<?php echo $base_url; ?>news.php">News & Updates</a></li>
+                    <li><a href="<?php echo $base_url; ?>events.php">School Events</a></li>
+                    <li><a href="<?php echo $base_url; ?>gallery.php">Photo Gallery</a></li>
+                    <li><a href="<?php echo $base_url; ?>contact.php">Contact Us</a></li>
+                </ul>
             </div>
 
             <!-- Programs -->
-            <div>
-                <h4 class="footer-heading">Programs</h4>
-                <a href="<?php echo $base_url; ?>about.php#early-childhood" class="footer-link">Creche (1–2 yrs)</a>
-                <a href="<?php echo $base_url; ?>about.php#early-childhood" class="footer-link">Nursery (2–4 yrs)</a>
-                <a href="<?php echo $base_url; ?>about.php#early-childhood" class="footer-link">Kindergarten (4–6 yrs)</a>
-                <a href="<?php echo $base_url; ?>about.php#primary" class="footer-link">Primary (6–11 yrs)</a>
-                <a href="<?php echo $base_url; ?>about.php#jhs" class="footer-link">JHS (11–14 yrs)</a>
+            <div class="footer-col">
+                <h4>Programs</h4>
+                <ul>
+                    <li><a href="<?php echo $base_url; ?>about.php#early-childhood">Creche (1–2 yrs)</a></li>
+                    <li><a href="<?php echo $base_url; ?>about.php#early-childhood">Nursery (2–4 yrs)</a></li>
+                    <li><a href="<?php echo $base_url; ?>about.php#early-childhood">Kindergarten (4–6 yrs)</a></li>
+                    <li><a href="<?php echo $base_url; ?>about.php#primary">Primary (6–11 yrs)</a></li>
+                    <li><a href="<?php echo $base_url; ?>about.php#jhs">JHS (11–14 yrs)</a></li>
+                </ul>
             </div>
 
             <!-- Contact -->
-            <div>
-                <h4 class="footer-heading">Contact</h4>
-                <a href="tel:<?php echo htmlspecialchars($settings['school_phone'] ?? ''); ?>" class="footer-link"><i class="fas fa-phone-alt footer-icon"></i> <?php echo htmlspecialchars($settings['school_phone'] ?? '+233 XX XXX XXXX'); ?></a>
-                <a href="mailto:<?php echo htmlspecialchars($settings['school_email'] ?? ''); ?>" class="footer-link"><i class="fas fa-envelope footer-icon"></i> <?php echo htmlspecialchars($settings['school_email'] ?? 'info@school.edu.gh'); ?></a>
-                <span class="footer-link"><i class="fas fa-map-marker-alt footer-icon"></i> <?php echo htmlspecialchars($settings['school_address'] ?? 'School Address, City, Ghana'); ?></span>
-                <div class="footer-hours">
-                    <p class="footer-hours-label">Office Hours</p>
-                    <p class="footer-hours-text">Mon–Fri: 7:30 AM – 4:00 PM</p>
-                </div>
+            <div class="footer-col">
+                <h4>Contact</h4>
+                <ul>
+                    <li><a href="tel:<?php echo htmlspecialchars($settings['school_phone'] ?? ''); ?>"><i class="fas fa-phone-alt" style="width:16px;"></i> <?php echo htmlspecialchars($settings['school_phone'] ?? '+233 XX XXX XXXX'); ?></a></li>
+                    <li><a href="mailto:<?php echo htmlspecialchars($settings['school_email'] ?? ''); ?>"><i class="fas fa-envelope" style="width:16px;"></i> <?php echo htmlspecialchars($settings['school_email'] ?? 'info@school.edu.gh'); ?></a></li>
+                    <li><span style="color:var(--color-on-dark-muted);font-size:var(--text-sm-size);"><i class="fas fa-map-marker-alt" style="width:16px;"></i> <?php echo htmlspecialchars($settings['school_address'] ?? 'School Address, City, Ghana'); ?></span></li>
+                    <li style="margin-top:8px;"><span style="color:var(--color-on-dark-muted);font-size:var(--text-sm-size);"><strong style="color:var(--color-on-dark);">Office Hours:</strong> Mon–Fri: 7:30 AM – 4:00 PM</span></li>
+                </ul>
             </div>
         </div>
 

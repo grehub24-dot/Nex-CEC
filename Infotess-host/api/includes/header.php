@@ -86,7 +86,23 @@
             <ul class="nav-links" role="menubar" id="navLinks">
                 <button class="nav-close-btn" id="navCloseBtn" aria-label="Close navigation menu"><i class="fas fa-times"></i></button>
                 <li role="none"><a href="<?php echo $base_url; ?>index.php" role="menuitem" class="<?php echo ($current_page === 'home.php' || $current_page === 'index.php') ? 'active' : ''; ?>">Home</a></li>
-                <li role="none"><a href="<?php echo $base_url; ?>about.php" role="menuitem" class="<?php echo ($current_page === 'about.php') ? 'active' : ''; ?>">About</a></li>
+                <li role="none" class="nav-dropdown">
+                    <a href="<?php echo $base_url; ?>about.php" role="menuitem" aria-haspopup="true" aria-expanded="false" class="<?php echo ($current_page === 'about.php') ? 'active' : ''; ?>">About <i class="fas fa-chevron-down" style="font-size:10px;margin-left:3px;"></i></a>
+                    <ul class="nav-dropdown-menu" role="menu" aria-label="About submenu">
+                        <li role="none"><a href="<?php echo $base_url; ?>about.php" role="menuitem">Our Mission</a></li>
+                        <li role="none"><a href="<?php echo $base_url; ?>about.php#team" role="menuitem">Our Team</a></li>
+                        <li role="none"><a href="<?php echo $base_url; ?>about.php#facilities" role="menuitem">Facilities</a></li>
+                    </ul>
+                </li>
+                <li role="none" class="nav-dropdown">
+                    <a href="<?php echo $base_url; ?>academics.php" role="menuitem" aria-haspopup="true" aria-expanded="false">Academics <i class="fas fa-chevron-down" style="font-size:10px;margin-left:3px;"></i></a>
+                    <ul class="nav-dropdown-menu" role="menu" aria-label="Academics submenu">
+                        <li role="none"><a href="<?php echo $base_url; ?>about.php#early-childhood" role="menuitem">Early Childhood</a></li>
+                        <li role="none"><a href="<?php echo $base_url; ?>about.php#primary" role="menuitem">Primary Education</a></li>
+                        <li role="none"><a href="<?php echo $base_url; ?>about.php#jhs" role="menuitem">Junior High School</a></li>
+                        <li role="none"><a href="<?php echo $base_url; ?>about.php#curriculum" role="menuitem">Curriculum Overview</a></li>
+                    </ul>
+                </li>
                 <li role="none"><a href="<?php echo $base_url; ?>news.php" role="menuitem" class="<?php echo ($current_page === 'news.php') ? 'active' : ''; ?>">News</a></li>
                 <li role="none"><a href="<?php echo $base_url; ?>events.php" role="menuitem" class="<?php echo ($current_page === 'events.php') ? 'active' : ''; ?>">Events</a></li>
                 <li role="none"><a href="<?php echo $base_url; ?>gallery.php" role="menuitem" class="<?php echo ($current_page === 'gallery.php') ? 'active' : ''; ?>">Gallery</a></li>

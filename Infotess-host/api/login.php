@@ -178,16 +178,67 @@ require_once 'includes/header.php';
 ?>
 
 <style>
-    .login-page { min-height: 80vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); padding: 40px 20px; }
-    .login-card { width: 100%; max-width: 440px; background: #fff; border-radius: 16px; box-shadow: 0 12px 36px rgba(0,0,0,0.12); padding: 40px; animation: fadeInUp 0.5s cubic-bezier(0.16,1,0.3,1); }
-    .login-logo { text-align: center; margin-bottom: 32px; }
-    .login-logo img { max-width: 100px; max-height: 60px; width: auto; height: auto; object-fit: contain; margin-bottom: 16px; border-radius: 8px; }
-    .login-logo h2 { font-size: 1.5rem; color: #003366; margin-bottom: 4px; }
-    .login-logo p { font-size: 0.85rem; color: #888; }
-    .login-divider { height: 1px; background: #e9ecef; margin: 24px 0; }
-    .login-footer-text { text-align: center; margin-top: 20px; font-size: 0.85rem; color: #888; }
-    .login-footer-text a { color: #003366; font-weight: 600; text-decoration: none; }
-    .login-footer-text a:hover { text-decoration: underline; }
+    .login-page {
+        min-height: 80vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, var(--color-canvas) 0%, var(--color-surface-soft) 100%);
+        padding: 40px 20px;
+    }
+    .login-card {
+        width: 100%;
+        max-width: 440px;
+        background: var(--color-surface);
+        border-radius: var(--radius-xl);
+        box-shadow: var(--shadow-lg);
+        padding: 40px;
+        animation: fadeInUp 0.5s cubic-bezier(0.16,1,0.3,1);
+        border: 1px solid var(--color-hairline);
+    }
+    .login-logo {
+        text-align: center;
+        margin-bottom: 32px;
+    }
+    .login-logo img {
+        max-width: 100px;
+        max-height: 60px;
+        width: auto;
+        height: auto;
+        object-fit: contain;
+        margin-bottom: 16px;
+        border-radius: var(--radius-md);
+    }
+    .login-logo h2 {
+        font-size: 1.5rem;
+        color: var(--color-primary);
+        margin-bottom: 4px;
+        font-weight: 700;
+    }
+    .login-logo p {
+        font-size: 0.85rem;
+        color: var(--color-steel);
+    }
+    .login-divider {
+        height: 1px;
+        background: var(--color-hairline);
+        margin: 24px 0;
+    }
+    .login-footer-text {
+        text-align: center;
+        margin-top: 20px;
+        font-size: 0.85rem;
+        color: var(--color-steel);
+    }
+    .login-footer-text a {
+        color: var(--color-primary);
+        font-weight: 600;
+        text-decoration: none;
+    }
+    .login-footer-text a:hover {
+        text-decoration: underline;
+        color: var(--color-primary-hover);
+    }
 </style>
 
 <div class="login-page">

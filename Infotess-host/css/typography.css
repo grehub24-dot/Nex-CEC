@@ -1,7 +1,7 @@
 /* ========================================
-   Nex CEC Typography
+   Nex CEC Typography — Warm, Readable, School-Grade
    ======================================== */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 html {
   font-family: var(--font-family);
@@ -12,7 +12,7 @@ html {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ---- Headings ---- */
+/* ---- Headings — Strong hierarchy, warm charcoal ---- */
 h1, .text-h1 {
   font-size: var(--text-h1-size);
   font-weight: var(--text-h1-weight);
@@ -61,7 +61,7 @@ h4, .text-h4 {
   color: var(--color-charcoal);
 }
 
-/* ---- Body ---- */
+/* ---- Body — Slightly larger, better contrast ---- */
 p, .text-body {
   font-size: var(--text-body-size);
   line-height: var(--text-body-lh);
@@ -72,6 +72,16 @@ p, .text-body {
   font-size: var(--text-sm-size);
   line-height: var(--text-sm-lh);
   color: var(--color-slate);
+}
+
+/* ---- Links — Warm, accessible blue ---- */
+a {
+  color: var(--color-link-blue);
+  text-decoration: none;
+  transition: color 200ms ease-out;
+}
+a:hover {
+  color: var(--color-link-blue-pressed);
 }
 
 /* ---- Utility ---- */

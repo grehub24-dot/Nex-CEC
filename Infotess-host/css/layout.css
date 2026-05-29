@@ -62,7 +62,7 @@ body {
 
 /* ---- Hero Band (full-width navy) ---- */
 .hero-band {
-  background: var(--color-brand-navy);
+  background: linear-gradient(135deg, var(--color-brand-navy-deep) 0%, var(--color-brand-navy) 50%, var(--color-primary-hover) 100%);
   color: var(--color-on-dark);
   padding: var(--space-hero) 0;
   padding-top: calc(var(--space-hero) + var(--sat));
@@ -76,8 +76,8 @@ body {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse at 20% 50%, rgba(43, 76, 126, 0.10) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 50%, rgba(255, 215, 0, 0.08) 0%, transparent 50%);
+    radial-gradient(ellipse at 20% 50%, rgba(232, 168, 56, 0.08) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 50%, rgba(37, 99, 235, 0.06) 0%, transparent 60%);
   animation: heroAmbient 8s ease-in-out infinite alternate;
 }
 
@@ -108,7 +108,7 @@ body {
 }
 
 .section-photo-bg-about {
-  background: linear-gradient(rgba(30, 58, 95, 0.92), rgba(30, 58, 95, 0.92)), url('../images/students/students-group-1.jpg');
+  background: linear-gradient(rgba(15, 23, 42, 0.90), rgba(15, 23, 42, 0.95)), url('../images/students/students-group-1.jpg');
   background-size: cover;
   background-position: center;
   color: var(--color-on-dark);
@@ -395,6 +395,83 @@ body {
   color: var(--color-on-dark);
 }
 
+/* ---- Footer Brand & Social ---- */
+.footer-brand {
+  margin-bottom: var(--space-md);
+}
+
+.footer-logo {
+  height: 40px;
+  width: auto;
+  margin-bottom: var(--space-sm);
+  border-radius: var(--radius-sm);
+}
+
+.footer-brand-name {
+  color: var(--color-on-dark);
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 4px;
+}
+
+.footer-motto {
+  color: var(--color-on-dark-muted);
+  font-size: var(--text-sm-size);
+  margin-bottom: var(--space-md);
+}
+
+.footer-desc {
+  color: var(--color-on-dark-muted);
+  font-size: var(--text-caption-size);
+  line-height: 1.6;
+}
+
+.footer-social {
+  display: flex;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+}
+
+.footer-social a {
+  color: var(--color-on-dark-muted);
+  font-size: 16px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  transition: color 200ms ease-out, background 200ms ease-out;
+}
+
+.footer-social a:hover {
+  color: var(--color-on-dark);
+  background: rgba(255,255,255,0.1);
+}
+
+.footer-icon {
+  width: 18px;
+  text-align: center;
+  margin-right: var(--space-xs);
+}
+
+.footer-hours {
+  margin-top: var(--space-md);
+}
+
+.footer-hours-label {
+  color: var(--color-on-dark);
+  font-size: var(--text-caption-size);
+  font-weight: 600;
+  margin: 0 0 4px;
+}
+
+.footer-hours-text {
+  color: var(--color-on-dark-muted);
+  font-size: var(--text-caption-size);
+  margin: 0;
+}
+
 /* ---- Portal Footer ---- */
 .portal-footer {
   text-align: center;
@@ -427,11 +504,27 @@ body {
 }
 
 .nav-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
   transition: opacity 200ms ease-out;
 }
 
 .nav-logo:hover {
   opacity: 0.75;
+}
+
+.nav-logo-img {
+  height: 32px;
+  width: auto;
+  border-radius: var(--radius-xs);
+}
+
+.nav-logo-text {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-charcoal);
 }
 
 .nav-links {
@@ -471,6 +564,14 @@ body {
 
 .nav-links a:hover::after {
   width: 100%;
+}
+
+.nav-link-logout {
+  color: var(--color-steel) !important;
+}
+
+.nav-link-logout:hover {
+  color: var(--color-error) !important;
 }
 
 /* ---- Mobile Overlay ---- */

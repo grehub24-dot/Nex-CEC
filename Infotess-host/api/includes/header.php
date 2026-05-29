@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="<?php echo $base_url; ?>css/components.css">
     <link rel="stylesheet" href="<?php echo $base_url; ?>css/animations.css">
     <link rel="stylesheet" href="<?php echo $base_url; ?>css/3d-school.css">
-    <link rel="stylesheet" href="<?php echo $base_url; ?>css/style.css"><!-- legacy compat -->
+    <link rel="stylesheet" href="<?php echo $base_url; ?>css/style.css"><!-- legacy compat loaded LAST for overrides -->
     <!-- PWA -->
     <link rel="manifest" href="<?php echo $base_url; ?>manifest.json">
     <meta name="theme-color" content="#1e3a5f">
@@ -78,9 +78,9 @@
     <!-- Navigation (Notion-style sticky white bar) -->
     <nav class="nav-white" role="navigation" aria-label="Main navigation">
         <div class="nav-inner">
-            <a href="<?php echo $base_url; ?>index.php" class="logo" aria-label="<?php echo htmlspecialchars($school_name); ?> Home" style="display: flex; align-items: center; gap: 10px; text-decoration: none;">
-                <img src="<?php echo htmlspecialchars($school_logo); ?>" alt="<?php echo htmlspecialchars($school_name); ?> Logo" height="32" onerror="this.onerror=null;this.src='<?php echo $base_url; ?>images/chariot-logo.svg'">
-                <span style="font-size: 16px; font-weight: 600; color: var(--color-charcoal);"><?php echo htmlspecialchars($school_name); ?></span>
+            <a href="<?php echo $base_url; ?>index.php" class="nav-logo" aria-label="<?php echo htmlspecialchars($school_name); ?> Home">
+                <img src="<?php echo htmlspecialchars($school_logo); ?>" alt="<?php echo htmlspecialchars($school_name); ?> Logo" class="nav-logo-img" onerror="this.onerror=null;this.src='<?php echo $base_url; ?>images/chariot-logo.svg'">
+                <span class="nav-logo-text"><?php echo htmlspecialchars($school_name); ?></span>
             </a>
 
             <ul class="nav-links" role="menubar" id="navLinks">
@@ -104,7 +104,7 @@
                     <?php else: ?>
                         <li role="none"><a href="<?php echo $base_url; ?>student_dashboard.php" class="btn btn-primary btn-sm" role="menuitem">Dashboard</a></li>
                     <?php endif; ?>
-                    <li role="none"><a href="<?php echo $base_url; ?>logout.php" role="menuitem" style="color: var(--color-steel);" aria-label="Logout"><i class="fas fa-sign-out-alt"></i></a></li>
+                    <li role="none"><a href="<?php echo $base_url; ?>logout.php" role="menuitem" class="nav-link-logout" aria-label="Logout"><i class="fas fa-sign-out-alt"></i></a></li>
                 <?php else: ?>
                     <li role="none"><a href="<?php echo $base_url; ?>register.php" class="btn btn-primary" role="menuitem"><i class="fas fa-user-plus"></i> Enroll Now</a></li>
                     <li role="none"><a href="<?php echo $base_url; ?>login.php" class="btn btn-secondary" role="menuitem"><i class="fas fa-sign-in-alt"></i> Login</a></li>

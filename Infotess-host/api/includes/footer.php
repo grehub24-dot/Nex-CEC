@@ -4,16 +4,16 @@
     <footer class="footer-navy">
         <div class="footer-grid">
             <!-- Brand -->
-            <div>
-                <img src="<?php echo htmlspecialchars($school_logo); ?>" alt="<?php echo htmlspecialchars($school_name); ?> Logo" height="40" onerror="this.onerror=null;this.src='<?php echo $base_url; ?>images/chariot-logo.svg'" style="margin-bottom: var(--space-sm);">
-                <h3 style="color: var(--color-on-dark); font-size: 18px; font-weight: 600; margin: 0 0 4px;"><?php echo htmlspecialchars($school_name); ?></h3>
-                <p style="color: var(--color-on-dark-muted); font-size: 14px; margin-bottom: var(--space-md);"><?php echo htmlspecialchars($settings['school_motto'] ?? 'Excellence in Education'); ?></p>
-                <p style="color: var(--color-on-dark-muted); font-size: 13px; line-height: 1.6;">Providing quality basic education from Creche through JHS — building strong academic foundations, character development, and holistic growth for every child.</p>
-                <div style="display: flex; gap: var(--space-sm); margin-top: var(--space-md);">
-                    <a href="<?php echo htmlspecialchars($settings['school_facebook'] ?? '#'); ?>" target="_blank" rel="noopener" aria-label="Facebook" style="color: var(--color-on-dark-muted); font-size: 16px;"><i class="fab fa-facebook-f"></i></a>
-                    <a href="<?php echo htmlspecialchars($settings['school_twitter'] ?? '#'); ?>" target="_blank" rel="noopener" aria-label="Twitter" style="color: var(--color-on-dark-muted); font-size: 16px;"><i class="fab fa-twitter"></i></a>
-                    <a href="<?php echo htmlspecialchars($settings['school_instagram'] ?? '#'); ?>" target="_blank" rel="noopener" aria-label="Instagram" style="color: var(--color-on-dark-muted); font-size: 16px;"><i class="fab fa-instagram"></i></a>
-                    <a href="<?php echo htmlspecialchars($settings['school_youtube'] ?? '#'); ?>" target="_blank" rel="noopener" aria-label="YouTube" style="color: var(--color-on-dark-muted); font-size: 16px;"><i class="fab fa-youtube"></i></a>
+            <div class="footer-brand">
+                <img src="<?php echo htmlspecialchars($school_logo); ?>" alt="<?php echo htmlspecialchars($school_name); ?> Logo" class="footer-logo" onerror="this.onerror=null;this.src='<?php echo $base_url; ?>images/chariot-logo.svg'">
+                <h3 class="footer-brand-name"><?php echo htmlspecialchars($school_name); ?></h3>
+                <p class="footer-motto"><?php echo htmlspecialchars($settings['school_motto'] ?? 'Excellence in Education'); ?></p>
+                <p class="footer-desc">Providing quality basic education from Creche through JHS — building strong academic foundations, character development, and holistic growth for every child.</p>
+                <div class="footer-social">
+                    <a href="<?php echo htmlspecialchars($settings['school_facebook'] ?? '#'); ?>" target="_blank" rel="noopener" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+                    <a href="<?php echo htmlspecialchars($settings['school_twitter'] ?? '#'); ?>" target="_blank" rel="noopener" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
+                    <a href="<?php echo htmlspecialchars($settings['school_instagram'] ?? '#'); ?>" target="_blank" rel="noopener" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+                    <a href="<?php echo htmlspecialchars($settings['school_youtube'] ?? '#'); ?>" target="_blank" rel="noopener" aria-label="YouTube"><i class="fab fa-youtube"></i></a>
                 </div>
             </div>
 
@@ -41,12 +41,12 @@
             <!-- Contact -->
             <div>
                 <h4 class="footer-heading">Contact</h4>
-                <a href="tel:<?php echo htmlspecialchars($settings['school_phone'] ?? ''); ?>" class="footer-link"><i class="fas fa-phone-alt" style="width: 18px;"></i> <?php echo htmlspecialchars($settings['school_phone'] ?? '+233 XX XXX XXXX'); ?></a>
-                <a href="mailto:<?php echo htmlspecialchars($settings['school_email'] ?? ''); ?>" class="footer-link"><i class="fas fa-envelope" style="width: 18px;"></i> <?php echo htmlspecialchars($settings['school_email'] ?? 'info@school.edu.gh'); ?></a>
-                <span class="footer-link"><i class="fas fa-map-marker-alt" style="width: 18px;"></i> <?php echo htmlspecialchars($settings['school_address'] ?? 'School Address, City, Ghana'); ?></span>
-                <div style="margin-top: var(--space-md);">
-                    <p style="color: var(--color-on-dark-muted); font-size: 13px; margin: 0 0 4px;"><strong style="color: var(--color-on-dark);">Office Hours</strong></p>
-                    <p style="color: var(--color-on-dark-muted); font-size: 13px; margin: 0;">Mon–Fri: 7:30 AM – 4:00 PM</p>
+                <a href="tel:<?php echo htmlspecialchars($settings['school_phone'] ?? ''); ?>" class="footer-link"><i class="fas fa-phone-alt footer-icon"></i> <?php echo htmlspecialchars($settings['school_phone'] ?? '+233 XX XXX XXXX'); ?></a>
+                <a href="mailto:<?php echo htmlspecialchars($settings['school_email'] ?? ''); ?>" class="footer-link"><i class="fas fa-envelope footer-icon"></i> <?php echo htmlspecialchars($settings['school_email'] ?? 'info@school.edu.gh'); ?></a>
+                <span class="footer-link"><i class="fas fa-map-marker-alt footer-icon"></i> <?php echo htmlspecialchars($settings['school_address'] ?? 'School Address, City, Ghana'); ?></span>
+                <div class="footer-hours">
+                    <p class="footer-hours-label">Office Hours</p>
+                    <p class="footer-hours-text">Mon–Fri: 7:30 AM – 4:00 PM</p>
                 </div>
             </div>
         </div>

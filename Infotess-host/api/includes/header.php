@@ -15,10 +15,12 @@
     <link rel="stylesheet" href="<?php echo $base_url; ?>css/style.css"><!-- legacy compat -->
     <!-- PWA -->
     <link rel="manifest" href="<?php echo $base_url; ?>manifest.json">
-    <meta name="theme-color" content="#003366">
+    <meta name="theme-color" content="#0a1530">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="<?php echo htmlspecialchars($settings['school_name'] ?? 'Nex CEC'); ?>">
     <link rel="apple-touch-icon" href="<?php echo $base_url; ?>images/chariot-logo.svg">
+    <link rel="icon" type="image/svg+xml" href="<?php echo $base_url; ?>images/chariot-logo.svg">
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
@@ -82,6 +84,7 @@
             </a>
 
             <ul class="nav-links" role="menubar" id="navLinks">
+                <button class="nav-close-btn" id="navCloseBtn" aria-label="Close navigation menu"><i class="fas fa-times"></i></button>
                 <li role="none"><a href="<?php echo $base_url; ?>index.php" role="menuitem" class="<?php echo ($current_page === 'home.php' || $current_page === 'index.php') ? 'active' : ''; ?>">Home</a></li>
                 <li role="none"><a href="<?php echo $base_url; ?>about.php" role="menuitem" class="<?php echo ($current_page === 'about.php') ? 'active' : ''; ?>">About</a></li>
                 <li role="none"><a href="<?php echo $base_url; ?>news.php" role="menuitem" class="<?php echo ($current_page === 'news.php') ? 'active' : ''; ?>">News</a></li>
@@ -113,5 +116,51 @@
             </button>
         </div>
     </nav>
+
+    <script>
+    // Mobile nav toggle with close button support
+    (function() {
+        var toggle = document.getElementById("mobileNavToggle");
+        var navLinks = document.getElementById("navLinks");
+        var closeBtn = document.getElementById("navCloseBtn");
+        if (!toggle || !navLinks) return;
+
+        function openNav() {
+            navLinks.classList.add("open");
+            toggle.setAttribute("aria-expanded", "true");
+            document.body.style.overflow = "hidden";
+        }
+        function closeNav() {
+            navLinks.classList.remove("open");
+            toggle.setAttribute("aria-expanded", "false");
+            document.body.style.overflow = "";
+        }
+        toggle.addEventListener("click", function() {
+            if (navLinks.classList.contains("open")) {
+                closeNav();
+            } else {
+                openNav();
+            }
+        });
+        if (closeBtn) {
+            closeBtn.addEventListener("click", closeNav);
+        }
+        // Close nav when clicking a link (mobile)
+        var links = navLinks.querySelectorAll("a");
+        for (var i = 0; i < links.length; i++) {
+            links[i].addEventListener("click", function() {
+                if (window.innerWidth <= 768) closeNav();
+            });
+        }
+        // Close on Escape
+        document.addEventListener("keydown", function(e) {
+            if (e.key === "Escape") closeNav();
+        });
+        // Close on resize to desktop
+        window.addEventListener("resize", function() {
+            if (window.innerWidth > 768) closeNav();
+        });
+    })();
+    </script>
 
     <main id="main-content">

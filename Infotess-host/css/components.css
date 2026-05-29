@@ -17,8 +17,17 @@
   border: none;
   cursor: pointer;
   text-decoration: none;
-  transition: var(--transition-fast);
+  transition: background 150ms ease-out,
+              transform 100ms ease-out,
+              box-shadow 150ms ease-out,
+              color 150ms ease-out;
   white-space: nowrap;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
 }
 
 .btn:active {
@@ -29,16 +38,26 @@
   background: var(--color-primary);
   color: var(--color-on-primary);
 }
+.btn-primary:hover {
+  background: var(--color-primary-hover);
+  box-shadow: 0 2px 8px rgba(43, 76, 126, 0.25);
+}
 .btn-primary:active {
   background: var(--color-primary-pressed);
+  box-shadow: none;
 }
 
 .btn-on-dark {
   background: var(--color-on-dark);
   color: var(--color-ink);
 }
+.btn-on-dark:hover {
+  background: #f0efed;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+}
 .btn-on-dark:active {
   background: var(--color-hairline);
+  box-shadow: none;
 }
 
 .btn-secondary {
@@ -46,8 +65,12 @@
   color: var(--color-charcoal);
   border: 1px solid var(--color-hairline-strong);
 }
-.btn-secondary:active {
+.btn-secondary:hover {
   background: var(--color-surface);
+  border-color: var(--color-steel);
+}
+.btn-secondary:active {
+  background: var(--color-hairline);
 }
 
 .btn-secondary-on-dark {
@@ -55,14 +78,22 @@
   color: var(--color-on-dark);
   border: 1px solid var(--color-on-dark-muted);
 }
+.btn-secondary-on-dark:hover {
+  background: rgba(255,255,255,0.08);
+  border-color: var(--color-on-dark);
+}
 .btn-secondary-on-dark:active {
-  background: rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.12);
 }
 
 .btn-link {
   background: transparent;
   color: var(--color-link-blue);
   padding: 0;
+}
+.btn-link:hover {
+  color: var(--color-link-blue-pressed);
+  text-decoration: underline;
 }
 .btn-link:active {
   color: var(--color-link-blue-pressed);
@@ -73,23 +104,58 @@
   font-size: 16px;
 }
 
+/* ---- Accent Button (mustard yellow — use for CTAs like "Enroll Now") ---- */
+.btn-accent {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-weight: 600;
+}
+.btn-accent:hover {
+  background: var(--color-accent-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(212, 167, 44, 0.35);
+}
+.btn-accent:active {
+  background: var(--color-accent-pressed);
+  transform: scale(0.97);
+  box-shadow: none;
+}
+
 /* ---- Cards ---- */
 .card {
   background: var(--color-canvas);
   border: 1px solid var(--color-hairline);
   border-radius: var(--radius-lg);
   padding: var(--space-xl);
+  transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
+}
+
+.card:active {
+  transform: translateY(0);
 }
 
 .card-feature {
   border-radius: var(--radius-lg);
   padding: var(--space-xxl);
+  transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.card-feature:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.07);
 }
 
 .card-tint-peach { background: var(--color-tint-peach); }
 .card-tint-rose { background: var(--color-tint-rose); }
 .card-tint-mint { background: var(--color-tint-mint); }
-.card-tint-lavender { background: var(--color-tint-lavender); }
+.card-tint-lavender { background: var(--color-tint-teal); }
 .card-tint-sky { background: var(--color-tint-sky); }
 .card-tint-yellow { background: var(--color-tint-yellow); }
 .card-tint-cream { background: var(--color-tint-cream); }
@@ -99,6 +165,13 @@
   border: 1px solid var(--color-hairline);
   border-radius: var(--radius-lg);
   padding: var(--space-xl);
+  transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.card-testimonial:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
 }
 
 .card-stat {
@@ -106,6 +179,13 @@
   border-radius: var(--radius-lg);
   padding: var(--space-section-sm);
   text-align: center;
+  transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.card-stat:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
 }
 
 .card-stat h3 {
@@ -133,12 +213,17 @@
   height: 44px;
   width: 100%;
   outline: none;
-  transition: var(--transition-fast);
+  transition: border-color 200ms ease,
+              box-shadow 200ms ease;
+}
+
+.input:hover {
+  border-color: var(--color-steel);
 }
 
 .input:focus {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px rgba(86, 69, 212, 0.15);
+  box-shadow: 0 0 0 3px rgba(43, 76, 126, 0.15);
 }
 
 .input::placeholder {
@@ -160,6 +245,11 @@ textarea.input {
   line-height: var(--text-caption-lh);
   padding: 4px 10px;
   border-radius: var(--radius-full);
+  transition: transform 150ms ease-out;
+}
+
+.badge:hover {
+  transform: scale(1.04);
 }
 
 .badge-primary {
@@ -168,7 +258,7 @@ textarea.input {
 }
 
 .badge-tag {
-  background: var(--color-tint-lavender);
+  background: var(--color-tint-teal);
   color: var(--color-primary);
   border-radius: var(--radius-sm);
 }
@@ -218,27 +308,32 @@ textarea.input {
   margin: 0;
 }
 
+.gallery-figure {
+  cursor: pointer;
+}
+
 .gallery-figure img {
   width: 100%;
   height: 250px;
   object-fit: cover;
   display: block;
-  transition: transform var(--transition-slow);
+  transition: transform 400ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
 }
 
 .gallery-figure:hover img {
-  transform: scale(1.02);
+  transform: scale(1.04);
 }
 
 .gallery-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(transparent 60%, rgba(0,0,0,0.6));
+  background: linear-gradient(transparent 50%, rgba(0,0,0,0.65));
   display: flex;
   align-items: flex-end;
   padding: var(--space-md);
   opacity: 0;
-  transition: opacity var(--transition-base);
+  transition: opacity 300ms cubic-bezier(0.16, 1, 0.3, 1);
   cursor: pointer;
 }
 
@@ -250,6 +345,12 @@ textarea.input {
   color: var(--color-on-dark);
   font-size: var(--text-sm-size);
   font-weight: 500;
+  transform: translateY(8px);
+  transition: transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.gallery-figure:hover .gallery-overlay span {
+  transform: translateY(0);
 }
 
 /* ---- Timeline ---- */
@@ -282,6 +383,13 @@ textarea.input {
   border-radius: 50%;
   background: var(--color-primary);
   border: 2px solid var(--color-canvas);
+  transition: transform 200ms ease-out,
+              box-shadow 200ms ease-out;
+}
+
+.timeline-item:hover .timeline-dot {
+  transform: scale(1.3);
+  box-shadow: 0 0 0 4px rgba(43, 76, 126, 0.18);
 }
 
 .timeline-date-box {
@@ -317,11 +425,17 @@ textarea.input {
   border: 1px solid var(--color-hairline);
   border-radius: var(--radius-lg);
   overflow: hidden;
-  transition: var(--transition-fast);
+  transition: transform 250ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 250ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .card-premium:hover {
-  box-shadow: var(--shadow-md);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+.card-premium:active {
+  transform: translateY(-1px);
 }
 
 .card-premium .card-image {
@@ -329,6 +443,11 @@ textarea.input {
   height: 180px;
   object-fit: cover;
   display: block;
+  transition: transform 400ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.card-premium:hover .card-image {
+  transform: scale(1.04);
 }
 
 .card-premium .card-body {
@@ -401,6 +520,17 @@ textarea.input {
   margin-bottom: var(--space-sm);
 }
 
+/* ---- Table Row Hover ---- */
+table.table tbody tr,
+.table tbody tr {
+  transition: background 150ms ease-out;
+}
+
+table.table tbody tr:hover,
+.table tbody tr:hover {
+  background: var(--color-surface);
+}
+
 /* ---- Empty State ---- */
 .empty-state {
   text-align: center;
@@ -422,10 +552,13 @@ textarea.input {
   z-index: 9999;
   align-items: center;
   justify-content: center;
+  opacity: 0;
+  transition: opacity 300ms ease-out;
 }
 
 .lightbox.active {
   display: flex;
+  opacity: 1;
 }
 
 .lightbox img {
@@ -433,6 +566,12 @@ textarea.input {
   max-height: 85%;
   border-radius: var(--radius-md);
   object-fit: contain;
+  transform: scale(0.92);
+  transition: transform 350ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.lightbox.active img {
+  transform: scale(1);
 }
 
 .lightbox-close {
@@ -463,19 +602,34 @@ textarea.input {
   display: flex;
   align-items: center;
   gap: var(--space-md);
+  transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
 }
 
 .stat-card .stat-icon {
   width: 48px;
   height: 48px;
   border-radius: var(--radius-md);
-  background: var(--color-tint-lavender);
+  background: var(--color-tint-teal);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 20px;
   color: var(--color-primary);
   flex-shrink: 0;
+  transition: transform 200ms ease-out,
+              background 200ms ease-out;
+}
+
+.stat-card:hover .stat-icon {
+  transform: scale(1.08);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
 }
 
 .stat-details h3 {
@@ -510,14 +664,29 @@ textarea.input {
   color: var(--color-charcoal);
   cursor: pointer;
   font-family: var(--font-family);
-  transition: var(--transition-fast);
+  transition: background 200ms ease-out,
+              color 200ms ease-out,
+              border-color 200ms ease-out,
+              transform 100ms ease-out;
 }
 
-.filter-btn.active,
 .filter-btn:hover {
+  background: var(--color-surface);
+  border-color: var(--color-steel);
+}
+
+.filter-btn:active {
+  transform: scale(0.96);
+}
+
+.filter-btn.active {
   background: var(--color-primary);
   color: var(--color-on-primary);
   border-color: var(--color-primary);
+}
+
+.filter-btn.active:hover {
+  background: var(--color-primary-hover);
 }
 
 /* ---- Quick Action Card ---- */
@@ -526,17 +695,29 @@ textarea.input {
   padding: var(--space-lg);
   text-decoration: none;
   display: block;
-  transition: var(--transition-fast);
+  transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  border-radius: var(--radius-lg);
 }
 
 .quick-action-card:hover {
-  box-shadow: var(--shadow-md);
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+}
+
+.quick-action-card:active {
+  transform: translateY(-1px);
 }
 
 .quick-action-card i {
   font-size: 28px;
   margin-bottom: var(--space-sm);
   display: block;
+  transition: transform 200ms ease-out;
+}
+
+.quick-action-card:hover i {
+  transform: scale(1.15);
 }
 
 /* ---- Page-specific color helpers ---- */
@@ -557,4 +738,154 @@ textarea.input {
   justify-content: center;
   font-weight: 600;
   font-size: var(--text-body-size);
+}
+
+/* ---- Loading Spinner ---- */
+.spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--color-hairline);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spinSlow 0.6s linear infinite;
+}
+
+.spinner-lg {
+  width: 36px;
+  height: 36px;
+  border-width: 3px;
+}
+
+.spinner-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-section);
+}
+
+/* ---- Page Loader (full-page interstitial) ---- */
+.page-loader {
+  position: fixed;
+  inset: 0;
+  background: var(--color-canvas);
+  z-index: 9998;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: var(--space-md);
+  animation: fadeOut 400ms ease-out 600ms forwards;
+  pointer-events: none;
+}
+
+@keyframes fadeOut {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+/* ========================================
+   Responsive Table → Card Pattern (mobile)
+   ======================================== */
+
+/* Wrapper for horizontal scroll on small screens */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* On very small screens, transform tables into stacked cards */
+@media (max-width: 600px) {
+  table.table,
+  .table {
+    border: 0;
+  }
+  table.table thead,
+  .table thead {
+    display: none; /* hide headers on mobile */
+  }
+  table.table tbody tr,
+  .table tbody tr {
+    display: block;
+    margin-bottom: var(--space-md);
+    background: var(--color-canvas);
+    border: 1px solid var(--color-hairline);
+    border-radius: var(--radius-lg);
+    padding: var(--space-md);
+    box-shadow: var(--shadow-sm);
+  }
+  table.table tbody tr td,
+  .table tbody tr td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-xs) 0;
+    border: none;
+    border-bottom: 1px solid var(--color-hairline-soft);
+    font-size: var(--text-sm-size);
+    gap: var(--space-xs);
+  }
+  table.table tbody tr td:last-child,
+  .table tbody tr td:last-child {
+    border-bottom: none;
+  }
+  table.table tbody tr td::before,
+  .table tbody tr td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--color-charcoal);
+    font-size: var(--text-caption-size);
+    flex-shrink: 0;
+  }
+  /* Keep action columns minimal */
+  table.table tbody tr td:last-child,
+  .table tbody tr td:last-child {
+    justify-content: flex-start;
+    gap: var(--space-sm);
+  }
+}
+
+/* ========================================
+   Mobile Component Overrides
+   ======================================== */
+@media (max-width: 767px) {
+  .card {
+    padding: var(--space-md);
+  }
+  .card-feature {
+    padding: var(--space-lg);
+  }
+  .card-stat {
+    padding: var(--space-md);
+    /* make stat-cards flex-row on mobile */
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    text-align: left;
+  }
+  .card-stat h3 {
+    font-size: 24px;
+    margin-bottom: 2px;
+  }
+  .stat-icon {
+    font-size: 28px;
+    margin-bottom: 0;
+  }
+  .btn {
+    white-space: normal;   /* allow button text to wrap */
+    padding: 10px 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .btn-link {
+    width: auto;
+  }
 }

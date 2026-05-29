@@ -107,8 +107,8 @@ export function buildSchoolScene(containerId) {
 
     // Main building block
     const buildingMat = new THREE.MeshPhongMaterial({
-        color: 0x5645d4,
-        emissive: 0x2a1a7a,
+        color: 0x2b4c7e,
+        emissive: 0x3b6da0,
         emissiveIntensity: 0.1,
         shininess: 30,
     });
@@ -235,7 +235,7 @@ export function buildBooksScene(containerId) {
     }
 
     // Grad cap
-    const capMat = new THREE.MeshPhongMaterial({ color: 0x5645d4 });
+    const capMat = new THREE.MeshPhongMaterial({ color: 0x2b4c7e });
     const capBase = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.03, 0.5), capMat);
     capBase.position.set(0, 0.55, 0);
     scene.add(capBase);
@@ -276,13 +276,13 @@ export function buildEnvelopeScene(containerId) {
     addSceneLights(scene);
 
     // Envelope body
-    const bodyMat = new THREE.MeshPhongMaterial({ color: 0x5645d4 });
+    const bodyMat = new THREE.MeshPhongMaterial({ color: 0x2b4c7e });
     const body = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.7, 0.05), bodyMat);
     body.position.y = 0;
     scene.add(body);
 
     // Flap (triangle)
-    const flapMat = new THREE.MeshPhongMaterial({ color: 0x4534b3 });
+    const flapMat = new THREE.MeshPhongMaterial({ color: 0x1e3a5f });
     const flapGeo = new THREE.BufferGeometry();
     const verts = new Float32Array([
         0, 0.35, 0.03,   -0.6, -0.35, 0.03,   0, -0.05, 0.03,
@@ -338,7 +338,7 @@ export function buildFrameScene(containerId) {
     addSceneLights(scene);
 
     // Frame (hollow box)
-    const frameMat = new THREE.MeshPhongMaterial({ color: 0x5645d4 });
+    const frameMat = new THREE.MeshPhongMaterial({ color: 0x2b4c7e });
     const frame = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.0, 0.06), frameMat);
     frame.position.y = 0;
     scene.add(frame);
@@ -401,7 +401,7 @@ export function buildCalendarScene(containerId) {
     addSceneLights(scene);
 
     // Calendar body
-    const bodyMat = new THREE.MeshPhongMaterial({ color: 0x5645d4 });
+    const bodyMat = new THREE.MeshPhongMaterial({ color: 0x2b4c7e });
     const body = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.2, 0.15), bodyMat);
     body.position.y = 0;
     scene.add(body);

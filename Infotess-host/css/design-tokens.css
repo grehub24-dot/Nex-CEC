@@ -1,16 +1,25 @@
 /* ========================================
    Nex CEC Design Tokens
-   Notion-Inspired School Design System
+   Light Navy + Bright Gold — 60/30/10
    ======================================== */
 
 :root {
-  /* ---- Brand Colors ---- */
-  --color-primary: #5645d4;
-  --color-primary-pressed: #4534b3;
+  /* ---- Brand Colors (Structural — 30%) ---- */
+  --color-primary: #2b4c7e;              /* Light Navy Blue — discipline & trust */
+  --color-primary-hover: #3b6da0;        /* Lighter navy — hover state */
+  --color-primary-pressed: #1e3a5f;      /* Deeper navy — pressed state */
   --color-on-primary: #ffffff;
-  --color-brand-navy: #0a1530;
-  --color-brand-navy-deep: #070f24;
-  --color-brand-navy-mid: #1a2a52;
+
+  /* ---- Accent (Action — 10%) — Bright Gold ---- */
+  --color-accent: #d4af37;              /* Bright Gold — youth & excellence */
+  --color-accent-hover: #e8c44a;         /* Lighter gold — hover */
+  --color-accent-pressed: #bf9e30;        /* Deeper gold — pressed */
+  --color-on-accent: #1e3a5f;            /* Navy text on gold (readability) */
+
+  /* ---- Structural ---- */
+  --color-brand-navy: #1e3a5f;           /* Light Navy (structural)*/
+  --color-brand-navy-deep: #0f2847;
+  --color-brand-navy-mid: #2b4c7e;
   --color-link-blue: #0075de;
   --color-link-blue-pressed: #005bab;
 
@@ -18,7 +27,9 @@
   --color-tint-peach: #ffe8d4;     /* Creche / Early Childhood */
   --color-tint-rose: #fde0ec;      /* Nursery / KG */
   --color-tint-mint: #d9f3e1;      /* Primary (B1–B6) */
-  --color-tint-lavender: #e6e0f5;  /* JHS (JHS1–JHS3) */
+  --color-tint-navy: #dbeafe;      /* JHS (JHS1–JHS3) — navy-light */
+  --color-tint-teal: #dbeafe;      /* deprecated alias — use --color-tint-navy */
+  --color-tint-lavender: #dbeafe;  /* deprecated alias — use --color-tint-navy */
   --color-tint-sky: #dcecfa;       /* Extracurricular */
   --color-tint-yellow: #fef7d6;    /* Achievements */
   --color-tint-cream: #f8f5e8;     /* General content */
@@ -134,5 +145,22 @@
     --text-sm-size: 13px;
     --space-section-lg: 48px;
     --space-hero: 80px;
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --text-hero-size: 32px;
+    --text-display-size: 28px;
+    --text-h1-size: 24px;
+    --text-h2-size: 20px;
+    --text-h3-size: 18px;
+    --text-h4-size: 16px;
+    --text-body-size: 14px;
+    --space-section: 40px;
+    --space-section-sm: 32px;
+    --space-hero: 60px;
+    --space-xl: 16px;
+    --space-xxl: 24px;
   }
 }

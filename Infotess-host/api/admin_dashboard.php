@@ -322,8 +322,8 @@ if (empty($chart_labels)) { $chart_labels = [date('M Y')]; $chart_data = [0]; }
                 datasets: [{
                     label: 'Revenue (GHS)',
                     data: <?php echo json_encode($chart_data); ?>,
-                    backgroundColor: 'rgba(86, 69, 212, 0.7)',
-                    borderColor: 'rgba(86, 69, 212, 1)',
+                    backgroundColor: 'rgba(43, 76, 126, 0.6)',
+                    borderColor: 'rgba(43, 76, 126, 1)',
                     borderWidth: 1
                 }]
             },

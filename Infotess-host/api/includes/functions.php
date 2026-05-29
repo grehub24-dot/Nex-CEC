@@ -320,13 +320,13 @@ function renderSidebar($currentPage = '', $schoolName = 'Nex CEC') {
     $html = '';
     
     // Hamburger button (visible on mobile)
-    $html .= '<button class="hamburger-btn" id="hamburgerBtn" aria-label="Open menu"><i class="fas fa-bars"></i></button>';
+    $html .= '<button class="hamburger-btn" id="hamburgerBtn" aria-label="Open menu" aria-expanded="false"><i class="fas fa-bars"></i></button>';
     
     // Sidebar overlay
     $html .= '<div class="sidebar-overlay" id="sidebarOverlay"></div>';
     
     // Sidebar
-    $html .= '<aside class="sidebar" id="sidebar">';
+    $html .= '<aside class="sidebar" id="sidebar" aria-label="Primary navigation">';
     $html .= '<div class="sidebar-header">';
     $html .= '<button class="sidebar-close-btn" id="sidebarCloseBtn" aria-label="Close menu"><i class="fas fa-times"></i></button>';
     $logoUrl = getCachedSchoolLogoUrl();
@@ -337,8 +337,9 @@ function renderSidebar($currentPage = '', $schoolName = 'Nex CEC') {
     $html .= '<ul class="sidebar-menu">';
     
     foreach ($menu as $item) {
-        $active = ($currentPage === basename($item['href'], '.php')) ? ' class="active"' : '';
-        $html .= '<li><a href="' . htmlspecialchars($item['href']) . '"' . $active . '><i class="' . htmlspecialchars($item['icon']) . '"></i> ' . htmlspecialchars($item['label']) . '</a></li>';
+        $active = ($currentPage === basename($item['href'], '.php'));
+        $attr = $active ? ' class="active" aria-current="page"' : '';
+        $html .= '<li><a href="' . htmlspecialchars($item['href']) . '"' . $attr . '><i class="' . htmlspecialchars($item['icon']) . '"></i> ' . htmlspecialchars($item['label']) . '</a></li>';
     }
     
     $html .= '</ul></aside>';
@@ -405,13 +406,13 @@ function renderStaffSidebar($currentPage = '', $schoolName = 'Nex CEC', $unreadC
     $html = '';
     
     // Hamburger button (visible on mobile) — NO inline onclick, handled by JS below to avoid double-toggle
-    $html .= '<button class="hamburger-menu" id="hamburgerBtn"><i class="fas fa-bars"></i></button>';
+    $html .= '<button class="hamburger-menu" id="hamburgerBtn" aria-label="Open menu" aria-expanded="false"><i class="fas fa-bars"></i></button>';
     
     // Sidebar overlay (tapping it closes sidebar)
     $html .= '<div class="sidebar-overlay" id="sidebarOverlay" style="z-index:90;"></div>';
     
     // Sidebar
-    $html .= '<aside class="staff-sidebar" id="sidebar">';
+    $html .= '<aside class="staff-sidebar" id="sidebar" aria-label="Staff navigation">';
     $html .= '<div class="sidebar-header">';
     $logoUrl = getCachedSchoolLogoUrl();
     $html .= '<img src="' . htmlspecialchars($logoUrl) . '" alt="Logo" style="width:64px;height:64px;border-radius:50%;object-fit:cover;background:white;padding:3px;margin-bottom:10px;" onerror="this.onerror=null;this.src=\'../images/aamusted.jpg\'">';
@@ -451,8 +452,9 @@ function renderStaffSidebar($currentPage = '', $schoolName = 'Nex CEC', $unreadC
             continue;
         }
         
-        $active = ($currentPage === $item['key']) ? ' class="active"' : '';
-        $html .= '<li><a href="' . htmlspecialchars($item['href']) . '"' . $active . '>';
+        $active = ($currentPage === $item['key']);
+        $attr = $active ? ' class="active" aria-current="page"' : '';
+        $html .= '<li><a href="' . htmlspecialchars($item['href']) . '"' . $attr . '>';
         $html .= '<i class="' . $item['icon'] . '"></i> ' . htmlspecialchars($item['label']);
         if (!empty($item['badge']) && $item['badge'] > 0) {
             $html .= ' <span class="msg-count">' . (int)$item['badge'] . '</span>';
@@ -519,13 +521,13 @@ function renderParentSidebar($currentPage = '', $schoolName = 'Nex CEC', $unread
     $html = '';
     
     // Hamburger button (visible on mobile) — NO inline onclick, handled by JS below
-    $html .= '<button class="hamburger-menu" id="hamburgerBtn"><i class="fas fa-bars"></i></button>';
+    $html .= '<button class="hamburger-menu" id="hamburgerBtn" aria-label="Open menu" aria-expanded="false"><i class="fas fa-bars"></i></button>';
     
     // Sidebar overlay (tapping it closes sidebar) — z-index:90 keeps it between hamburger(200) and before page content
     $html .= '<div class="sidebar-overlay" id="sidebarOverlay" style="z-index:90;"></div>';
     
     // Sidebar
-    $html .= '<aside class="parent-sidebar" id="sidebar">';
+    $html .= '<aside class="parent-sidebar" id="sidebar" aria-label="Parent navigation">';
     $html .= '<div class="sidebar-header">';
         $logoUrl = getCachedSchoolLogoUrl();
         $html .= '<img src="' . htmlspecialchars($logoUrl) . '" alt="Logo" style="width:64px;height:64px;border-radius:50%;object-fit:cover;background:white;padding:3px;margin-bottom:10px;" onerror="this.onerror=null;this.src=\'../images/aamusted.jpg\'">';
@@ -536,39 +538,39 @@ function renderParentSidebar($currentPage = '', $schoolName = 'Nex CEC', $unread
     
     // Staff Dashboard link (for dual-role users who have children)
     if ($hasChildren) {
-        $active = ($currentPage === 'staff_dashboard') ? ' class="active"' : '';
-        $html .= '<li><a href="../staff/dashboard.php"' . $active . '><i class="fas fa-chalkboard-teacher"></i> Staff Dashboard</a></li>';
+        $isActive = ($currentPage === 'staff_dashboard');
+        $html .= '<li><a href="../staff/dashboard.php"' . ($isActive ? ' class="active" aria-current="page"' : '') . '><i class="fas fa-chalkboard-teacher"></i> Staff Dashboard</a></li>';
     }
     
     // My Children
-    $active = ($currentPage === 'dashboard') ? ' class="active"' : '';
-    $html .= '<li><a href="../parent/dashboard.php"' . $active . '><i class="fas fa-home"></i> My Children</a></li>';
+    $isActive = ($currentPage === 'dashboard');
+    $html .= '<li><a href="../parent/dashboard.php"' . ($isActive ? ' class="active" aria-current="page"' : '') . '><i class="fas fa-home"></i> My Children</a></li>';
     
     // Learning at Home Resources
-    $active = ($currentPage === 'resources') ? ' class="active"' : '';
-    $html .= '<li><a href="../parent/resources.php"' . $active . '><i class="fas fa-bookmark"></i> Learning at Home</a></li>';
-    $active = ($currentPage === 'lesson_notes') ? ' class="active"' : '';
-    $html .= '<li><a href="../parent/lesson_notes.php"' . $active . '><i class="fas fa-book-open"></i> Lesson Notes</a></li>';
+    $isActive = ($currentPage === 'resources');
+    $html .= '<li><a href="../parent/resources.php"' . ($isActive ? ' class="active" aria-current="page"' : '') . '><i class="fas fa-bookmark"></i> Learning at Home</a></li>';
+    $isActive = ($currentPage === 'lesson_notes');
+    $html .= '<li><a href="../parent/lesson_notes.php"' . ($isActive ? ' class="active" aria-current="page"' : '') . '><i class="fas fa-book-open"></i> Lesson Notes</a></li>';
 
     // Messages (with unread badge)
-    $active = ($currentPage === 'messages') ? ' class="active"' : '';
-    $html .= '<li><a href="../parent/messages.php"' . $active . '><i class="fas fa-envelope"></i> Messages';
+    $isActive = ($currentPage === 'messages');
+    $html .= '<li><a href="../parent/messages.php"' . ($isActive ? ' class="active" aria-current="page"' : '') . '><i class="fas fa-envelope"></i> Messages';
     if ($unreadCount > 0) {
         $html .= ' <span class="msg-count">' . (int)$unreadCount . '</span>';
     }
     $html .= '</a></li>';
     
     // Academic Calendar
-    $active = ($currentPage === 'academic_calendar') ? ' class="active"' : '';
-    $html .= '<li><a href="../parent/academic_calendar.php"' . $active . '><i class="fas fa-calendar-alt"></i> Academic Calendar</a></li>';
+    $isActive = ($currentPage === 'academic_calendar');
+    $html .= '<li><a href="../parent/academic_calendar.php"' . ($isActive ? ' class="active" aria-current="page"' : '') . '><i class="fas fa-calendar-alt"></i> Academic Calendar</a></li>';
 
     // My Profile
-    $active = ($currentPage === 'profile') ? ' class="active"' : '';
-    $html .= '<li><a href="../parent/profile.php"' . $active . '><i class="fas fa-user-cog"></i> My Profile</a></li>';
+    $isActive = ($currentPage === 'profile');
+    $html .= '<li><a href="../parent/profile.php"' . ($isActive ? ' class="active" aria-current="page"' : '') . '><i class="fas fa-user-cog"></i> My Profile</a></li>';
     
     // Change Password
-    $active = ($currentPage === 'password') ? ' class="active"' : '';
-    $html .= '<li><a href="../parent/password-reset.php"' . $active . '><i class="fas fa-key"></i> Change Password</a></li>';
+    $isActive = ($currentPage === 'password');
+    $html .= '<li><a href="../parent/password-reset.php"' . ($isActive ? ' class="active" aria-current="page"' : '') . '><i class="fas fa-key"></i> Change Password</a></li>';
     
     // Logout
     $html .= '<li><a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>';

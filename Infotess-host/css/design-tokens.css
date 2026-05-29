@@ -10,10 +10,10 @@
   --color-primary-pressed: #1e3a5f;      /* Deeper navy — pressed state */
   --color-on-primary: #ffffff;
 
-  /* ---- Accent (Action — 10%) — Bright Gold ---- */
-  --color-accent: #d4af37;              /* Bright Gold — youth & excellence */
-  --color-accent-hover: #e8c44a;         /* Lighter gold — hover */
-  --color-accent-pressed: #bf9e30;        /* Deeper gold — pressed */
+  /* ---- Accent (Action — 10%) — Vibrant Gold (Golden Waves) ---- */
+  --color-accent: #FFD700;              /* Vibrant Gold — youth & excellence */
+  --color-accent-hover: #FFE44D;         /* Lighter gold — hover */
+  --color-accent-pressed: #DAA520;       /* Deeper gold — pressed */
   --color-on-accent: #1e3a5f;            /* Navy text on gold (readability) */
 
   /* ---- Structural ---- */
@@ -22,6 +22,11 @@
   --color-brand-navy-mid: #2b4c7e;
   --color-link-blue: #0075de;
   --color-link-blue-pressed: #005bab;
+
+  /* ---- Golden Waves Secondary Tones ---- */
+  --color-soft-blue: #A3C1DA;           /* Calming secondary — section backgrounds */
+  --color-pale-yellow: #F0E68C;         /* Warm highlight — banners, badges */
+  --color-tint-soft-blue: #D6E4F0;      /* Light soft blue tint for cards */
 
   /* ---- Education-Stage Card Tints ---- */
   --color-tint-peach: #ffe8d4;     /* Creche / Early Childhood */
@@ -55,6 +60,16 @@
   --color-success: #1aae39;
   --color-warning: #dd5b00;
   --color-error: #e03131;
+
+  /* ---- Legacy accent colors (referenced by pages) ---- */
+  --color-accent-green: #27ae60;
+  --color-accent-yellow: #f5b342;
+  --color-accent-pink: #e67eaa;
+
+  /* ---- Legacy tint colors (referenced by pages) ---- */
+  --color-tint-gray: #f0eeec;
+  --color-tint-green: #d9f3e1;
+  --color-tint-pink: #fde0ec;
 
   /* ---- Typography Scale ---- */
   --font-family: 'Inter', -apple-system, system-ui, sans-serif;

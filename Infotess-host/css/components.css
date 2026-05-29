@@ -113,7 +113,7 @@
 .btn-accent:hover {
   background: var(--color-accent-hover);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(212, 167, 44, 0.35);
+  box-shadow: 0 4px 16px rgba(255, 215, 0, 0.35);
 }
 .btn-accent:active {
   background: var(--color-accent-pressed);
@@ -152,6 +152,22 @@
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.07);
 }
 
+.card-feature-icon {
+  font-size: 36px;
+  margin-bottom: var(--space-md);
+}
+
+.card-feature p {
+  color: var(--color-charcoal);
+  font-size: var(--text-sm-size);
+  line-height: var(--text-sm-lh);
+}
+
+.card-feature .btn-link {
+  margin-top: var(--space-sm);
+  display: inline-block;
+}
+
 .card-tint-peach { background: var(--color-tint-peach); }
 .card-tint-rose { background: var(--color-tint-rose); }
 .card-tint-mint { background: var(--color-tint-mint); }
@@ -159,47 +175,55 @@
 .card-tint-sky { background: var(--color-tint-sky); }
 .card-tint-yellow { background: var(--color-tint-yellow); }
 .card-tint-cream { background: var(--color-tint-cream); }
+.card-tint-soft-blue { background: var(--color-tint-soft-blue); }
 
-.card-testimonial {
-  background: var(--color-canvas);
-  border: 1px solid var(--color-hairline);
-  border-radius: var(--radius-lg);
-  padding: var(--space-xl);
-  transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1),
-              box-shadow 200ms cubic-bezier(0.16, 1, 0.3, 1);
+/* ---- Card content helpers ---- */
+.card-title {
+  font-size: var(--text-h3-size);
+  font-weight: var(--text-h3-weight);
+  line-height: var(--text-h3-lh);
+  margin: 0 0 var(--space-sm);
 }
 
-.card-testimonial:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+.card-text {
+  color: var(--color-slate);
+  font-size: var(--text-sm-size);
+  line-height: var(--text-sm-lh);
+  margin: 0;
 }
 
-.card-stat {
-  background: var(--color-surface);
-  border-radius: var(--radius-lg);
-  padding: var(--space-section-sm);
+.card .card-icon-block {
+  font-size: 2rem;
+  margin-bottom: var(--space-md);
   text-align: center;
-  transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1),
-              box-shadow 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.card-icon-block-lg i {
+  font-size: 2.5rem !important;
+}
+.icon-color-orange i, i.icon-color-orange { color: #e67e22; }
+.icon-color-green i, i.icon-color-green { color: #27ae60; }
+.icon-color-primary i, i.icon-color-primary { color: var(--color-primary); }
+.icon-color-accent i, i.icon-color-accent { color: var(--color-accent); }
+
+.card-highlight-mission { border-top: 4px solid var(--color-primary); }
+.card-highlight-vision { border-top: 4px solid var(--color-success); }
+.card-highlight-accent { border-top: 4px solid var(--color-accent); }
+
+.about-image {
+  width: 100%;
+  border-radius: var(--radius-lg);
+  object-fit: cover;
+  height: 320px;
 }
 
-.card-stat:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+.card-photo-bg {
+  background: rgba(30, 58, 95, 0.85);
+  color: var(--color-on-dark);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  backdrop-filter: blur(4px);
 }
-
-.card-stat h3 {
-  font-size: 36px;
-  font-weight: 600;
-  color: var(--color-brand-navy);
-  margin: 0 0 var(--space-xs);
-}
-
-.stat-icon {
-  font-size: 32px;
-  color: var(--color-primary);
-  margin-bottom: var(--space-sm);
-}
+.card-photo-bg p { color: var(--color-on-dark-muted); }
+.card-photo-bg .card-icon-block i { color: var(--color-accent); }
 
 /* ---- Form Inputs ---- */
 .input {
@@ -281,6 +305,16 @@ textarea.input {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
+}
+
+.testimonial-name {
+  font-size: 14px;
+  display: block;
+}
+
+.testimonial-role {
+  font-size: 13px;
+  color: var(--color-steel);
 }
 
 /* ---- Section Title ---- */
@@ -726,6 +760,14 @@ table.table tbody tr:hover,
 .color-warning { color: var(--color-warning); }
 
 .text-center { text-align: center; }
+.surface-bg { background: var(--color-surface); }
+.max-w-sm { max-width: 640px; margin-left: auto; margin-right: auto; }
+.max-w-md { max-width: 720px; margin-left: auto; margin-right: auto; }
+.mb-xs { margin-bottom: var(--space-xs); }
+.mb-sm { margin-bottom: var(--space-sm); }
+.mb-md { margin-bottom: var(--space-md); }
+.mb-lg { margin-bottom: var(--space-lg); }
+.mb-xl { margin-bottom: var(--space-xl); }
 
 .testimonial-avatar {
   width: 40px;

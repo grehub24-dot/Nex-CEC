@@ -14,7 +14,7 @@ description: >
   child-friendly. Colorful student photography breaks up blue/white blocks.
 
 colors:
-  # ---- 60/30/10 Palette ----
+  # ---- 60/30/10 Palette — "Golden Waves" adaptation ----
   # 60% Base (Background) — Crisp White
   canvas: "#ffffff"
   surface: "#f6f5f4"
@@ -29,11 +29,16 @@ colors:
   brand-navy-deep: "#0f2847"
   brand-navy-mid: "#2b4c7e"
 
-  # 10% Accent (Action) — Bright Gold
-  accent: "#d4af37"
-  accent-hover: "#e8c44a"
-  accent-pressed: "#bf9e30"
+  # 10% Accent (Action) — Vibrant Gold (Golden Waves)
+  accent: "#FFD700"
+  accent-hover: "#FFE44D"
+  accent-pressed: "#DAA520"
   on-accent: "#1e3a5f"        # Navy text on gold (for readability)
+
+  # Golden Waves secondary tones
+  soft-blue: "#A3C1DA"        # Calming secondary — section backgrounds
+  pale-yellow: "#F0E68C"      # Warm highlight — banners, badges
+  tint-soft-blue: "#D6E4F0"   # Light soft blue tint for cards
   star: "#f5b342"
 
   # Functional links

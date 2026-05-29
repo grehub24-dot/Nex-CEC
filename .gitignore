@@ -1,0 +1,25 @@
+# Superpowers plugin working dir (generated, user-specific)
+.superpowers/
+
+# Dependencies
+vendor/
+node_modules/
+
+# Environment
+.env
+.env.local
+.env.production
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Vercel (project-level cache)
+.vercel

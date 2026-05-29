@@ -22,12 +22,11 @@ try {
 $years_count = 4;
 ?>
 
-<!-- Hero Section (Eduman-style tall hero) -->
-<section class="hero-band-tall">
+<!-- Hero Section -->
+<section class="hero-band">
     <div id="hero-3d-container" class="school-3d-container hero-3d"></div>
     <div class="hero-band-content">
-        <span class="badge badge-accent" style="margin-bottom:12px;display:inline-block;"><?php echo htmlspecialchars($school_name); ?></span>
-        <h1 class="text-hero mb-sm">Shaping Tomorrow's Leaders Today</h1>
+        <h1 class="text-hero mb-sm">Welcome to <?php echo htmlspecialchars($school_name); ?></h1>
         <p class="hero-band-text">
             <?php echo htmlspecialchars($settings['school_motto'] ?? 'Excellence in Education'); ?>
             — Providing quality education from Creche through Junior High School in a safe, nurturing, and academically excellent environment.
@@ -72,39 +71,6 @@ $years_count = 4;
     </div>
 </section>
 
-<!-- Featured Image Cards (Eduman-style) -->
-<section class="section-block surface-bg">
-    <div class="container">
-        <h2 class="text-h2 text-center mb-xs">Why Choose <?php echo htmlspecialchars($school_name); ?></h2>
-        <p class="text-sm text-center max-w-sm mb-xl">
-            Discover what makes our school a special place for your child's educational journey.
-        </p>
-        <div class="grid-3">
-            <div class="card-feature-image">
-                <img src="<?php echo $base_url; ?>images/placeholder-classroom.svg" alt="Modern classrooms" class="card-img" onerror="this.style.display='none'">
-                <div class="card-body">
-                    <h3>Modern Learning Environment</h3>
-                    <p>Well-equipped classrooms with learning resources that engage students and foster academic excellence at every level.</p>
-                </div>
-            </div>
-            <div class="card-feature-image">
-                <img src="<?php echo $base_url; ?>images/placeholder-students.svg" alt="Dedicated teachers" class="card-img" onerror="this.style.display='none'">
-                <div class="card-body">
-                    <h3>Dedicated Educators</h3>
-                    <p>Our passionate teachers provide individual attention and create a supportive atmosphere where every child can thrive.</p>
-                </div>
-            </div>
-            <div class="card-feature-image">
-                <img src="<?php echo $base_url; ?>images/placeholder-activities.svg" alt="Holistic development" class="card-img" onerror="this.style.display='none'">
-                <div class="card-body">
-                    <h3>Holistic Development</h3>
-                    <p>Beyond academics, we nurture character, creativity, and critical thinking — preparing students for life beyond school.</p>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
 <!-- What We Offer -->
 <section class="section-block">
     <div class="container">
@@ -130,24 +96,6 @@ $years_count = 4;
                 <h3 class="text-h3">Junior High School</h3>
                 <p>JHS 1 to 3 preparing students for the BECE with strong academics, practical skills, and character formation.</p>
                 <a href="about.php#jhs" class="btn-link">Learn More <i class="fas fa-arrow-right"></i></a>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Testimonial Accent Quote -->
-<section class="section-block">
-    <div class="container max-w-md">
-        <div class="testimonial-accent">
-            <blockquote>
-                The care and attention my child receives at <?php echo htmlspecialchars($school_name); ?> is outstanding. I've seen remarkable growth in both academics and confidence since joining.
-            </blockquote>
-            <div class="attribution">
-                <span style="background:var(--color-primary);color:#fff;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-weight:600;flex-shrink:0;">A</span>
-                <div>
-                    <strong>Parent of KG 2 Student</strong><br>
-                    <span>Current Parent</span>
-                </div>
             </div>
         </div>
     </div>
@@ -222,14 +170,14 @@ $years_count = 4;
     </div>
 </section>
 
-<!-- CTA Banner (Eduman-style gradient) -->
-<section class="cta-banner-gradient">
+<!-- CTA Banner -->
+<section class="section-block surface-bg">
     <div class="container text-center max-w-md">
         <h2 class="text-h2 mb-sm">Enroll Your Child Today</h2>
         <p class="mb-xl">Give your child the best foundation for a bright future. Registration is now open for all levels — Creche through JHS 3.</p>
-        <div class="cta-group" style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center;">
+        <div class="cta-group">
             <a href="register.php" class="btn btn-accent btn-lg"><i class="fas fa-user-plus"></i> Enroll Now</a>
-            <a href="contact.php" class="btn btn-secondary-on-dark btn-lg" style="background:rgba(255,255,255,0.15);border-color:rgba(255,255,255,0.3);color:#fff;"><i class="fas fa-phone-alt"></i> Contact Us</a>
+            <a href="contact.php" class="btn btn-secondary btn-lg"><i class="fas fa-phone-alt"></i> Contact Us</a>
         </div>
     </div>
 </section>

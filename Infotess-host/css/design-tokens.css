@@ -126,8 +126,6 @@
   --space-section: 56px;
   --space-section-lg: 72px;
   --space-hero: 80px;
-  --space-hero-lg: 120px;         /* Tall hero for homepage (~700px) */
-  --card-image-height: 200px;     /* Hybrid card feature image height */
 
   /* ---- Rounded Corners ---- */
   --radius-xs: 6px;
@@ -189,7 +187,5 @@
     --space-section: 96px;
     --space-section-lg: 128px;
     --space-hero: 160px;
-    --space-hero-lg: 180px;
-    --card-image-height: 240px;
   }
 }
